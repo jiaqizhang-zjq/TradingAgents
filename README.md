@@ -198,6 +198,47 @@ print(decision)
 
 See `tradingagents/default_config.py` for all configuration options.
 
+## 项目文档
+
+为了帮助更好地理解项目架构和代码逻辑，我们提供了详细的文档：
+
+### 📚 核心文档
+
+- [项目架构文档](doc/architecture.md) - 详细的项目结构、模块说明和技术栈
+- [LLM 调用关系链](doc/llm_call_chain.md) - LLM 相关的函数调用关系和详细流程
+- [Agent 用法和解析](doc/agents_guide.md) - Agent 的创建、使用和完整工作流程
+
+### 🔍 核心概念解析
+
+#### Agent 架构
+
+TradingAgents 使用 LangGraph 框架构建多代理系统，每个代理都有专门的角色：
+
+1. **分析师团队** - 分析不同维度的市场数据
+2. **研究员团队** - 对分析结果进行辩论和评估
+3. **交易员** - 综合所有信息做出交易决策
+4. **风险管理团队** - 评估投资组合风险
+
+#### Prompt 组织方式
+
+每个 Agent 的 Prompt 包含：
+- **系统提示词** - 定义角色、职责和任务要求
+- **工具描述** - 可用工具的说明
+- **对话历史** - MessagesPlaceholder 管理对话上下文
+
+完整示例请参考 [Agent 用法和解析](doc/agents_guide.md)。
+
+#### Tool、Skill、MCP、SubAgent 的区别
+
+| 概念 | 定义 | 特点 | 当前项目使用 |
+|------|------|------|-------------|
+| **Tool** | 单个可执行函数 | 简单、单一职责、LLM 直接调用 | ✅ 大量使用 |
+| **Skill** | 多个 Tool 的组合 | 有控制流程、可维护状态 | ❌ 未使用 |
+| **MCP** | 标准化协议 | 跨平台、可发现 | ❌ 未使用 |
+| **SubAgent** | Agent 内部调用 Agent | 模块化、递归 | ❌ 未使用 |
+
+当前项目使用 **LangGraph ToolNode** 来管理工具调用，配合 `bind_tools` 将工具绑定到 LLM。
+
 ## Contributing
 
 We welcome contributions from the community! Whether it's fixing a bug, improving documentation, or suggesting a new feature, your input helps make this project better. If you are interested in this line of research, please consider joining our open-source financial AI research community [Tauric Research](https://tauric.ai/).

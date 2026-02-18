@@ -45,7 +45,7 @@ class TradingAgentsGraph:
 
     def __init__(
         self,
-        selected_analysts=["market", "social", "news", "fundamentals"],
+        selected_analysts=["market", "social", "news", "fundamentals", "candlestick"],
         debug=False,
         config: Dict[str, Any] = None,
         callbacks: Optional[List] = None,
@@ -71,26 +71,32 @@ class TradingAgentsGraph:
             exist_ok=True,
         )
 
-        # Initialize LLMs with provider-specific thinking configuration
+        # 初始化LLMs，使用提供商特定的思考配置
         llm_kwargs = self._get_provider_kwargs()
 
-        # Add callbacks to kwargs if provided (passed to LLM constructor)
+        # 如果提供了回调，则添加到kwargs中（传递给LLM构造函数）
         if self.callbacks:
             llm_kwargs["callbacks"] = self.callbacks
 
+        # 创建深度思考LLM客户端
+        # 深度思考LLM用于复杂的推理任务，如分析和决策
         deep_client = create_llm_client(
             provider=self.config["llm_provider"],
-            model=self.config["deep_think_llm"],
+            model=self.config["deep_think_llm"],  # 通常是更强大的模型，如gpt-5.2
             base_url=self.config.get("backend_url"),
             **llm_kwargs,
         )
+        
+        # 创建快速思考LLM客户端
+        # 快速思考LLM用于简单的任务，如数据处理和报告生成
         quick_client = create_llm_client(
             provider=self.config["llm_provider"],
-            model=self.config["quick_think_llm"],
+            model=self.config["quick_think_llm"],  # 通常是更轻量的模型，如gpt-5-mini
             base_url=self.config.get("backend_url"),
             **llm_kwargs,
         )
 
+        # 获取配置好的LLM实例
         self.deep_thinking_llm = deep_client.get_llm()
         self.quick_thinking_llm = quick_client.get_llm()
         
@@ -131,15 +137,23 @@ class TradingAgentsGraph:
         self.graph = self.graph_setup.setup_graph(selected_analysts)
 
     def _get_provider_kwargs(self) -> Dict[str, Any]:
-        """Get provider-specific kwargs for LLM client creation."""
+        """获取LLM客户端创建的提供商特定参数
+        
+        根据不同的LLM提供商，获取相应的特定参数
+        
+        Returns:
+            提供商特定参数的字典
+        """
         kwargs = {}
         provider = self.config.get("llm_provider", "").lower()
 
+        # Google提供商特定参数
         if provider == "google":
             thinking_level = self.config.get("google_thinking_level")
             if thinking_level:
                 kwargs["thinking_level"] = thinking_level
 
+        # OpenAI提供商特定参数
         elif provider == "openai":
             reasoning_effort = self.config.get("openai_reasoning_effort")
             if reasoning_effort:
@@ -148,25 +162,32 @@ class TradingAgentsGraph:
         return kwargs
 
     def _create_tool_nodes(self) -> Dict[str, ToolNode]:
-        """Create tool nodes for different data sources using abstract methods."""
+        """创建不同数据源的工具节点，使用抽象方法
+        
+        ToolNode是LangGraph提供的组件，用于执行工具函数并处理结果
+        每个分析师类型都有自己的一组工具
+        
+        Returns:
+            工具节点字典，键为分析师类型，值为对应的ToolNode
+        """
         return {
             "market": ToolNode(
                 [
-                    # Core stock data tools
+                    # 核心股票数据工具
                     get_stock_data,
-                    # Technical indicators
+                    # 技术指标工具
                     get_indicators,
                 ]
             ),
             "social": ToolNode(
                 [
-                    # News tools for social media analysis
+                    # 社交媒体分析的新闻工具
                     get_news,
                 ]
             ),
             "news": ToolNode(
                 [
-                    # News and insider information
+                    # 新闻和内幕信息工具
                     get_news,
                     get_global_news,
                     get_insider_transactions,
@@ -174,48 +195,71 @@ class TradingAgentsGraph:
             ),
             "fundamentals": ToolNode(
                 [
-                    # Fundamental analysis tools
+                    # 基本面分析工具
                     get_fundamentals,
                     get_balance_sheet,
                     get_cashflow,
                     get_income_statement,
                 ]
             ),
+            "candlestick": ToolNode(
+                [
+                    # 蜡烛图分析工具
+                    get_stock_data,
+                    get_indicators,
+                ]
+            ),
         }
 
     def propagate(self, company_name, trade_date):
-        """Run the trading agents graph for a company on a specific date."""
+        """运行交易代理图，处理指定公司在特定日期的交易
+        
+        这是核心执行方法，协调所有代理的工作流程
+        
+        Args:
+            company_name: 公司股票代码 (如 "NVDA")
+            trade_date: 交易日期 (如 "2026-01-15")
+            
+        Returns:
+            元组 (final_state, processed_signal)
+            - final_state: 图执行完成后的最终状态
+            - processed_signal: 处理后的交易决策信号
+        """
 
         self.ticker = company_name
 
-        # Initialize state
+        # 初始化状态
+        # 创建代理的初始状态，包含公司信息和交易日期
         init_agent_state = self.propagator.create_initial_state(
             company_name, trade_date
         )
         args = self.propagator.get_graph_args()
 
         if self.debug:
-            # Debug mode with tracing
+            # 调试模式，带跟踪输出
+            # 使用stream方法逐块执行，便于调试和观察中间状态
             trace = []
             for chunk in self.graph.stream(init_agent_state, **args):
                 if len(chunk["messages"]) == 0:
                     pass
                 else:
+                    # 打印最后一条消息
                     chunk["messages"][-1].pretty_print()
                     trace.append(chunk)
 
             final_state = trace[-1]
         else:
-            # Standard mode without tracing
+            # 标准模式，不带跟踪
+            # 使用invoke方法一次性执行完整个图
             final_state = self.graph.invoke(init_agent_state, **args)
 
-        # Store current state for reflection
+        # 存储当前状态用于反思
         self.curr_state = final_state
 
-        # Log state
+        # 记录状态到文件
         self._log_state(trade_date, final_state)
 
-        # Return decision and processed signal
+        # 返回决策和处理后的信号
         return final_state, self.process_signal(final_state["final_trade_decision"])
 
     def _log_state(self, trade_date, final_state):
@@ -227,6 +271,7 @@ class TradingAgentsGraph:
             "sentiment_report": final_state["sentiment_report"],
             "news_report": final_state["news_report"],
             "fundamentals_report": final_state["fundamentals_report"],
+            "candlestick_report": final_state["candlestick_report"],
             "investment_debate_state": {
                 "bull_history": final_state["investment_debate_state"]["bull_history"],
                 "bear_history": final_state["investment_debate_state"]["bear_history"],

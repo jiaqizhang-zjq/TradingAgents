@@ -38,7 +38,7 @@ class GraphSetup:
         self.conditional_logic = conditional_logic
 
     def setup_graph(
-        self, selected_analysts=["market", "social", "news", "fundamentals"]
+        self, selected_analysts=["market", "social", "news", "fundamentals", "candlestick"]
     ):
         """Set up and compile the agent workflow graph.
 
@@ -48,6 +48,7 @@ class GraphSetup:
                 - "social": Social media analyst
                 - "news": News analyst
                 - "fundamentals": Fundamentals analyst
+                - "candlestick": Candlestick analyst
         """
         if len(selected_analysts) == 0:
             raise ValueError("Trading Agents Graph Setup Error: no analysts selected!")
@@ -84,6 +85,13 @@ class GraphSetup:
             )
             delete_nodes["fundamentals"] = create_msg_delete()
             tool_nodes["fundamentals"] = self.tool_nodes["fundamentals"]
+
+        if "candlestick" in selected_analysts:
+            analyst_nodes["candlestick"] = create_candlestick_analyst(
+                self.quick_thinking_llm
+            )
+            delete_nodes["candlestick"] = create_msg_delete()
+            tool_nodes["candlestick"] = self.tool_nodes["candlestick"]
 
         # Create researcher and manager nodes
         bull_researcher_node = create_bull_researcher(

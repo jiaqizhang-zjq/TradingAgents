@@ -1,6 +1,13 @@
 from langchain_core.tools import tool
-from typing import Annotated
+from typing import Annotated, List
 from tradingagents.dataflows.interface import route_to_vendor
+
+try:
+    from tradingagents.dataflows.social_media import get_stock_mentions
+    HAS_SOCIAL_MEDIA = True
+except ImportError:
+    HAS_SOCIAL_MEDIA = False
+
 
 @tool
 def get_news(
@@ -20,6 +27,7 @@ def get_news(
     """
     return route_to_vendor("get_news", ticker, start_date, end_date)
 
+
 @tool
 def get_global_news(
     curr_date: Annotated[str, "Current date in yyyy-mm-dd format"],
@@ -38,6 +46,7 @@ def get_global_news(
     """
     return route_to_vendor("get_global_news", curr_date, look_back_days, limit)
 
+
 @tool
 def get_insider_transactions(
     ticker: Annotated[str, "ticker symbol"],
@@ -51,3 +60,30 @@ def get_insider_transactions(
         str: A report of insider transaction data
     """
     return route_to_vendor("get_insider_transactions", ticker)
+
+
+@tool
+def get_social_media_data(
+    ticker: Annotated[str, "Ticker symbol"],
+    platforms: Annotated[List[str], "List of platforms (reddit, twitter)"] = ["reddit", "twitter"],
+    limit: Annotated[int, "Number of posts per platform"] = 20,
+) -> str:
+    """
+    Retrieve social media mentions for a given ticker from Reddit and/or Twitter.
+    Provides insights into public sentiment and discussions about the company.
+    
+    Args:
+        ticker (str): Ticker symbol
+        platforms (list): List of platforms to search (default: ["reddit", "twitter"])
+        limit (int): Number of posts per platform (default: 20)
+        
+    Returns:
+        str: JSON string containing social media data
+    """
+    if not HAS_SOCIAL_MEDIA:
+        return "Social media module not available. Please install praw and tweepy."
+    
+    try:
+        return get_stock_mentions(ticker, platforms, limit)
+    except Exception as e:
+        return f"Error retrieving social media data: {str(e)}"

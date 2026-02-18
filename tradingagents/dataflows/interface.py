@@ -24,6 +24,23 @@ from .alpha_vantage import (
 )
 from .alpha_vantage_common import AlphaVantageRateLimitError
 
+# 导入长桥API模块
+try:
+    from .longbridge import (
+        get_stock as get_longbridge_stock,
+        get_indicator as get_longbridge_indicator,
+        get_fundamentals as get_longbridge_fundamentals,
+        get_balance_sheet as get_longbridge_balance_sheet,
+        get_cashflow as get_longbridge_cashflow,
+        get_income_statement as get_longbridge_income_statement,
+        get_insider_transactions as get_longbridge_insider_transactions,
+        get_news as get_longbridge_news,
+        get_global_news as get_longbridge_global_news,
+    )
+    HAS_LONGBRIDGE = True
+except ImportError:
+    HAS_LONGBRIDGE = False
+
 # Configuration and routing logic
 from .config import get_config
 
@@ -63,6 +80,7 @@ TOOLS_CATEGORIES = {
 VENDOR_LIST = [
     "yfinance",
     "alpha_vantage",
+    "longbridge",
 ]
 
 # Mapping of methods to their vendor-specific implementations
@@ -108,6 +126,18 @@ VENDOR_METHODS = {
         "yfinance": get_yfinance_insider_transactions,
     },
 }
+
+# 如果长桥API可用，添加到VENDOR_METHODS中
+if HAS_LONGBRIDGE:
+    # 添加长桥的实现
+    VENDOR_METHODS["get_stock_data"]["longbridge"] = get_longbridge_stock
+    VENDOR_METHODS["get_indicators"]["longbridge"] = get_longbridge_indicator
+    VENDOR_METHODS["get_fundamentals"]["longbridge"] = get_longbridge_fundamentals
+    VENDOR_METHODS["get_balance_sheet"]["longbridge"] = get_longbridge_balance_sheet
+    VENDOR_METHODS["get_cashflow"]["longbridge"] = get_longbridge_cashflow
+    VENDOR_METHODS["get_income_statement"]["longbridge"] = get_longbridge_income_statement
+    # 注意: 长桥不提供新闻和内幕交易数据，所以不添加这些实现
+    # 这些功能会自动回退到其他数据源
 
 def get_category_for_method(method: str) -> str:
     """Get the category that contains the specified method."""

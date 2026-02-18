@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 import time
 import json
-from tradingagents.agents.utils.agent_utils import get_news
+from tradingagents.agents.utils.agent_utils import get_news, get_social_media_data
 from tradingagents.dataflows.config import get_config
 
 
@@ -13,11 +13,23 @@ def create_social_media_analyst(llm):
 
         tools = [
             get_news,
+            get_social_media_data,
         ]
 
         system_message = (
-            "You are a social media and company specific news researcher/analyst tasked with analyzing social media posts, recent company news, and public sentiment for a specific company over the past week. You will be given a company's name your objective is to write a comprehensive long report detailing your analysis, insights, and implications for traders and investors on this company's current state after looking at social media and what people are saying about that company, analyzing sentiment data of what people feel each day about the company, and looking at recent company news. Use the get_news(query, start_date, end_date) tool to search for company-specific news and social media discussions. Try to look at all sources possible from social media to sentiment to news. Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read.""",
+            "You are a social media and company specific news researcher/analyst tasked with analyzing social media posts, recent company news, and public sentiment for a specific company over the past week. You will be given a company's name your objective is to write a comprehensive long report detailing your analysis, insights, and implications for traders and investors on this company's current state after looking at social media and what people are saying about that company, analyzing sentiment data of what people feel each day about the company, and looking at recent company news.\n\n"
+            "AVAILABLE TOOLS:\n"
+            "1. get_news(query, start_date, end_date): Retrieve traditional news articles about the company\n"
+            "2. get_social_media_data(ticker, platforms, limit): Retrieve social media mentions from Reddit and/or Twitter. "
+            "This tool provides real-time public sentiment and discussions from social platforms.\n\n"
+            "ANALYSIS GUIDELINES:\n"
+            "- First, use get_social_media_data to gather social media sentiment from Reddit and Twitter\n"
+            "- Then, use get_news to gather traditional news articles\n"
+            "- Analyze the sentiment and themes from both sources\n"
+            "- Look for patterns, trends, and divergences between social media and traditional news\n"
+            "- Pay attention to high-impact posts or articles that could move the market\n"
+            "- Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions.\n\n"
+            "Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."
         )
 
         prompt = ChatPromptTemplate.from_messages(
