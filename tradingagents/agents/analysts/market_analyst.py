@@ -17,8 +17,19 @@ def create_market_analyst(llm):
             get_indicators,
         ]
 
-        system_message = (
-            """You are a trading assistant tasked with analyzing financial markets. Your role is to select the **most relevant indicators** for a given market condition or trading strategy from the following list. The goal is to choose up to **12 indicators** that provide complementary insights without redundancy. Categories and each category's indicators are:
+        config = get_config()
+        language = config.get("output_language", "en")
+
+        if language == "zh":
+            system_message = (
+                "你是一位专业的金融市场技术分析师。基于提供的股票价格数据和技术指标，请撰写一份详细且深入的市场趋势分析报告。"
+                "你的分析应包括：1.趋势分析 2.支撑/阻力位 3.动量分析 4.波动性评估 5.成交量分析 6.图表形态。"
+                "不要简单地说明趋势混合，要提供详细且精细的分析和见解，帮助交易员做出决策。"
+                "确保在报告末尾添加一个Markdown表格，整理报告中的关键点。"
+            )
+        else:
+            system_message = (
+                """You are a trading assistant tasked with analyzing financial markets. Your role is to select the **most relevant indicators** for a given market condition or trading strategy from the following list. The goal is to choose up to **12 indicators** that provide complementary insights without redundancy. Categories and each category's indicators are:
 
 Moving Averages (Trend Indicators):
 - close_5_sma: 5 SMA: Very short-term trend indicator. Usage: Identify immediate trend changes. Tips: Very sensitive to noise; use with caution.
@@ -87,21 +98,35 @@ Support/Resistance & Chart Patterns:
 6. Chart Patterns: Look for any emerging chart patterns (triangles, flags, head & shoulders, etc.)
 
 Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions."""
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
-        )
+                + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
+            )
+
+        if language == "zh":
+            assistant_prompt = (
+                "你是一个有用的AI助手，与其他助手合作。使用提供的工具来推进问题的回答。"
+                "如果你无法完全回答，没关系；另一个拥有不同工具的助手会在你离开的地方继续。"
+                "执行你能做的来取得进展。如果你或任何其他助手有最终交易建议：**买入/持有/卖出**或可交付成果，"
+                "请在你的回复前加上'最终交易建议：**买入/持有/卖出**'，这样团队就知道要停止了。"
+                "你可以使用以下工具：{tool_names}。\n{system_message}"
+                "参考信息：当前日期是{current_date}。我们要分析的公司是{ticker}"
+            )
+        else:
+            assistant_prompt = (
+                "You are a helpful AI assistant, collaborating with other assistants."
+                " Use the provided tools to progress towards answering the question."
+                " If you are unable to fully answer, that's OK; another assistant with different tools"
+                " will help where you left off. Execute what you can to make progress."
+                " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
+                " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
+                " You have access to the following tools: {tool_names}.\n{system_message}"
+                "For your reference, the current date is {current_date}. The company we want to look at is {ticker}"
+            )
 
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    "You are a helpful AI assistant, collaborating with other assistants."
-                    " Use the provided tools to progress towards answering the question."
-                    " If you are unable to fully answer, that's OK; another assistant with different tools"
-                    " will help where you left off. Execute what you can to make progress."
-                    " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
-                    " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " You have access to the following tools: {tool_names}.\n{system_message}"
-                    "For your reference, the current date is {current_date}. The company we want to look at is {ticker}",
+                    assistant_prompt,
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]

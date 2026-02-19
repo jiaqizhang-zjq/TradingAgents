@@ -1,6 +1,7 @@
 from langchain_core.messages import AIMessage
 import time
 import json
+from tradingagents.dataflows.config import get_config
 
 
 def create_bull_researcher(llm, memory):
@@ -23,7 +24,32 @@ def create_bull_researcher(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
-        prompt = f"""You are a Bull Analyst advocating for investing in the stock. Your task is to build a strong, evidence-based case emphasizing growth potential, competitive advantages, and positive market indicators. Leverage the provided research and data to address concerns and counter bearish arguments effectively.
+        config = get_config()
+        language = config.get("output_language", "en")
+        
+        if language == "zh":
+            prompt = f"""你是一个看涨分析师，主张投资这支股票。你的任务是建立一个强有力的、基于证据的论点，强调增长潜力、竞争优势和积极的市场指标。利用提供的研究和数据来解决关切，并有效反驳看跌论点。
+
+需要关注的关键点：
+- 增长潜力：强调公司的市场机会、收入预测和可扩展性。
+- 竞争优势：强调独特产品、强大品牌或主导市场地位等因素。
+- 积极指标：使用财务状况、行业趋势和近期积极新闻作为证据。
+- 反驳看跌论点：用具体数据和合理的推理批判性地分析看跌论点，彻底解决关切，并说明为什么看涨观点更有说服力。
+- 互动性：以对话的方式呈现你的论点，直接与看跌分析师的观点互动，有效地辩论，而不仅仅是列出数据。
+
+可用资源：
+市场研究报告：{market_research_report}
+社交媒体情绪报告：{sentiment_report}
+最新国际新闻：{news_report}
+公司基本面报告：{fundamentals_report}
+蜡烛图分析报告：{candlestick_report}
+辩论对话历史：{history}
+上一个看跌论点：{current_response}
+类似情况的反思和经验教训：{past_memory_str}
+利用这些信息提供一个有说服力的看涨论点，反驳看跌的关切，并参与动态辩论，展示看涨立场的优势。你还必须处理反思，并从过去的经验教训和错误中学习。
+"""
+        else:
+            prompt = f"""You are a Bull Analyst advocating for investing in the stock. Your task is to build a strong, evidence-based case emphasizing growth potential, competitive advantages, and positive market indicators. Leverage the provided research and data to address concerns and counter bearish arguments effectively.
 
 Key points to focus on:
 - Growth Potential: Highlight the company's market opportunities, revenue projections, and scalability.

@@ -14,7 +14,18 @@ def create_candlestick_analyst(llm):
             get_indicators,
         ]
 
-        system_message = """You are a professional technical analyst specializing in candlestick patterns, price action analysis, and technical chart patterns. Your role is to conduct comprehensive technical analysis including candlestick patterns, support/resistance levels, trendlines, chart patterns, and technical indicators.
+        config = get_config()
+        language = config.get("output_language", "en")
+
+        if language == "zh":
+            system_message = (
+                "你是一位专业的蜡烛图技术分析师。基于提供的股票价格数据和蜡烛图形态，请撰写一份详细的蜡烛图分析报告。"
+                "你的分析应包括：1.蜡烛图形态识别（单根、两根、三根蜡烛形态）2.支撑阻力位识别 3.趋势确认 4.交易量配合 5.图表形态识别。"
+                "不要简单地说明趋势混合，要提供详细且精细的分析和见解，帮助交易员做出决策。"
+                "确保在报告末尾添加Markdown表格，整理报告中的关键蜡烛图形态和图表形态。"
+            )
+        else:
+            system_message = """You are a professional technical analyst specializing in candlestick patterns, price action analysis, and technical chart patterns. Your role is to conduct comprehensive technical analysis including candlestick patterns, support/resistance levels, trendlines, chart patterns, and technical indicators.
 
 ANALYSIS GUIDELINES:
 
@@ -170,18 +181,32 @@ OUTPUT REQUIREMENTS:
 
 Do NOT simply state that patterns are mixed. Provide detailed, nuanced analysis that explains why certain patterns are significant in the current market context. Focus on actionable insights that traders can use."""
 
+        if language == "zh":
+            assistant_prompt = (
+                "你是一个有用的AI助手，与其他助手合作。使用提供的工具来推进问题的回答。"
+                "如果你无法完全回答，没关系；另一个拥有不同工具的助手会在你离开的地方继续。"
+                "执行你能做的来取得进展。如果你或任何其他助手有最终交易建议：**买入/持有/卖出**或可交付成果，"
+                "请在你的回复前加上'最终交易建议：**买入/持有/卖出**'，这样团队就知道要停止了。"
+                "你可以使用以下工具：{tool_names}。\n{system_message}"
+                "参考信息：当前日期是{current_date}。我们要分析的公司是{ticker}"
+            )
+        else:
+            assistant_prompt = (
+                "You are a helpful AI assistant, collaborating with other assistants."
+                " Use the provided tools to progress towards answering the question."
+                " If you are unable to fully answer, that's OK; another assistant with different tools"
+                " will help where you left off. Execute what you can to make progress."
+                " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
+                " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
+                " You have access to the following tools: {tool_names}.\n{system_message}"
+                "For your reference, the current date is {current_date}. The company we want to analyze is {ticker}"
+            )
+
         prompt = ChatPromptTemplate.from_messages(
             [
                 (
                     "system",
-                    "You are a helpful AI assistant, collaborating with other assistants."
-                    " Use the provided tools to progress towards answering the question."
-                    " If you are unable to fully answer, that's OK; another assistant with different tools"
-                    " will help where you left off. Execute what you can to make progress."
-                    " If you or any other assistant has the FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** or deliverable,"
-                    " prefix your response with FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL** so the team knows to stop."
-                    " You have access to the following tools: {tool_names}.\n{system_message}"
-                    "For your reference, the current date is {current_date}. The company we want to analyze is {ticker}",
+                    assistant_prompt,
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]
