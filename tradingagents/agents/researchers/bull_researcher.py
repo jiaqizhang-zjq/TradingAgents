@@ -4,6 +4,37 @@ import json
 import re
 
 from tradingagents.dataflows.research_tracker import get_research_tracker
+from tradingagents.dataflows.config import get_config
+
+
+# 中英双语系统提示词
+SYSTEM_PROMPTS = {
+    "en": """You are a Bull Analyst advocating for investing in the stock. Your task is to build a strong, evidence-based case emphasizing growth potential, competitive advantages, and positive market indicators. Leverage the provided research and data to address concerns and counter bearish arguments effectively.
+
+Key points to focus on:
+- Growth Potential: Highlight the company's market opportunities, revenue projections, and scalability.
+- Competitive Advantages: Emphasize factors like unique products, strong branding, or dominant market positioning.
+- Positive Indicators: Use financial health, industry trends, and recent positive news as evidence.
+- Bear Counterpoints: Critically analyze the bear argument with specific data and sound reasoning, addressing concerns thoroughly and showing why the bull perspective holds stronger merit.
+- Engagement: Present your argument in a conversational style, engaging directly with the bear analyst's points and debating effectively rather than just listing data.
+
+IMPORTANT: At the end of your response, you MUST include a clear prediction in the format:
+PREDICTION: [BUY/SELL/HOLD] (Confidence: [0-100]%)
+""",
+
+    "zh": """你是一位看涨分析师，主张投资该股票。你的任务是基于证据建立一个强有力的案例，强调增长潜力、竞争优势和积极的市场指标。利用提供的研究和数据来解决问题并有效反驳看跌论点。
+
+重点关注的关键点：
+- 增长潜力：突出公司的市场机会、收入预测和可扩展性。
+- 竞争优势：强调独特产品、强大品牌或主导市场地位等因素。
+- 积极指标：使用财务健康状况、行业趋势和近期积极消息作为证据。
+- 反驳看跌观点：用具体数据和合理推理批判性分析看跌论点，彻底解决问题并说明为什么看涨观点具有更强的价值。
+- 参与度：以对话式风格提出你的论点，直接与看跌分析师的观点互动并进行有效辩论，而不是仅仅列出数据。
+
+重要：在你的回复末尾，你必须包含一个明确的预测，格式如下：
+PREDICTION: [BUY/SELL/HOLD] (Confidence: [0-100]%)
+"""
+}
 
 
 def create_bull_researcher(llm, memory):
@@ -22,6 +53,10 @@ def create_bull_researcher(llm, memory):
         # 获取股票和日期信息
         symbol = state.get("company_of_interest", "UNKNOWN")
         trade_date = state.get("trade_date", "")
+        
+        # 获取语言配置
+        config = get_config()
+        language = config.get("output_language", "zh")
 
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{candlestick_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
@@ -30,17 +65,24 @@ def create_bull_researcher(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
-        prompt = f"""You are a Bull Analyst advocating for investing in the stock. Your task is to build a strong, evidence-based case emphasizing growth potential, competitive advantages, and positive market indicators. Leverage the provided research and data to address concerns and counter bearish arguments effectively.
+        # 根据语言选择系统提示词
+        system_prompt = SYSTEM_PROMPTS.get(language, SYSTEM_PROMPTS["zh"])
+        
+        if language == "zh":
+            prompt = f"""{system_prompt}
 
-Key points to focus on:
-- Growth Potential: Highlight the company's market opportunities, revenue projections, and scalability.
-- Competitive Advantages: Emphasize factors like unique products, strong branding, or dominant market positioning.
-- Positive Indicators: Use financial health, industry trends, and recent positive news as evidence.
-- Bear Counterpoints: Critically analyze the bear argument with specific data and sound reasoning, addressing concerns thoroughly and showing why the bull perspective holds stronger merit.
-- Engagement: Present your argument in a conversational style, engaging directly with the bear analyst's points and debating effectively rather than just listing data.
-
-IMPORTANT: At the end of your response, you MUST include a clear prediction in the format:
-PREDICTION: [BUY/SELL/HOLD] (Confidence: [0-100]%)
+可用资源：
+市场研究报告：{market_research_report}
+社交媒体情绪报告：{sentiment_report}
+最新世界事务新闻：{news_report}
+公司基本面报告：{fundamentals_report}
+蜡烛图分析报告：{candlestick_report}
+辩论对话历史：{history}
+上次看跌论点：{current_response}
+类似情况下的反思和经验教训：{past_memory_str}
+利用这些信息提出一个令人信服的看涨论点，反驳看跌的担忧，并参与一场动态辩论，展示看涨立场的优势。你还必须解决反思问题，并从过去的经验教训中学习。"""
+        else:
+            prompt = f"""{system_prompt}
 
 Resources available:
 Market research report: {market_research_report}
