@@ -67,7 +67,7 @@ def get_news_yfinance(
         news = stock.get_news(count=20)
 
         if not news:
-            return f"No news found for {ticker}"
+            raise Exception(f"No news found for {ticker}")
 
         # Parse date range for filtering
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
@@ -94,12 +94,12 @@ def get_news_yfinance(
             filtered_count += 1
 
         if filtered_count == 0:
-            return f"No news found for {ticker} between {start_date} and {end_date}"
+            raise Exception(f"No news found for {ticker} between {start_date} and {end_date}")
 
         return f"## {ticker} News, from {start_date} to {end_date}:\n\n{news_str}"
 
     except Exception as e:
-        return f"Error fetching news for {ticker}: {str(e)}"
+        raise Exception(f"Error fetching news for {ticker}: {str(e)}")
 
 
 def get_global_news_yfinance(
@@ -155,7 +155,7 @@ def get_global_news_yfinance(
                 break
 
         if not all_news:
-            return f"No global news found for {curr_date}"
+            raise Exception(f"No global news found for {curr_date}")
 
         # Calculate date range
         curr_dt = datetime.strptime(curr_date, "%Y-%m-%d")
@@ -187,4 +187,4 @@ def get_global_news_yfinance(
         return f"## Global Market News, from {start_date} to {curr_date}:\n\n{news_str}"
 
     except Exception as e:
-        return f"Error fetching global news: {str(e)}"
+        raise Exception(f"Error fetching global news: {str(e)}")

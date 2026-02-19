@@ -1,7 +1,9 @@
 from langchain_core.messages import AIMessage
 import time
 import json
-from tradingagents.dataflows.config import get_config
+import re
+
+from tradingagents.dataflows.research_tracker import get_research_tracker
 
 
 def create_bull_researcher(llm, memory):
@@ -16,6 +18,10 @@ def create_bull_researcher(llm, memory):
         news_report = state["news_report"]
         fundamentals_report = state["fundamentals_report"]
         candlestick_report = state.get("candlestick_report", "")
+        
+        # 获取股票和日期信息
+        symbol = state.get("company_of_interest", "UNKNOWN")
+        trade_date = state.get("trade_date", "")
 
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{candlestick_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
@@ -24,32 +30,7 @@ def create_bull_researcher(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
-        config = get_config()
-        language = config.get("output_language", "en")
-        
-        if language == "zh":
-            prompt = f"""你是一个看涨分析师，主张投资这支股票。你的任务是建立一个强有力的、基于证据的论点，强调增长潜力、竞争优势和积极的市场指标。利用提供的研究和数据来解决关切，并有效反驳看跌论点。
-
-需要关注的关键点：
-- 增长潜力：强调公司的市场机会、收入预测和可扩展性。
-- 竞争优势：强调独特产品、强大品牌或主导市场地位等因素。
-- 积极指标：使用财务状况、行业趋势和近期积极新闻作为证据。
-- 反驳看跌论点：用具体数据和合理的推理批判性地分析看跌论点，彻底解决关切，并说明为什么看涨观点更有说服力。
-- 互动性：以对话的方式呈现你的论点，直接与看跌分析师的观点互动，有效地辩论，而不仅仅是列出数据。
-
-可用资源：
-市场研究报告：{market_research_report}
-社交媒体情绪报告：{sentiment_report}
-最新国际新闻：{news_report}
-公司基本面报告：{fundamentals_report}
-蜡烛图分析报告：{candlestick_report}
-辩论对话历史：{history}
-上一个看跌论点：{current_response}
-类似情况的反思和经验教训：{past_memory_str}
-利用这些信息提供一个有说服力的看涨论点，反驳看跌的关切，并参与动态辩论，展示看涨立场的优势。你还必须处理反思，并从过去的经验教训和错误中学习。
-"""
-        else:
-            prompt = f"""You are a Bull Analyst advocating for investing in the stock. Your task is to build a strong, evidence-based case emphasizing growth potential, competitive advantages, and positive market indicators. Leverage the provided research and data to address concerns and counter bearish arguments effectively.
+        prompt = f"""You are a Bull Analyst advocating for investing in the stock. Your task is to build a strong, evidence-based case emphasizing growth potential, competitive advantages, and positive market indicators. Leverage the provided research and data to address concerns and counter bearish arguments effectively.
 
 Key points to focus on:
 - Growth Potential: Highlight the company's market opportunities, revenue projections, and scalability.
@@ -57,6 +38,9 @@ Key points to focus on:
 - Positive Indicators: Use financial health, industry trends, and recent positive news as evidence.
 - Bear Counterpoints: Critically analyze the bear argument with specific data and sound reasoning, addressing concerns thoroughly and showing why the bull perspective holds stronger merit.
 - Engagement: Present your argument in a conversational style, engaging directly with the bear analyst's points and debating effectively rather than just listing data.
+
+IMPORTANT: At the end of your response, you MUST include a clear prediction in the format:
+PREDICTION: [BUY/SELL/HOLD] (Confidence: [0-100]%)
 
 Resources available:
 Market research report: {market_research_report}
@@ -71,8 +55,41 @@ Use this information to deliver a compelling bull argument, refute the bear's co
 """
 
         response = llm.invoke(prompt)
+        response_content = response.content
 
-        argument = f"Bull Analyst: {response.content}"
+        argument = f"Bull Analyst: {response_content}"
+        
+        # 解析预测结果并记录到数据库
+        try:
+            tracker = get_research_tracker()
+            
+            # 提取预测结果
+            prediction_match = re.search(r'PREDICTION:\s*(BUY|SELL|HOLD).*?Confidence:\s*(\d+)%?', response_content, re.IGNORECASE)
+            if prediction_match:
+                prediction = prediction_match.group(1).upper()
+                confidence = int(prediction_match.group(2)) / 100.0
+            else:
+                # 默认预测
+                prediction = "BUY"
+                confidence = 0.7
+            
+            # 记录到数据库
+            tracker.record_research(
+                researcher_name=f"bull_{state.get('debate_round', 0)}",
+                researcher_type="bull",
+                symbol=symbol,
+                trade_date=trade_date,
+                prediction=prediction,
+                confidence=confidence,
+                reasoning=response_content[:500],  # 前500字符作为推理
+                holding_days=5,
+                metadata={
+                    "debate_round": state.get("debate_round", 0),
+                    "full_response": response_content
+                }
+            )
+        except Exception as e:
+            print(f"⚠️ 记录Bull Research失败: {e}")
 
         new_investment_debate_state = {
             "history": history + "\n" + argument,

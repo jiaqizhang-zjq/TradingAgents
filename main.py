@@ -1,30 +1,24 @@
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Create a custom config
-config = DEFAULT_CONFIG.copy()
-config["deep_think_llm"] = "gpt-5-mini"  # Use a different model
-config["quick_think_llm"] = "gpt-5-mini"  # Use a different model
-config["max_debate_rounds"] = 1  # Increase debate rounds
+# 使用2026-02-20的日期
+trade_date = "2026-02-20"
 
-# Configure data vendors (default uses yfinance, no extra API keys needed)
-config["data_vendors"] = {
-    "core_stock_apis": "yfinance",           # Options: alpha_vantage, yfinance
-    "technical_indicators": "yfinance",      # Options: alpha_vantage, yfinance
-    "fundamental_data": "yfinance",          # Options: alpha_vantage, yfinance
-    "news_data": "yfinance",                 # Options: alpha_vantage, yfinance
-}
-
-# Initialize with custom config
-ta = TradingAgentsGraph(debug=True, config=config)
+# Initialize with default config (已配置 Opencode minimax-m2.5-free 和 longbridge)
+ta = TradingAgentsGraph(
+    debug=True, 
+    config=DEFAULT_CONFIG,
+    selected_analysts=["market", "social", "news", "fundamentals", "candlestick"]
+)
 
 # forward propagate
-_, decision = ta.propagate("NVDA", "2024-05-10")
+_, decision = ta.propagate("LMND", trade_date)
 print(decision)
 
 # Memorize mistakes and reflect

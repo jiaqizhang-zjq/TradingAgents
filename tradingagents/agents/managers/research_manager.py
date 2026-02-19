@@ -1,6 +1,8 @@
 import time
 import json
-from tradingagents.dataflows.config import get_config
+import re
+
+from tradingagents.dataflows.research_tracker import get_research_tracker
 
 
 def create_research_manager(llm, memory):
@@ -13,6 +15,10 @@ def create_research_manager(llm, memory):
         candlestick_report = state.get("candlestick_report", "")
 
         investment_debate_state = state["investment_debate_state"]
+        
+        # 获取股票和日期信息
+        symbol = state.get("company_of_interest", "UNKNOWN")
+        trade_date = state.get("trade_date", "")
 
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}\n\n{candlestick_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
@@ -21,29 +27,7 @@ def create_research_manager(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
-        config = get_config()
-        language = config.get("output_language", "en")
-        
-        if language == "zh":
-            prompt = f"""作为投资组合经理和辩论主持人，你的角色是批判性地评估这一轮辩论并做出明确的决定：与看跌分析师保持一致，与看涨分析师保持一致，或者只有在基于所提出的论点有充分理由的情况下才选择持有。
-
-简洁地总结双方的关键点，专注于最有说服力的证据或推理。你的建议——买入、卖出或持有——必须清晰且可操作。避免仅仅因为双方都有有效观点就默认选择持有；要致力于一个基于辩论中最强论点的立场。
-
-此外，为交易员制定详细的投资计划。这应该包括：
-
-你的建议：一个由最有说服力的论点支持的决定性立场。
-理由：解释为什么这些论点导致你的结论。
-战略行动：实施建议的具体步骤。
-考虑你在类似情况下的过去错误。利用这些见解来完善你的决策，确保你正在学习和改进。以对话的方式呈现你的分析，就像自然说话一样，没有特殊的格式。
-
-以下是你过去对错误的反思：
-"{past_memory_str}"
-
-以下是辩论：
-辩论历史：
-{history}"""
-        else:
-            prompt = f"""As the portfolio manager and debate facilitator, your role is to critically evaluate this round of debate and make a definitive decision: align with the bear analyst, the bull analyst, or choose Hold only if it is strongly justified based on the arguments presented.
+        prompt = f"""As the portfolio manager and debate facilitator, your role is to critically evaluate this round of debate and make a definitive decision: align with the bear analyst, the bull analyst, or choose Hold only if it is strongly justified based on the arguments presented.
 
 Summarize the key points from both sides concisely, focusing on the most compelling evidence or reasoning. Your recommendation—Buy, Sell, or Hold—must be clear and actionable. Avoid defaulting to Hold simply because both sides have valid points; commit to a stance grounded in the debate's strongest arguments.
 
@@ -54,6 +38,9 @@ Rationale: An explanation of why these arguments lead to your conclusion.
 Strategic Actions: Concrete steps for implementing the recommendation.
 Take into account your past mistakes on similar situations. Use these insights to refine your decision-making and ensure you are learning and improving. Present your analysis conversationally, as if speaking naturally, without special formatting. 
 
+IMPORTANT: At the end of your response, you MUST include a clear final decision in the format:
+FINAL DECISION: [BUY/SELL/HOLD] (Confidence: [0-100]%)
+
 Here are your past reflections on mistakes:
 "{past_memory_str}"
 
@@ -61,19 +48,59 @@ Here is the debate:
 Debate History:
 {history}"""
         response = llm.invoke(prompt)
+        response_content = response.content
 
         new_investment_debate_state = {
-            "judge_decision": response.content,
+            "judge_decision": response_content,
             "history": investment_debate_state.get("history", ""),
             "bear_history": investment_debate_state.get("bear_history", ""),
             "bull_history": investment_debate_state.get("bull_history", ""),
-            "current_response": response.content,
+            "current_response": response_content,
             "count": investment_debate_state["count"],
         }
+        
+        # 解析最终决策并记录到数据库
+        try:
+            tracker = get_research_tracker()
+            
+            # 提取最终决策
+            decision_match = re.search(r'FINAL\s*DECISION:\s*(BUY|SELL|HOLD).*?Confidence:\s*(\d+)%?', response_content, re.IGNORECASE)
+            if decision_match:
+                prediction = decision_match.group(1).upper()
+                confidence = int(decision_match.group(2)) / 100.0
+            else:
+                # 尝试从内容推断
+                if "BUY" in response_content.upper() and "SELL" not in response_content.upper():
+                    prediction = "BUY"
+                    confidence = 0.6
+                elif "SELL" in response_content.upper():
+                    prediction = "SELL"
+                    confidence = 0.6
+                else:
+                    prediction = "HOLD"
+                    confidence = 0.5
+            
+            # 记录到数据库
+            tracker.record_research(
+                researcher_name="research_manager",
+                researcher_type="manager",
+                symbol=symbol,
+                trade_date=trade_date,
+                prediction=prediction,
+                confidence=confidence,
+                reasoning=response_content[:500],
+                holding_days=5,
+                metadata={
+                    "role": "research_manager",
+                    "full_response": response_content
+                }
+            )
+        except Exception as e:
+            print(f"⚠️ 记录Research Manager决策失败: {e}")
 
         return {
             "investment_debate_state": new_investment_debate_state,
-            "investment_plan": response.content,
+            "investment_plan": response_content,
         }
 
     return research_manager_node

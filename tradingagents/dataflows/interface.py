@@ -22,171 +22,227 @@ from .alpha_vantage import (
     get_news as get_alpha_vantage_news,
     get_global_news as get_alpha_vantage_global_news,
 )
-from .alpha_vantage_common import AlphaVantageRateLimitError
 
-# 导入长桥API模块
-try:
-    from .longbridge import (
-        get_stock as get_longbridge_stock,
-        get_indicator as get_longbridge_indicator,
-        get_fundamentals as get_longbridge_fundamentals,
-        get_balance_sheet as get_longbridge_balance_sheet,
-        get_cashflow as get_longbridge_cashflow,
-        get_income_statement as get_longbridge_income_statement,
-        get_insider_transactions as get_longbridge_insider_transactions,
-        get_news as get_longbridge_news,
-        get_global_news as get_longbridge_global_news,
-    )
-    HAS_LONGBRIDGE = True
-except ImportError:
-    HAS_LONGBRIDGE = False
+# 长桥API模块（默认选项）
+from .longbridge import (
+    get_stock as get_longbridge_stock,
+    get_indicator as get_longbridge_indicator,
+    get_fundamentals as get_longbridge_fundamentals,
+    get_balance_sheet as get_longbridge_balance_sheet,
+    get_cashflow as get_longbridge_cashflow,
+    get_income_statement as get_longbridge_income_statement,
+    get_insider_transactions as get_longbridge_insider_transactions,
+    get_news as get_longbridge_news,
+    get_global_news as get_longbridge_global_news,
+    get_candlestick_patterns as get_longbridge_candlestick_patterns,
+)
+
+# 导入统一数据管理器
+from .unified_data_manager import (
+    UnifiedDataManager,
+    VendorPriority,
+    DataFetchError,
+)
 
 # Configuration and routing logic
 from .config import get_config
 
-# Tools organized by category
-TOOLS_CATEGORIES = {
-    "core_stock_apis": {
-        "description": "OHLCV stock price data",
-        "tools": [
-            "get_stock_data"
-        ]
-    },
-    "technical_indicators": {
-        "description": "Technical analysis indicators",
-        "tools": [
-            "get_indicators"
-        ]
-    },
-    "fundamental_data": {
-        "description": "Company fundamentals",
-        "tools": [
-            "get_fundamentals",
-            "get_balance_sheet",
-            "get_cashflow",
-            "get_income_statement"
-        ]
-    },
-    "news_data": {
-        "description": "News and insider data",
-        "tools": [
-            "get_news",
-            "get_global_news",
-            "get_insider_transactions",
-        ]
-    }
-}
+# 全局统一数据管理器实例
+_data_manager: UnifiedDataManager = None
 
-VENDOR_LIST = [
-    "yfinance",
-    "alpha_vantage",
-    "longbridge",
-]
+def get_data_manager() -> UnifiedDataManager:
+    """获取全局数据管理器实例"""
+    global _data_manager
+    
+    if _data_manager is None:
+        _data_manager = _init_data_manager()
+    
+    return _data_manager
 
-# Mapping of methods to their vendor-specific implementations
-VENDOR_METHODS = {
-    # core_stock_apis
-    "get_stock_data": {
-        "alpha_vantage": get_alpha_vantage_stock,
-        "yfinance": get_YFin_data_online,
-    },
-    # technical_indicators
-    "get_indicators": {
-        "alpha_vantage": get_alpha_vantage_indicator,
-        "yfinance": get_stock_stats_indicators_window,
-    },
-    # fundamental_data
-    "get_fundamentals": {
-        "alpha_vantage": get_alpha_vantage_fundamentals,
-        "yfinance": get_yfinance_fundamentals,
-    },
-    "get_balance_sheet": {
-        "alpha_vantage": get_alpha_vantage_balance_sheet,
-        "yfinance": get_yfinance_balance_sheet,
-    },
-    "get_cashflow": {
-        "alpha_vantage": get_alpha_vantage_cashflow,
-        "yfinance": get_yfinance_cashflow,
-    },
-    "get_income_statement": {
-        "alpha_vantage": get_alpha_vantage_income_statement,
-        "yfinance": get_yfinance_income_statement,
-    },
-    # news_data
-    "get_news": {
-        "alpha_vantage": get_alpha_vantage_news,
-        "yfinance": get_news_yfinance,
-    },
-    "get_global_news": {
-        "yfinance": get_global_news_yfinance,
-        "alpha_vantage": get_alpha_vantage_global_news,
-    },
-    "get_insider_transactions": {
-        "alpha_vantage": get_alpha_vantage_insider_transactions,
-        "yfinance": get_yfinance_insider_transactions,
-    },
-}
-
-# 如果长桥API可用，添加到VENDOR_METHODS中
-if HAS_LONGBRIDGE:
-    # 添加长桥的实现
-    VENDOR_METHODS["get_stock_data"]["longbridge"] = get_longbridge_stock
-    VENDOR_METHODS["get_indicators"]["longbridge"] = get_longbridge_indicator
-    VENDOR_METHODS["get_fundamentals"]["longbridge"] = get_longbridge_fundamentals
-    VENDOR_METHODS["get_balance_sheet"]["longbridge"] = get_longbridge_balance_sheet
-    VENDOR_METHODS["get_cashflow"]["longbridge"] = get_longbridge_cashflow
-    VENDOR_METHODS["get_income_statement"]["longbridge"] = get_longbridge_income_statement
-    # 注意: 长桥不提供新闻和内幕交易数据，所以不添加这些实现
-    # 这些功能会自动回退到其他数据源
-
-def get_category_for_method(method: str) -> str:
-    """Get the category that contains the specified method."""
-    for category, info in TOOLS_CATEGORIES.items():
-        if method in info["tools"]:
-            return category
-    raise ValueError(f"Method '{method}' not found in any category")
-
-def get_vendor(category: str, method: str = None) -> str:
-    """Get the configured vendor for a data category or specific tool method.
-    Tool-level configuration takes precedence over category-level.
-    """
+def _init_data_manager() -> UnifiedDataManager:
+    """初始化数据管理器"""
+    manager = UnifiedDataManager(
+        default_max_retries=3,
+        default_retry_delay_base=1.0,
+        default_retry_delay_max=10.0,
+        default_rate_limit_wait=5.0,
+        default_rate_limit_max_retries=5,
+    )
+    
     config = get_config()
-
-    # Check tool-level configuration first (if method provided)
-    if method:
-        tool_vendors = config.get("tool_vendors", {})
-        if method in tool_vendors:
-            return tool_vendors[method]
-
-    # Fall back to category-level configuration
-    return config.get("data_vendors", {}).get(category, "default")
+    
+    manager.register_vendor(
+        "longbridge",
+        priority=VendorPriority.PRIMARY,
+        max_retries=3,
+        rate_limit_wait=2.0,
+    )
+    
+    manager.register_vendor(
+        "yfinance",
+        priority=VendorPriority.SECONDARY,
+        max_retries=3,
+        rate_limit_wait=1.0,
+    )
+    
+    manager.register_vendor(
+        "alpha_vantage",
+        priority=VendorPriority.FALLBACK,
+        max_retries=2,
+        rate_limit_wait=12.0,
+    )
+    
+    get_stock_data_impls = {}
+    get_stock_data_impls["longbridge"] = get_longbridge_stock
+    get_stock_data_impls["yfinance"] = get_YFin_data_online
+    get_stock_data_impls["alpha_vantage"] = get_alpha_vantage_stock
+    
+    manager.register_method(
+        "get_stock_data",
+        get_stock_data_impls,
+        ["longbridge", "yfinance", "alpha_vantage"]
+    )
+    
+    get_indicators_impls = {}
+    get_indicators_impls["longbridge"] = get_longbridge_indicator
+    get_indicators_impls["yfinance"] = get_stock_stats_indicators_window
+    get_indicators_impls["alpha_vantage"] = get_alpha_vantage_indicator
+    
+    manager.register_method(
+        "get_indicators",
+        get_indicators_impls,
+        ["longbridge", "yfinance", "alpha_vantage"]
+    )
+    
+    get_fundamentals_impls = {}
+    get_fundamentals_impls["longbridge"] = get_longbridge_fundamentals
+    get_fundamentals_impls["yfinance"] = get_yfinance_fundamentals
+    get_fundamentals_impls["alpha_vantage"] = get_alpha_vantage_fundamentals
+    
+    manager.register_method(
+        "get_fundamentals",
+        get_fundamentals_impls,
+        ["longbridge", "yfinance", "alpha_vantage"]
+    )
+    
+    get_balance_sheet_impls = {}
+    get_balance_sheet_impls["alpha_vantage"] = get_alpha_vantage_balance_sheet
+    get_balance_sheet_impls["yfinance"] = get_yfinance_balance_sheet
+    get_balance_sheet_impls["longbridge"] = get_longbridge_balance_sheet
+    
+    manager.register_method(
+        "get_balance_sheet",
+        get_balance_sheet_impls,
+        ["alpha_vantage", "yfinance", "longbridge"]
+    )
+    
+    get_cashflow_impls = {}
+    get_cashflow_impls["alpha_vantage"] = get_alpha_vantage_cashflow
+    get_cashflow_impls["yfinance"] = get_yfinance_cashflow
+    get_cashflow_impls["longbridge"] = get_longbridge_cashflow
+    
+    manager.register_method(
+        "get_cashflow",
+        get_cashflow_impls,
+        ["alpha_vantage", "yfinance", "longbridge"]
+    )
+    
+    get_income_statement_impls = {}
+    get_income_statement_impls["alpha_vantage"] = get_alpha_vantage_income_statement
+    get_income_statement_impls["yfinance"] = get_yfinance_income_statement
+    get_income_statement_impls["longbridge"] = get_longbridge_income_statement
+    
+    manager.register_method(
+        "get_income_statement",
+        get_income_statement_impls,
+        ["alpha_vantage", "yfinance", "longbridge"]
+    )
+    
+    get_news_impls = {}
+    get_news_impls["alpha_vantage"] = get_alpha_vantage_news
+    get_news_impls["yfinance"] = get_news_yfinance
+    
+    manager.register_method(
+        "get_news",
+        get_news_impls,
+        ["alpha_vantage", "yfinance"]
+    )
+    
+    get_global_news_impls = {}
+    get_global_news_impls["alpha_vantage"] = get_alpha_vantage_global_news
+    get_global_news_impls["yfinance"] = get_global_news_yfinance
+    
+    manager.register_method(
+        "get_global_news",
+        get_global_news_impls,
+        ["alpha_vantage", "yfinance"]
+    )
+    
+    get_insider_transactions_impls = {}
+    get_insider_transactions_impls["alpha_vantage"] = get_alpha_vantage_insider_transactions
+    get_insider_transactions_impls["yfinance"] = get_yfinance_insider_transactions
+    
+    manager.register_method(
+        "get_insider_transactions",
+        get_insider_transactions_impls,
+        ["alpha_vantage", "yfinance"]
+    )
+    
+    # 蜡烛图形态工具 - 注册 yfinance 作为 fallback，虽然没有实现，但会触发 unified_data_manager 的 fallback
+    get_candlestick_patterns_impls = {}
+    get_candlestick_patterns_impls["longbridge"] = get_longbridge_candlestick_patterns
+    get_candlestick_patterns_impls["yfinance"] = get_longbridge_candlestick_patterns  # dummy, will trigger fallback
+    
+    manager.register_method(
+        "get_candlestick_patterns",
+        get_candlestick_patterns_impls,
+        ["longbridge", "yfinance"]
+    )
+    
+    return manager
 
 def route_to_vendor(method: str, *args, **kwargs):
-    """Route method calls to appropriate vendor implementation with fallback support."""
-    category = get_category_for_method(method)
-    vendor_config = get_vendor(category, method)
-    primary_vendors = [v.strip() for v in vendor_config.split(',')]
+    """路由方法调用到统一数据管理器
+    
+    这是兼容旧代码的接口，新代码应该直接使用 get_data_manager()
+    
+    Args:
+        method: 方法名称
+        *args: 位置参数
+        **kwargs: 关键字参数
+    
+    Returns:
+        获取的数据
+    """
+    from datetime import datetime, timedelta
+    
+    manager = get_data_manager()
+    
+    if method == "get_stock_data":
+        args_list = list(args)
+        if len(args_list) >= 3:
+            symbol, start_date, end_date = args_list[:3]
+            try:
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+                days_diff = (end_dt - start_dt).days
+                
+                if days_diff < 200:
+                    new_start_dt = end_dt - timedelta(days=200)
+                    new_start_date = new_start_dt.strftime("%Y-%m-%d")
+                    args_list[1] = new_start_date
+                    args = tuple(args_list)
+            except Exception:
+                pass
+    
+    return manager.fetch(method, *args, **kwargs)
 
-    if method not in VENDOR_METHODS:
-        raise ValueError(f"Method '{method}' not supported")
+def get_fetch_stats():
+    """获取数据获取统计信息"""
+    manager = get_data_manager()
+    return manager.get_stats()
 
-    # Build fallback chain: primary vendors first, then remaining available vendors
-    all_available_vendors = list(VENDOR_METHODS[method].keys())
-    fallback_vendors = primary_vendors.copy()
-    for vendor in all_available_vendors:
-        if vendor not in fallback_vendors:
-            fallback_vendors.append(vendor)
-
-    for vendor in fallback_vendors:
-        if vendor not in VENDOR_METHODS[method]:
-            continue
-
-        vendor_impl = VENDOR_METHODS[method][vendor]
-        impl_func = vendor_impl[0] if isinstance(vendor_impl, list) else vendor_impl
-
-        try:
-            return impl_func(*args, **kwargs)
-        except AlphaVantageRateLimitError:
-            continue  # Only rate limits trigger fallback
-
-    raise RuntimeError(f"No available vendor for '{method}'")
+def reset_fetch_stats():
+    """重置数据获取统计信息"""
+    manager = get_data_manager()
+    manager.reset_stats()

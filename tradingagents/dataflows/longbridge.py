@@ -10,12 +10,13 @@ import numpy as np
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 import pandas as pd
+from io import StringIO
 
 from .api_config import get_api_config
 from .data_cache import cached
 
 try:
-    from longbridge.openapi import QuoteContext, Config
+    from longbridge.openapi import QuoteContext, Config, Period, AdjustType
     HAS_LONGBRIDGE = True
 except ImportError:
     HAS_LONGBRIDGE = False
@@ -30,6 +31,8 @@ class LongbridgeAPI:
         self.config = None
         self.quote_ctx = None
         self.initialized = False
+        self._cached_indicators = None
+        self._cached_indicators_key = None
         
     def _initialize(self):
         """延迟初始化长桥连接"""
@@ -37,7 +40,7 @@ class LongbridgeAPI:
             return
             
         if not HAS_LONGBRIDGE:
-            raise ImportError("longbridge SDK 未安装")
+            raise ImportError("longbridge SDK 未安装，请运行: pip install longbridge")
             
         # 从环境变量获取配置
         app_key = os.environ.get("LONGBRIDGE_APP_KEY", "")
@@ -62,6 +65,9 @@ class LongbridgeAPI:
             
         Returns:
             CSV格式的股票数据
+            
+        Raises:
+            Exception: 如果API调用失败
         """
         self._initialize()
         
@@ -69,54 +75,45 @@ class LongbridgeAPI:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         
-        # 获取K线数据
-        # 注意: 长桥API的具体调用需要根据实际SDK调整
-        # 这里提供一个模拟实现，实际使用时需要替换为真实的API调用
+        if self.quote_ctx is None:
+            raise Exception("长桥 API 未正确初始化")
         
-        # 模拟数据 - 实际项目中替换为真实API调用
-        data = self._generate_mock_stock_data(symbol, start_dt, end_dt)
+        # 转换为长桥的代码格式（美股加上 .US）
+        lb_symbol = symbol
+        if not (lb_symbol.endswith('.US') or lb_symbol.endswith('.HK') or lb_symbol.endswith('.SH') or lb_symbol.endswith('.SZ')):
+            lb_symbol = f"{symbol}.US"
         
-        return data
-    
-    def _generate_mock_stock_data(self, symbol: str, start_dt: datetime, end_dt: datetime) -> str:
-        """生成模拟股票数据（用于演示）"""
-        dates = []
-        current = start_dt
-        while current <= end_dt:
-            dates.append(current)
-            current += timedelta(days=1)
+        # 使用历史K线API - 按日期范围获取
+        bars = self.quote_ctx.history_candlesticks_by_date(
+            symbol=lb_symbol,
+            period=Period.Day,
+            adjust_type=AdjustType.NoAdjust,
+            start=start_dt,
+            end=end_dt
+        )
         
-        # 生成模拟数据
-        data = []
-        base_price = 100.0
-        for i, date in enumerate(dates):
-            # 周末跳过
-            if date.weekday() >= 5:
-                continue
-                
-            # 生成随机价格变化
-            import random
-            change = random.uniform(-0.05, 0.05)
-            open_price = base_price * (1 + change)
-            high = open_price * 1.02
-            low = open_price * 0.98
-            close = (open_price + high + low) / 3
-            volume = random.randint(1000000, 10000000)
-            
-            data.append({
-                "timestamp": date.strftime("%Y-%m-%d"),
-                "open": round(open_price, 2),
-                "high": round(high, 2),
-                "low": round(low, 2),
-                "close": round(close, 2),
-                "volume": volume,
-                "adjusted_close": round(close, 2)
+        if not bars:
+            raise Exception(f"长桥 API 返回空数据: {lb_symbol}")
+        
+        # 转换数据
+        data_list = []
+        for bar in bars:
+            bar_dt = bar.timestamp
+            data_list.append({
+                "timestamp": bar_dt.strftime("%Y-%m-%d"),
+                "open": round(bar.open, 2),
+                "high": round(bar.high, 2),
+                "low": round(bar.low, 2),
+                "close": round(bar.close, 2),
+                "volume": bar.volume,
+                "adjusted_close": round(bar.close, 2)
             })
-            
-            base_price = close
         
-        # 转换为CSV
-        df = pd.DataFrame(data)
+        if not data_list:
+            raise Exception(f"日期范围内无数据: {start_date} 到 {end_date}")
+        
+        df = pd.DataFrame(data_list)
+        df = df.sort_values('timestamp')
         return df.to_csv(index=False)
     
     def get_indicators(self, symbol: str, indicators: List[str], start_date: str, end_date: str) -> str:
@@ -136,115 +133,482 @@ class LongbridgeAPI:
         stock_data = self.get_stock_data(symbol, start_date, end_date)
         
         # 计算技术指标
-        df = pd.read_csv(pd.compat.StringIO(stock_data))
+        df = pd.read_csv(StringIO(stock_data))
         
-        # 计算常用技术指标
-        for indicator in indicators:
-            # 移动平均线 - SMA
-            if indicator == "close_5_sma":
-                df["close_5_sma"] = df["close"].rolling(window=5).mean()
-            elif indicator == "close_10_sma":
-                df["close_10_sma"] = df["close"].rolling(window=10).mean()
-            elif indicator == "close_20_sma":
-                df["close_20_sma"] = df["close"].rolling(window=20).mean()
-            elif indicator == "close_50_sma":
-                df["close_50_sma"] = df["close"].rolling(window=50).mean()
-            elif indicator == "close_100_sma":
-                df["close_100_sma"] = df["close"].rolling(window=100).mean()
-            elif indicator == "close_200_sma":
-                df["close_200_sma"] = df["close"].rolling(window=200).mean()
-            # 移动平均线 - EMA
-            elif indicator == "close_5_ema":
-                df["close_5_ema"] = df["close"].ewm(span=5, adjust=False).mean()
-            elif indicator == "close_10_ema":
-                df["close_10_ema"] = df["close"].ewm(span=10, adjust=False).mean()
-            elif indicator == "close_20_ema":
-                df["close_20_ema"] = df["close"].ewm(span=20, adjust=False).mean()
-            elif indicator == "close_50_ema":
-                df["close_50_ema"] = df["close"].ewm(span=50, adjust=False).mean()
-            elif indicator == "close_100_ema":
-                df["close_100_ema"] = df["close"].ewm(span=100, adjust=False).mean()
-            elif indicator == "close_200_ema":
-                df["close_200_ema"] = df["close"].ewm(span=200, adjust=False).mean()
-            # MACD
-            elif indicator == "macd":
-                macd, signal, hist = self._calculate_macd(df["close"])
-                df["macd"] = macd
-                df["macds"] = signal
-                df["macdh"] = hist
-            # RSI
-            elif indicator == "rsi":
-                df["rsi"] = self._calculate_rsi(df["close"])
-            # Stochastic Oscillator
-            elif indicator == "stoch":
-                k, d = self._calculate_stochastic(df)
-                df["stoch_k"] = k
-                df["stoch_d"] = d
-            # Stochastic RSI
-            elif indicator == "stochrsi":
-                stochrsi_k, stochrsi_d = self._calculate_stochrsi(df["close"])
-                df["stochrsi_k"] = stochrsi_k
-                df["stochrsi_d"] = stochrsi_d
-            # CCI
-            elif indicator == "cci":
-                df["cci"] = self._calculate_cci(df)
-            # ROC
-            elif indicator == "roc":
-                df["roc"] = self._calculate_roc(df["close"])
-            # MFI
-            elif indicator == "mfi":
-                df["mfi"] = self._calculate_mfi(df)
-            # Bollinger Bands
-            elif indicator.startswith("boll"):
-                sma = df["close"].rolling(window=20).mean()
-                std = df["close"].rolling(window=20).std()
-                df["boll"] = sma
-                df["boll_ub"] = sma + (std * 2)
-                df["boll_lb"] = sma - (std * 2)
-                df["boll_pct_b"] = (df["close"] - df["boll_lb"]) / (df["boll_ub"] - df["boll_lb"])
-                df["boll_width"] = (df["boll_ub"] - df["boll_lb"]) / df["boll"]
-            # ATR
-            elif indicator == "atr":
-                df["atr"] = self._calculate_atr(df)
-            elif indicator == "natr":
-                atr = self._calculate_atr(df)
-                df["natr"] = atr / df["close"] * 100
-            # Volume indicators
-            elif indicator == "vwma":
-                df["vwma"] = self._calculate_vwma(df)
-            elif indicator == "volume":
-                df["volume"] = df["volume"]
-            elif indicator == "obv":
-                df["obv"] = self._calculate_obv(df)
-            elif indicator == "ad":
-                df["ad"] = self._calculate_ad(df)
-            # ADX
-            elif indicator in ["adx", "plus_di", "minus_di"]:
-                adx, plus_di, minus_di = self._calculate_adx(df)
-                df["adx"] = adx
-                df["plus_di"] = plus_di
-                df["minus_di"] = minus_di
-            # Swing highs/lows
-            elif indicator == "swing_highs":
-                df["swing_high"] = self._identify_swing_highs(df)
-            elif indicator == "swing_lows":
-                df["swing_low"] = self._identify_swing_lows(df)
-            # Fibonacci levels (simplified)
-            elif indicator in ["fib_382", "fib_500", "fib_618"]:
-                fib_levels = self._calculate_fibonacci(df)
-                df["fib_382"] = fib_levels["38.2%"]
-                df["fib_500"] = fib_levels["50%"]
-                df["fib_618"] = fib_levels["61.8%"]
-            # Pivot points
-            elif indicator in ["pivot", "r1", "r2", "s1", "s2"]:
-                pivot_levels = self._calculate_pivot_points(df)
-                df["pivot"] = pivot_levels["pivot"]
-                df["r1"] = pivot_levels["r1"]
-                df["r2"] = pivot_levels["r2"]
-                df["s1"] = pivot_levels["s1"]
-                df["s2"] = pivot_levels["s2"]
+        # 一次计算所有常用指标，避免重复计算
+        all_indicators = [
+            "close_5_sma", "close_10_sma", "close_20_sma", "close_50_sma", "close_100_sma", "close_200_sma",
+            "close_5_ema", "close_10_ema", "close_20_ema", "close_50_ema", "close_100_ema", "close_200_ema",
+            "rsi", "macd", "boll", "boll_ub", "boll_lb", "atr", "vwma", "volume", "obv", "adx", "plus_di", "minus_di"
+        ]
+        
+        # 移动平均线 - SMA
+        df["close_5_sma"] = df["close"].rolling(window=5).mean()
+        df["close_10_sma"] = df["close"].rolling(window=10).mean()
+        df["close_20_sma"] = df["close"].rolling(window=20).mean()
+        df["close_50_sma"] = df["close"].rolling(window=50).mean()
+        df["close_100_sma"] = df["close"].rolling(window=100).mean()
+        df["close_200_sma"] = df["close"].rolling(window=200).mean()
+        
+        # 移动平均线 - EMA
+        df["close_5_ema"] = df["close"].ewm(span=5, adjust=False).mean()
+        df["close_10_ema"] = df["close"].ewm(span=10, adjust=False).mean()
+        df["close_20_ema"] = df["close"].ewm(span=20, adjust=False).mean()
+        df["close_50_ema"] = df["close"].ewm(span=50, adjust=False).mean()
+        df["close_100_ema"] = df["close"].ewm(span=100, adjust=False).mean()
+        df["close_200_ema"] = df["close"].ewm(span=200, adjust=False).mean()
+        
+        # MACD
+        macd, signal, hist = self._calculate_macd(df["close"])
+        df["macd"] = macd
+        df["macds"] = signal
+        df["macdh"] = hist
+        
+        # RSI
+        df["rsi"] = self._calculate_rsi(df["close"])
+        
+        # Bollinger Bands
+        sma20 = df["close"].rolling(window=20).mean()
+        std20 = df["close"].rolling(window=20).std()
+        df["boll"] = sma20
+        df["boll_ub"] = sma20 + (std20 * 2)
+        df["boll_lb"] = sma20 - (std20 * 2)
+        
+        # ATR
+        df["atr"] = self._calculate_atr(df)
+        
+        # Volume indicators
+        df["vwma"] = self._calculate_vwma(df)
+        df["obv"] = self._calculate_obv(df)
+        
+        # ADX
+        adx, plus_di, minus_di = self._calculate_adx(df)
+        df["adx"] = adx
+        df["plus_di"] = plus_di
+        df["minus_di"] = minus_di
+        
+        # ==================== 成交量指标 ====================
+        df["volume_sma_5"] = df["volume"].rolling(window=5).mean()
+        df["volume_sma_10"] = df["volume"].rolling(window=10).mean()
+        df["volume_sma_20"] = df["volume"].rolling(window=20).mean()
+        df["volume_sma_50"] = df["volume"].rolling(window=50).mean()
+        
+        # 量比 = 当前成交量 / 过去5日平均成交量
+        df["volume_ratio_5"] = df["volume"] / df["volume_sma_5"]
+        df["volume_ratio_20"] = df["volume"] / df["volume_sma_20"]
+        
+        # 成交量变化率
+        df["volume_change_pct"] = df["volume"].pct_change() * 100
+        
+        # 成交量加速度
+        df["volume_acceleration"] = df["volume_change_pct"].diff()
+        
+        # ==================== 压力支撑指标 ====================
+        # 近期高低点（压力支撑位）
+        window = 20
+        df["resistance_20"] = df["high"].rolling(window=window).max()
+        df["support_20"] = df["low"].rolling(window=window).min()
+        df["mid_range_20"] = (df["resistance_20"] + df["support_20"]) / 2
+        
+        window = 50
+        df["resistance_50"] = df["high"].rolling(window=window).max()
+        df["support_50"] = df["low"].rolling(window=window).min()
+        
+        # 当前价格相对位置
+        df["position_in_range_20"] = (df["close"] - df["support_20"]) / (df["resistance_20"] - df["support_20"])
+        
+        # ==================== 趋势指标 ====================
+        # 趋势线斜率（通过移动平均线计算）
+        df["trend_slope_10"] = df["close"].rolling(window=10).apply(
+            lambda x: np.polyfit(range(len(x)), x, 1)[0] if len(x) == 10 else np.nan,
+            raw=True
+        )
+        df["trend_slope_20"] = df["close"].rolling(window=20).apply(
+            lambda x: np.polyfit(range(len(x)), x, 1)[0] if len(x) == 20 else np.nan,
+            raw=True
+        )
+        
+        # 线性回归预测值
+        def linear_regression_pred(x, window=20):
+            if len(x) < window:
+                return np.nan
+            recent = x.tail(window)
+            slope, intercept = np.polyfit(range(window), recent, 1)
+            return intercept + slope * window
+        
+        df["lr_pred_20"] = df["close"].rolling(window=30).apply(
+            lambda x: linear_regression_pred(x, 20),
+            raw=True
+        )
+        
+        # ==================== 动量指标 ====================
+        # ROC (Rate of Change) - 多个周期
+        df["roc_5"] = ((df["close"] - df["close"].shift(5)) / df["close"].shift(5)) * 100
+        df["roc_10"] = ((df["close"] - df["close"].shift(10)) / df["close"].shift(10)) * 100
+        df["roc_20"] = ((df["close"] - df["close"].shift(20)) / df["close"].shift(20)) * 100
+        
+        # CCI (Commodity Channel Index)
+        tp = (df["high"] + df["low"] + df["close"]) / 3
+        sma_tp = tp.rolling(window=20).mean()
+        mad = tp.rolling(window=20).apply(lambda x: np.abs(x - x.mean()).mean(), raw=True)
+        df["cci_20"] = (tp - sma_tp) / (0.015 * mad)
+        
+        # CMO (Chande Momentum Oscillator)
+        def calculate_cmo(prices, period=14):
+            deltas = prices.diff()
+            gains = deltas.where(deltas > 0, 0).rolling(window=period).sum()
+            losses = -deltas.where(deltas < 0, 0).rolling(window=period).sum()
+            return 100 * (gains - losses) / (gains + losses)
+        
+        df["cmo_14"] = calculate_cmo(df["close"], 14)
+        
+        # MFI (Money Flow Index)
+        df["mfi_14"] = self._calculate_mfi(df)
+        
+        # ==================== 波动率指标 ====================
+        # 历史波动率（滚动标准差）
+        df["returns"] = df["close"].pct_change()
+        df["volatility_20"] = df["returns"].rolling(window=20).std() * np.sqrt(252)
+        df["volatility_50"] = df["returns"].rolling(window=50).std() * np.sqrt(252)
+        
+        # 真实波幅百分比
+        df["atr_pct"] = (df["atr"] / df["close"]) * 100
+        
+        # 布林带宽度
+        df["boll_width"] = (df["boll_ub"] - df["boll_lb"]) / df["boll"]
+        
+        # ==================== 价格位置指标 ====================
+        # 相对于均线的位置
+        df["price_to_sma_20"] = (df["close"] - df["close_20_sma"]) / df["close_20_sma"] * 100
+        df["price_to_sma_50"] = (df["close"] - df["close_50_sma"]) / df["close_50_sma"] * 100
+        
+        # 相对于高低点的位置
+        df["price_to_high_20"] = (df["close"] - df["high"].rolling(window=20).max()) / df["high"].rolling(window=20).max() * 100
+        df["price_to_low_20"] = (df["close"] - df["low"].rolling(window=20).min()) / df["low"].rolling(window=20).min() * 100
+        
+        # ==================== 背离指标 ====================
+        # 价格新高但指标未新高（潜在顶背离）
+        df["price_new_high_20"] = (df["close"] == df["close"].rolling(window=20).max()).astype(int)
+        df["rsi_new_high_20"] = (df["rsi"] == df["rsi"].rolling(window=20).max()).astype(int)
+        
+        # 价格新低但指标未新低（潜在底背离）
+        df["price_new_low_20"] = (df["close"] == df["close"].rolling(window=20).min()).astype(int)
+        df["rsi_new_low_20"] = (df["rsi"] == df["rsi"].rolling(window=20).min()).astype(int)
+        
+        # ==================== 交叉信号 ====================
+        # 均线金叉死叉
+        df["sma_5_20_cross"] = np.where(
+            (df["close_5_sma"] > df["close_20_sma"]) & (df["close_5_sma"].shift(1) <= df["close_20_sma"].shift(1)),
+            1,
+            np.where(
+                (df["close_5_sma"] < df["close_20_sma"]) & (df["close_5_sma"].shift(1) >= df["close_20_sma"].shift(1)),
+                -1,
+                0
+            )
+        )
+        
+        df["sma_20_50_cross"] = np.where(
+            (df["close_20_sma"] > df["close_50_sma"]) & (df["close_20_sma"].shift(1) <= df["close_50_sma"].shift(1)),
+            1,
+            np.where(
+                (df["close_20_sma"] < df["close_50_sma"]) & (df["close_20_sma"].shift(1) >= df["close_50_sma"].shift(1)),
+                -1,
+                0
+            )
+        )
+        
+        # MACD金叉死叉
+        df["macd_cross"] = np.where(
+            (df["macd"] > df["macds"]) & (df["macd"].shift(1) <= df["macds"].shift(1)),
+            1,
+            np.where(
+                (df["macd"] < df["macds"]) & (df["macd"].shift(1) >= df["macds"].shift(1)),
+                -1,
+                0
+            )
+        )
+        
+        # RSI超买超卖信号
+        df["rsi_overbought"] = (df["rsi"] >= 70).astype(int)
+        df["rsi_oversold"] = (df["rsi"] <= 30).astype(int)
+        
+        # 布林带突破信号
+        df["boll_breakout_up"] = (df["close"] > df["boll_ub"]).astype(int)
+        df["boll_breakout_down"] = (df["close"] < df["boll_lb"]).astype(int)
         
         return df.to_csv(index=False)
+    
+    def get_candlestick_patterns(self, symbol: str, start_date: str, end_date: str) -> str:
+        """
+        识别蜡烛图形态（完整版）
+        
+        Args:
+            symbol: 股票代码
+            start_date: 开始日期
+            end_date: 结束日期
+            
+        Returns:
+            CSV格式的蜡烛图形态数据
+        """
+        stock_data = self.get_stock_data(symbol, start_date, end_date)
+        df = pd.read_csv(StringIO(stock_data))
+        
+        patterns = []
+        
+        for i in range(3, len(df)):
+            prev3 = df.iloc[i-3] if i >= 3 else None
+            prev2 = df.iloc[i-2]
+            prev1 = df.iloc[i-1]
+            curr = df.iloc[i]
+            
+            pattern_info = {
+                "timestamp": curr["timestamp"],
+                "open": curr["open"],
+                "high": curr["high"],
+                "low": curr["low"],
+                "close": curr["close"],
+                "patterns": []
+            }
+            
+            # 计算实体大小、上下影线
+            curr_body = abs(curr["close"] - curr["open"])
+            curr_range = curr["high"] - curr["low"]
+            curr_upper_shadow = curr["high"] - max(curr["open"], curr["close"])
+            curr_lower_shadow = min(curr["open"], curr["close"]) - curr["low"]
+            curr_is_bullish = curr["close"] > curr["open"]
+            curr_is_bearish = curr["close"] < curr["open"]
+            
+            prev1_body = abs(prev1["close"] - prev1["open"])
+            prev1_range = prev1["high"] - prev1["low"]
+            prev1_is_bullish = prev1["close"] > prev1["open"]
+            prev1_is_bearish = prev1["close"] < prev1["open"]
+            
+            prev2_body = abs(prev2["close"] - prev2["open"])
+            prev2_is_bullish = prev2["close"] > prev2["open"]
+            prev2_is_bearish = prev2["close"] < prev2["open"]
+            
+            # ==================== 单一蜡烛形态 ====================
+            
+            # 1. 十字星类
+            if curr_body < curr_range * 0.1:
+                if curr_upper_shadow > curr_body * 3 and curr_lower_shadow > curr_body * 3:
+                    pattern_info["patterns"].append("DOJI_LONG_LEGGED")
+                elif curr_upper_shadow > curr_lower_shadow * 2:
+                    pattern_info["patterns"].append("DOJI_GRAVESTONE")
+                elif curr_lower_shadow > curr_upper_shadow * 2:
+                    pattern_info["patterns"].append("DOJI_DRAGONFLY")
+                else:
+                    pattern_info["patterns"].append("DOJI")
+            
+            # 2. 锤头类
+            if (curr_body < curr_range * 0.35 and
+                curr_lower_shadow > curr_body * 2 and
+                curr_upper_shadow < curr_body * 0.5):
+                if curr_is_bullish:
+                    pattern_info["patterns"].append("HAMMER")
+                else:
+                    pattern_info["patterns"].append("HANGING_MAN")
+            
+            # 3. 倒锤头类
+            if (curr_body < curr_range * 0.35 and
+                curr_upper_shadow > curr_body * 2 and
+                curr_lower_shadow < curr_body * 0.5):
+                if curr_is_bearish:
+                    pattern_info["patterns"].append("INVERTED_HAMMER")
+                else:
+                    pattern_info["patterns"].append("SHOOTING_STAR")
+            
+            # 4. 纺锤线
+            if (curr_body < curr_range * 0.5 and
+                curr_body > curr_range * 0.2 and
+                curr_upper_shadow > curr_body * 0.5 and
+                curr_lower_shadow > curr_body * 0.5):
+                pattern_info["patterns"].append("SPINNING_TOP")
+            
+            # 5. 大阳线/大阴线
+            if curr_body > curr_range * 0.8:
+                if curr_is_bullish:
+                    pattern_info["patterns"].append("MARUBOZU_BULLISH")
+                else:
+                    pattern_info["patterns"].append("MARUBOZU_BEARISH")
+            
+            # 6. 长上影线/长下影线
+            if curr_upper_shadow > curr_body * 3:
+                pattern_info["patterns"].append("LONG_UPPER_SHADOW")
+            if curr_lower_shadow > curr_body * 3:
+                pattern_info["patterns"].append("LONG_LOWER_SHADOW")
+            
+            # ==================== 双蜡烛形态 ====================
+            
+            # 7. 看涨吞没
+            if (prev1_is_bearish and
+                curr_is_bullish and
+                curr["open"] < prev1["close"] and
+                curr["close"] > prev1["open"] and
+                curr_body > prev1_body * 1.3):
+                pattern_info["patterns"].append("BULLISH_ENGULFING")
+            
+            # 8. 看跌吞没
+            if (prev1_is_bullish and
+                curr_is_bearish and
+                curr["open"] > prev1["close"] and
+                curr["close"] < prev1["open"] and
+                curr_body > prev1_body * 1.3):
+                pattern_info["patterns"].append("BEARISH_ENGULFING")
+            
+            # 9. 刺透形态
+            if (prev1_is_bearish and
+                curr_is_bullish and
+                curr["open"] < prev1["low"] and
+                curr["close"] > (prev1["open"] + prev1["close"]) / 2 and
+                curr["close"] < prev1["open"]):
+                pattern_info["patterns"].append("PIERCING_PATTERN")
+            
+            # 10. 乌云盖顶
+            if (prev1_is_bullish and
+                curr_is_bearish and
+                curr["open"] > prev1["high"] and
+                curr["close"] < (prev1["open"] + prev1["close"]) / 2 and
+                curr["close"] > prev1["close"]):
+                pattern_info["patterns"].append("DARK_CLOUD_COVER")
+            
+            # 11. 母子线（孕线）
+            if (curr_body < prev1_body * 0.6 and
+                curr["high"] < prev1["high"] and
+                curr["low"] > prev1["low"]):
+                if prev1_is_bullish and curr_is_bearish:
+                    pattern_info["patterns"].append("HARAMI_BEARISH")
+                elif prev1_is_bearish and curr_is_bullish:
+                    pattern_info["patterns"].append("HARAMI_BULLISH")
+                else:
+                    pattern_info["patterns"].append("HARAMI")
+            
+            # 12. 十字孕线
+            if (curr_body < curr_range * 0.1 and
+                curr["high"] < prev1["high"] and
+                curr["low"] > prev1["low"]):
+                pattern_info["patterns"].append("HARAMI_CROSS")
+            
+            # 13. 平头底/平头顶
+            if abs(curr["low"] - prev1["low"]) < prev1_range * 0.01:
+                pattern_info["patterns"].append("FLAT_BOTTOM")
+            if abs(curr["high"] - prev1["high"]) < prev1_range * 0.01:
+                pattern_info["patterns"].append("FLAT_TOP")
+            
+            # ==================== 三蜡烛形态 ====================
+            
+            if i >= 3:
+                prev3_body = abs(prev3["close"] - prev3["open"])
+                prev3_is_bullish = prev3["close"] > prev3["open"]
+                prev3_is_bearish = prev3["close"] < prev3["open"]
+                
+                # 14. 晨星
+                if (prev3_is_bearish and
+                    prev2_body < prev3_body * 0.5 and
+                    prev1_is_bullish and
+                    prev1_body > prev2_body * 1.5):
+                    pattern_info["patterns"].append("MORNING_STAR")
+                
+                # 15. 黄昏星
+                if (prev3_is_bullish and
+                    prev2_body < prev3_body * 0.5 and
+                    prev1_is_bearish and
+                    prev1_body > prev2_body * 1.5):
+                    pattern_info["patterns"].append("EVENING_STAR")
+                
+                # 16. 三只乌鸦
+                if (prev2_is_bearish and
+                    prev1_is_bearish and
+                    curr_is_bearish and
+                    prev1["open"] < prev2["close"] and
+                    curr["open"] < prev1["close"] and
+                    prev1_body > prev2_body * 0.7 and
+                    curr_body > prev1_body * 0.7):
+                    pattern_info["patterns"].append("THREE_BLACK_CROWS")
+                
+                # 17. 三白兵
+                if (prev2_is_bullish and
+                    prev1_is_bullish and
+                    curr_is_bullish and
+                    prev1["open"] > prev2["close"] and
+                    curr["open"] > prev1["close"] and
+                    prev1_body > prev2_body * 0.7 and
+                    curr_body > prev1_body * 0.7):
+                    pattern_info["patterns"].append("THREE_WHITE_SOLDIERS")
+                
+                # 18. 上升三法
+                if (prev3_is_bullish and
+                    prev3_body > prev2_body * 2 and
+                    prev2_is_bearish and
+                    prev1_is_bearish and
+                    curr_is_bullish and
+                    curr["close"] > prev3["close"] and
+                    prev2["low"] > prev3["low"] and
+                    prev1["low"] > prev3["low"]):
+                    pattern_info["patterns"].append("THREE_RISING_METHODS")
+                
+                # 19. 下降三法
+                if (prev3_is_bearish and
+                    prev3_body > prev2_body * 2 and
+                    prev2_is_bullish and
+                    prev1_is_bullish and
+                    curr_is_bearish and
+                    curr["close"] < prev3["close"] and
+                    prev2["high"] < prev3["high"] and
+                    prev1["high"] < prev3["high"]):
+                    pattern_info["patterns"].append("THREE_FALLING_METHODS")
+                
+                # 20. 红三兵受阻
+                if (prev2_is_bullish and
+                    prev1_is_bullish and
+                    curr_is_bullish and
+                    prev1_body > prev2_body and
+                    curr_body < prev1_body * 0.7):
+                    pattern_info["patterns"].append("THREE_ADVANCING_BLOCKS")
+                
+                # 21. 白三兵受阻
+                if (prev2_is_bearish and
+                    prev1_is_bearish and
+                    curr_is_bearish and
+                    prev1_body > prev2_body and
+                    curr_body < prev1_body * 0.7):
+                    pattern_info["patterns"].append("THREE_DECLINING_BLOCKS")
+            
+            # ==================== 趋势确认形态 ====================
+            
+            # 22. 连续上涨/下跌
+            if i >= 2:
+                consecutive_up = 0
+                consecutive_down = 0
+                for j in range(max(0, i-4), i+1):
+                    if df.iloc[j]["close"] > df.iloc[j]["open"]:
+                        consecutive_up += 1
+                        consecutive_down = 0
+                    else:
+                        consecutive_down += 1
+                        consecutive_up = 0
+                
+                if consecutive_up >= 3:
+                    pattern_info["patterns"].append(f"CONSECUTIVE_UP_{consecutive_up}")
+                if consecutive_down >= 3:
+                    pattern_info["patterns"].append(f"CONSECUTIVE_DOWN_{consecutive_down}")
+            
+            # 23. 新高/新低
+            if i >= 20:
+                recent_high = df.iloc[max(0, i-20):i+1]["high"].max()
+                recent_low = df.iloc[max(0, i-20):i+1]["low"].min()
+                if curr["high"] >= recent_high * 0.999:
+                    pattern_info["patterns"].append("NEW_20_HIGH")
+                if curr["low"] <= recent_low * 1.001:
+                    pattern_info["patterns"].append("NEW_20_LOW")
+            
+            if pattern_info["patterns"]:
+                patterns.append(pattern_info)
+        
+        result_df = pd.DataFrame(patterns)
+        if len(result_df) > 0:
+            result_df["patterns"] = result_df["patterns"].apply(lambda x: "|".join(x))
+        return result_df.to_csv(index=False) if len(result_df) > 0 else "timestamp,open,high,low,close,patterns\n"
     
     def _calculate_rsi(self, prices, period=14):
         """计算RSI指标"""
@@ -435,63 +799,77 @@ class LongbridgeAPI:
             "s2": s2
         }
     
-    def get_fundamentals(self, symbol: str) -> str:
-        """
-        获取基本面数据
+    def get_fundamentals(self, symbol: str, curr_date: str = None, *args, **kwargs) -> str:
+        """获取基本面数据
         
-        Args:
-            symbol: 股票代码
-            
-        Returns:
-            JSON格式的基本面数据
+        使用长桥 API 的 static_info() 方法获取部分基本面数据
         """
-        # 模拟基本面数据
-        fundamentals = {
-            "symbol": symbol,
-            "market_cap": "100000000000",
-            "pe_ratio": 25.5,
-            "pb_ratio": 3.2,
-            "dividend_yield": 0.025,
-            "eps": 5.25,
-            "revenue_growth": 0.15,
-            "profit_margin": 0.18
-        }
-        return json.dumps(fundamentals, indent=2)
+        self._initialize()
+        
+        if self.quote_ctx is None:
+            raise Exception("长桥 API 未正确初始化")
+        
+        lb_symbol = symbol
+        if not (lb_symbol.endswith('.US') or lb_symbol.endswith('.HK') or lb_symbol.endswith('.SH') or lb_symbol.endswith('.SZ')):
+            lb_symbol = f"{symbol}.US"
+        
+        info_list = self.quote_ctx.static_info([lb_symbol])
+        
+        if not info_list:
+            raise Exception(f"长桥 API 返回空数据: {lb_symbol}")
+        
+        info = info_list[0]
+        
+        fields = [
+            ("Name (CN)", info.name_cn),
+            ("Name (EN)", info.name_en),
+            ("Symbol", info.symbol),
+            ("Exchange", info.exchange),
+            ("Currency", info.currency),
+            ("Lot Size", info.lot_size),
+            ("Total Shares", info.total_shares),
+            ("Circulating Shares", info.circulating_shares),
+            ("EPS", float(info.eps) if info.eps else None),
+            ("EPS (TTM)", float(info.eps_ttm) if info.eps_ttm else None),
+            ("BPS (Net Assets per Share)", float(info.bps) if info.bps else None),
+            ("Dividend Yield", float(info.dividend_yield) if info.dividend_yield else None),
+            ("Board", str(info.board)),
+        ]
+        
+        lines = []
+        for label, value in fields:
+            if value is not None:
+                lines.append(f"{label}: {value}")
+        
+        header = f"# Company Fundamentals for {symbol.upper()}\n"
+        header += f"# Data source: Longbridge API\n"
+        header += f"# Data retrieved on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        
+        return header + "\n".join(lines)
     
-    def get_balance_sheet(self, symbol: str) -> str:
-        """获取资产负债表"""
-        balance_sheet = {
-            "symbol": symbol,
-            "total_assets": "50000000000",
-            "total_liabilities": "20000000000",
-            "shareholder_equity": "30000000000",
-            "cash_and_equivalents": "5000000000",
-            "debt": "10000000000"
-        }
-        return json.dumps(balance_sheet, indent=2)
+    def get_balance_sheet(self, symbol: str, freq: str = "quarterly", curr_date: str = None, *args, **kwargs) -> str:
+        """获取资产负债表
+        
+        注意: 长桥 API 不提供完整的资产负债表数据
+        此方法会抛出 NotImplementedError，让系统回退到其他数据源
+        """
+        raise NotImplementedError("长桥 API 不提供完整的资产负债表数据，请使用 Yahoo Finance 或 Alpha Vantage")
     
-    def get_cashflow(self, symbol: str) -> str:
-        """获取现金流量表"""
-        cashflow = {
-            "symbol": symbol,
-            "operating_cashflow": "8000000000",
-            "investing_cashflow": "-3000000000",
-            "financing_cashflow": "-2000000000",
-            "free_cashflow": "5000000000"
-        }
-        return json.dumps(cashflow, indent=2)
+    def get_cashflow(self, symbol: str, freq: str = "quarterly", curr_date: str = None, *args, **kwargs) -> str:
+        """获取现金流量表
+        
+        注意: 长桥 API 不提供完整的现金流量表数据
+        此方法会抛出 NotImplementedError，让系统回退到其他数据源
+        """
+        raise NotImplementedError("长桥 API 不提供完整的现金流量表数据，请使用 Yahoo Finance 或 Alpha Vantage")
     
-    def get_income_statement(self, symbol: str) -> str:
-        """获取损益表"""
-        income = {
-            "symbol": symbol,
-            "revenue": "25000000000",
-            "cost_of_revenue": "15000000000",
-            "gross_profit": "10000000000",
-            "operating_income": "6000000000",
-            "net_income": "4500000000"
-        }
-        return json.dumps(income, indent=2)
+    def get_income_statement(self, symbol: str, freq: str = "quarterly", curr_date: str = None, *args, **kwargs) -> str:
+        """获取损益表
+        
+        注意: 长桥 API 不提供完整的损益表数据
+        此方法会抛出 NotImplementedError，让系统回退到其他数据源
+        """
+        raise NotImplementedError("长桥 API 不提供完整的损益表数据，请使用 Yahoo Finance 或 Alpha Vantage")
     
     def get_news(self, symbol: str, limit: int = 10) -> str:
         """获取新闻数据
@@ -540,35 +918,70 @@ def get_stock(symbol: str, start_date: str, end_date: str) -> str:
 
 
 @cached
-def get_indicator(symbol: str, indicators: List[str], start_date: str, end_date: str) -> str:
-    """获取技术指标"""
+def get_indicator(symbol: str, indicator: str, curr_date: str, look_back_days: int = 120) -> str:
+    """获取技术指标（兼容 yfinance 和 alpha_vantage 的签名）
+    
+    Args:
+        symbol: 股票代码
+        indicator: 指标名称（单个字符串，不是列表）
+        curr_date: 当前日期
+        look_back_days: 回看天数
+    """
+    from datetime import datetime
+    from dateutil.relativedelta import relativedelta
+    from .indicator_groups import get_indicator_columns
+    
     api = get_longbridge_api()
-    return api.get_indicators(symbol, indicators, start_date, end_date)
+    
+    curr_date_dt = datetime.strptime(curr_date, "%Y-%m-%d")
+    start_date_dt = curr_date_dt - relativedelta(days=look_back_days + 60)
+    
+    # 获取所有指标
+    all_indicators_csv = api.get_indicators(
+        symbol, 
+        [],  # 传入空列表，会计算所有指标
+        start_date_dt.strftime("%Y-%m-%d"), 
+        curr_date
+    )
+    
+    # 解析CSV，只保留需要的指标
+    df = pd.read_csv(StringIO(all_indicators_csv))
+    
+    # 使用统一的指标组配置来确定需要保留的列
+    keep_cols = get_indicator_columns(indicator, list(df.columns))
+    
+    # 只保留需要的列
+    result_df = df[[col for col in keep_cols if col in df.columns]]
+    
+    # 只返回最近look_back_days天的数据
+    result_df = result_df.tail(look_back_days + 10)
+    
+    return result_df.to_csv(index=False)
 
 
 @cached
-def get_fundamentals(symbol: str) -> str:
+def get_fundamentals(symbol: str, curr_date: str = None, *args, **kwargs) -> str:
     """获取基本面数据"""
     api = get_longbridge_api()
     return api.get_fundamentals(symbol)
 
 
 @cached
-def get_balance_sheet(symbol: str) -> str:
+def get_balance_sheet(symbol: str, freq: str = "quarterly", curr_date: str = None, *args, **kwargs) -> str:
     """获取资产负债表"""
     api = get_longbridge_api()
     return api.get_balance_sheet(symbol)
 
 
 @cached
-def get_cashflow(symbol: str) -> str:
+def get_cashflow(symbol: str, freq: str = "quarterly", curr_date: str = None, *args, **kwargs) -> str:
     """获取现金流量表"""
     api = get_longbridge_api()
     return api.get_cashflow(symbol)
 
 
 @cached
-def get_income_statement(symbol: str) -> str:
+def get_income_statement(symbol: str, freq: str = "quarterly", curr_date: str = None, *args, **kwargs) -> str:
     """获取损益表"""
     api = get_longbridge_api()
     return api.get_income_statement(symbol)
@@ -585,8 +998,15 @@ def get_global_news(limit: int = 10) -> str:
     api = get_longbridge_api()
     return api.get_global_news(limit)
 
-
+@cached
 def get_insider_transactions(symbol: str, limit: int = 10) -> str:
     """获取内幕交易"""
     api = get_longbridge_api()
     return api.get_insider_transactions(symbol, limit)
+
+
+@cached
+def get_candlestick_patterns(symbol: str, start_date: str, end_date: str) -> str:
+    """获取蜡烛图形态"""
+    api = get_longbridge_api()
+    return api.get_candlestick_patterns(symbol, start_date, end_date)

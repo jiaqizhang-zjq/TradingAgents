@@ -303,7 +303,7 @@ def get_fundamentals(
         info = ticker_obj.info
 
         if not info:
-            return f"No fundamentals data found for symbol '{ticker}'"
+            raise Exception(f"No fundamentals data found for symbol '{ticker}'")
 
         fields = [
             ("Name", info.get("longName")),
@@ -347,7 +347,7 @@ def get_fundamentals(
         return header + "\n".join(lines)
 
     except Exception as e:
-        return f"Error retrieving fundamentals for {ticker}: {str(e)}"
+        raise Exception(f"Error retrieving fundamentals for {ticker}: {str(e)}")
 
 
 def get_balance_sheet(
@@ -365,7 +365,7 @@ def get_balance_sheet(
             data = ticker_obj.balance_sheet
             
         if data.empty:
-            return f"No balance sheet data found for symbol '{ticker}'"
+            raise Exception(f"No balance sheet data found for symbol '{ticker}'")
             
         # Convert to CSV string for consistency with other functions
         csv_string = data.to_csv()
@@ -377,7 +377,7 @@ def get_balance_sheet(
         return header + csv_string
         
     except Exception as e:
-        return f"Error retrieving balance sheet for {ticker}: {str(e)}"
+        raise Exception(f"Error retrieving balance sheet for {ticker}: {str(e)}")
 
 
 def get_cashflow(
@@ -395,7 +395,7 @@ def get_cashflow(
             data = ticker_obj.cashflow
             
         if data.empty:
-            return f"No cash flow data found for symbol '{ticker}'"
+            raise Exception(f"No cash flow data found for symbol '{ticker}'")
             
         # Convert to CSV string for consistency with other functions
         csv_string = data.to_csv()
@@ -407,7 +407,7 @@ def get_cashflow(
         return header + csv_string
         
     except Exception as e:
-        return f"Error retrieving cash flow for {ticker}: {str(e)}"
+        raise Exception(f"Error retrieving cash flow for {ticker}: {str(e)}")
 
 
 def get_income_statement(
@@ -425,7 +425,7 @@ def get_income_statement(
             data = ticker_obj.income_stmt
             
         if data.empty:
-            return f"No income statement data found for symbol '{ticker}'"
+            raise Exception(f"No income statement data found for symbol '{ticker}'")
             
         # Convert to CSV string for consistency with other functions
         csv_string = data.to_csv()
@@ -437,7 +437,7 @@ def get_income_statement(
         return header + csv_string
         
     except Exception as e:
-        return f"Error retrieving income statement for {ticker}: {str(e)}"
+        raise Exception(f"Error retrieving income statement for {ticker}: {str(e)}")
 
 
 def get_insider_transactions(
@@ -449,7 +449,7 @@ def get_insider_transactions(
         data = ticker_obj.insider_transactions
         
         if data is None or data.empty:
-            return f"No insider transactions data found for symbol '{ticker}'"
+            raise Exception(f"No insider transactions data found for symbol '{ticker}'")
             
         # Convert to CSV string for consistency with other functions
         csv_string = data.to_csv()
@@ -461,4 +461,4 @@ def get_insider_transactions(
         return header + csv_string
         
     except Exception as e:
-        return f"Error retrieving insider transactions for {ticker}: {str(e)}"
+        raise Exception(f"Error retrieving insider transactions for {ticker}: {str(e)}")

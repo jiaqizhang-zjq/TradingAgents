@@ -1,0 +1,717 @@
+import time
+import random
+import pandas as pd
+import numpy as np
+from typing import Any, Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass, field
+from enum import Enum
+from datetime import datetime, timedelta
+
+from .data_cache import get_data_cache
+
+
+class RateLimitError(Exception):
+    """限流错误"""
+    pass
+
+
+class DataFetchError(Exception):
+    """数据获取错误"""
+    pass
+
+
+class VendorPriority(Enum):
+    """数据源优先级"""
+    PRIMARY = 1
+    SECONDARY = 2
+    FALLBACK = 3
+
+
+@dataclass
+class VendorConfig:
+    """数据源配置"""
+    name: str
+    priority: VendorPriority = VendorPriority.SECONDARY
+    max_retries: int = 3
+    retry_delay_base: float = 1.0
+    retry_delay_max: float = 10.0
+    rate_limit_wait: float = 5.0
+    rate_limit_max_retries: int = 5
+    enabled: bool = True
+
+
+@dataclass
+class FetchStats:
+    """获取统计"""
+    total_calls: int = 0
+    successful_calls: int = 0
+    failed_calls: int = 0
+    rate_limit_hits: int = 0
+    total_wait_time: float = 0.0
+
+
+@dataclass
+class VendorStats:
+    """数据源统计"""
+    name: str
+    stats: FetchStats = field(default_factory=FetchStats)
+    last_error: Optional[str] = None
+    last_success: Optional[datetime] = None
+
+
+class UnifiedDataManager:
+    """统一数据获取管理器
+    
+    特性:
+    - 多数据源优先级支持
+    - 自动降级和重试
+    - 限流检测和等待
+    - 最大访问次数限制
+    - 详细的统计信息
+    """
+    
+    def __init__(
+        self,
+        default_max_retries: int = 3,
+        default_retry_delay_base: float = 1.0,
+        default_retry_delay_max: float = 10.0,
+        default_rate_limit_wait: float = 5.0,
+        default_rate_limit_max_retries: int = 5,
+    ):
+        """
+        初始化统一数据管理器
+        
+        Args:
+            default_max_retries: 默认最大重试次数
+            default_retry_delay_base: 默认重试延迟基数（指数退避）
+            default_retry_delay_max: 默认最大重试延迟
+            default_rate_limit_wait: 默认限流等待时间
+            default_rate_limit_max_retries: 默认限流最大重试次数
+        """
+        self.default_max_retries = default_max_retries
+        self.default_retry_delay_base = default_retry_delay_base
+        self.default_retry_delay_max = default_retry_delay_max
+        self.default_rate_limit_wait = default_rate_limit_wait
+        self.default_rate_limit_max_retries = default_rate_limit_max_retries
+        
+        self.vendor_configs: Dict[str, VendorConfig] = {}
+        self.vendor_stats: Dict[str, VendorStats] = {}
+        self.global_stats: FetchStats = FetchStats()
+        
+        self.method_vendors: Dict[str, List[str]] = {}
+        self.method_implementations: Dict[str, Dict[str, Callable]] = {}
+        
+        self.cache = get_data_cache()
+        self.last_vendor_used: Optional[str] = None
+        
+    def register_vendor(
+        self,
+        name: str,
+        priority: VendorPriority = VendorPriority.SECONDARY,
+        **kwargs
+    ) -> "UnifiedDataManager":
+        """
+        注册数据源
+        
+        Args:
+            name: 数据源名称
+            priority: 优先级
+            **kwargs: 其他配置参数
+        
+        Returns:
+            self，支持链式调用
+        """
+        config = VendorConfig(
+            name=name,
+            priority=priority,
+            max_retries=kwargs.get("max_retries", self.default_max_retries),
+            retry_delay_base=kwargs.get("retry_delay_base", self.default_retry_delay_base),
+            retry_delay_max=kwargs.get("retry_delay_max", self.default_retry_delay_max),
+            rate_limit_wait=kwargs.get("rate_limit_wait", self.default_rate_limit_wait),
+            rate_limit_max_retries=kwargs.get("rate_limit_max_retries", self.default_rate_limit_max_retries),
+            enabled=kwargs.get("enabled", True),
+        )
+        self.vendor_configs[name] = config
+        self.vendor_stats[name] = VendorStats(name=name)
+        return self
+    
+    def register_method(
+        self,
+        method_name: str,
+        vendor_implementations: Dict[str, Callable],
+        vendor_priority_order: Optional[List[str]] = None
+    ) -> "UnifiedDataManager":
+        """
+        注册方法
+        
+        Args:
+            method_name: 方法名称
+            vendor_implementations: 数据源实现字典 {vendor_name: implementation}
+            vendor_priority_order: 可选的数据源优先级顺序
+        
+        Returns:
+            self，支持链式调用
+        """
+        self.method_implementations[method_name] = vendor_implementations
+        
+        if vendor_priority_order:
+            self.method_vendors[method_name] = vendor_priority_order
+        else:
+            vendors = list(vendor_implementations.keys())
+            vendors.sort(key=lambda v: self.vendor_configs.get(v, VendorConfig(name=v)).priority.value)
+            self.method_vendors[method_name] = vendors
+        
+        return self
+    
+    def _get_sorted_vendors(self, method_name: str) -> List[str]:
+        """
+        获取排序后的数据源列表
+        
+        Args:
+            method_name: 方法名称
+        
+        Returns:
+            排序后的数据源列表
+        """
+        if method_name not in self.method_vendors:
+            return []
+        
+        vendors = self.method_vendors[method_name]
+        
+        enabled_vendors = [
+            v for v in vendors
+            if self.vendor_configs.get(v, VendorConfig(name=v)).enabled
+        ]
+        
+        return enabled_vendors
+    
+    def _parse_stock_data(self, stock_data_str: str) -> Optional[pd.DataFrame]:
+        """
+        解析股票数据字符串为 DataFrame
+        
+        Args:
+            stock_data_str: CSV格式的股票数据字符串
+        
+        Returns:
+            DataFrame 或 None
+        """
+        try:
+            lines = stock_data_str.strip().split('\n')
+            if len(lines) < 2:
+                return None
+            
+            header = [col.strip() for col in lines[0].split(',')]
+            data = []
+            
+            for line in lines[1:]:
+                if line.strip():
+                    row = [col.strip() for col in line.split(',')]
+                    if len(row) == len(header):
+                        data.append(row)
+            
+            if not data:
+                return None
+            
+            df = pd.DataFrame(data, columns=header)
+            
+            numeric_cols = ['open', 'high', 'low', 'close', 'volume']
+            for col in numeric_cols:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'])
+                df = df.set_index('date').sort_index()
+            
+            return df
+        except Exception:
+            return None
+    
+    def _calculate_indicator_online(
+        self,
+        df: pd.DataFrame,
+        indicator: str,
+        curr_date: Optional[str] = None,
+        look_back_days: int = 120
+    ) -> str:
+        """
+        在线计算技术指标
+        
+        Args:
+            df: 股票数据 DataFrame
+            indicator: 指标名称
+            curr_date: 当前日期
+            look_back_days: 回看天数
+        
+        Returns:
+            格式化的指标字符串
+        """
+        if df is None or len(df) < 20:
+            return f"Insufficient data to calculate {indicator}"
+        
+        result_df = df.copy()
+        
+        if indicator.startswith('close_') and indicator.endswith('_sma'):
+            period = int(indicator.split('_')[1])
+            if len(result_df) >= period:
+                result_df[indicator] = result_df['close'].rolling(window=period).mean()
+        
+        elif indicator.startswith('close_') and indicator.endswith('_ema'):
+            period = int(indicator.split('_')[1])
+            if len(result_df) >= period:
+                result_df[indicator] = result_df['close'].ewm(span=period, adjust=False).mean()
+        
+        elif indicator == 'macd':
+            if len(result_df) >= 26:
+                ema12 = result_df['close'].ewm(span=12, adjust=False).mean()
+                ema26 = result_df['close'].ewm(span=26, adjust=False).mean()
+                result_df['macd'] = ema12 - ema26
+        
+        elif indicator == 'macds':
+            if len(result_df) >= 35:
+                ema12 = result_df['close'].ewm(span=12, adjust=False).mean()
+                ema26 = result_df['close'].ewm(span=26, adjust=False).mean()
+                macd_line = ema12 - ema26
+                result_df['macds'] = macd_line.ewm(span=9, adjust=False).mean()
+        
+        elif indicator == 'macdh':
+            if len(result_df) >= 35:
+                ema12 = result_df['close'].ewm(span=12, adjust=False).mean()
+                ema26 = result_df['close'].ewm(span=26, adjust=False).mean()
+                macd_line = ema12 - ema26
+                signal_line = macd_line.ewm(span=9, adjust=False).mean()
+                result_df['macdh'] = macd_line - signal_line
+        
+        elif indicator == 'rsi':
+            if len(result_df) >= 14:
+                delta = result_df['close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                result_df['rsi'] = 100 - (100 / (1 + rs))
+        
+        elif indicator == 'boll':
+            if len(result_df) >= 20:
+                result_df['boll'] = result_df['close'].rolling(window=20).mean()
+        
+        elif indicator == 'boll_ub':
+            if len(result_df) >= 20:
+                sma20 = result_df['close'].rolling(window=20).mean()
+                std20 = result_df['close'].rolling(window=20).std()
+                result_df['boll_ub'] = sma20 + (std20 * 2)
+        
+        elif indicator == 'boll_lb':
+            if len(result_df) >= 20:
+                sma20 = result_df['close'].rolling(window=20).mean()
+                std20 = result_df['close'].rolling(window=20).std()
+                result_df['boll_lb'] = sma20 - (std20 * 2)
+        
+        elif indicator == 'atr':
+            if len(result_df) >= 14:
+                high_low = result_df['high'] - result_df['low']
+                high_close = np.abs(result_df['high'] - result_df['close'].shift())
+                low_close = np.abs(result_df['low'] - result_df['close'].shift())
+                true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+                result_df['atr'] = true_range.rolling(window=14).mean()
+        
+        elif indicator == 'volume':
+            if 'volume' in result_df.columns:
+                pass
+        
+        elif indicator == 'obv':
+            if len(result_df) >= 2 and 'volume' in result_df.columns:
+                result_df['obv'] = (np.sign(result_df['close'].diff()) * result_df['volume']).fillna(0).cumsum()
+        
+        if indicator not in result_df.columns:
+            return f"Indicator {indicator} not supported for online calculation"
+        
+        result_series = result_df[indicator].dropna()
+        if len(result_series) == 0:
+            return f"No valid data for {indicator}"
+        
+        display_data = result_series.tail(min(look_back_days, len(result_series)))
+        
+        lines = [f"date,{indicator}"]
+        for idx, val in display_data.items():
+            if pd.notna(val):
+                date_str = idx.strftime('%Y-%m-%d') if isinstance(idx, pd.Timestamp) else str(idx)
+                lines.append(f"{date_str},{val:.4f}")
+        
+        return "\n".join(lines)
+    
+    def _exponential_backoff(
+        self,
+        attempt: int,
+        base_delay: float,
+        max_delay: float
+    ) -> float:
+        """
+        计算指数退避延迟时间
+        
+        Args:
+            attempt: 重试次数
+            base_delay: 基础延迟
+            max_delay: 最大延迟
+        
+        Returns:
+            延迟时间（秒）
+        """
+        delay = min(base_delay * (2 ** attempt), max_delay)
+        jitter = random.uniform(0, delay * 0.1)
+        return delay + jitter
+    
+    def _is_rate_limit_error(self, error: Exception) -> bool:
+        """
+        判断是否是限流错误
+        
+        Args:
+            error: 异常
+        
+        Returns:
+            是否是限流错误
+        """
+        error_str = str(error).lower()
+        
+        rate_limit_keywords = [
+            "rate limit", "ratelimit", "too many requests",
+            "429", "quota", "exceeded", "throttle"
+        ]
+        
+        for keyword in rate_limit_keywords:
+            if keyword in error_str:
+                return True
+        
+        from .alpha_vantage_common import AlphaVantageRateLimitError
+        if isinstance(error, (RateLimitError, AlphaVantageRateLimitError)):
+            return True
+        
+        return False
+    
+    def fetch(
+        self,
+        method_name: str,
+        *args,
+        **kwargs
+    ) -> Any:
+        """
+        获取数据
+        
+        Args:
+            method_name: 方法名称
+            *args: 位置参数
+            **kwargs: 关键字参数
+        
+        Returns:
+            获取的数据
+        
+        Raises:
+            DataFetchError: 所有数据源都失败时抛出
+        """
+        from datetime import datetime, timedelta
+        
+        print(f"[UnifiedDataManager] 调用方法: {method_name}")
+        print(f"[UnifiedDataManager] 参数: args={args}, kwargs={kwargs}")
+        
+        self.global_stats.total_calls += 1
+        
+        processed_args = args
+        if method_name == "get_stock_data":
+            args_list = list(args)
+            if len(args_list) >= 3:
+                try:
+                    symbol, start_date, end_date = args_list[:3]
+                    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+                    days_diff = (end_dt - start_dt).days
+                    
+                    if days_diff < 200:
+                        new_start_dt = end_dt - timedelta(days=200)
+                        new_start_date = new_start_dt.strftime("%Y-%m-%d")
+                        args_list[1] = new_start_date
+                        processed_args = tuple(args_list)
+                        print(f"[UnifiedDataManager] 调整日期范围: {start_date} -> {new_start_date}")
+                except Exception:
+                    pass
+        
+        cached_result = self.cache.get(method_name, *processed_args, **kwargs)
+        if cached_result is not None:
+            print(f"[UnifiedDataManager] 使用缓存数据")
+            self.global_stats.successful_calls += 1
+            print(f"[UnifiedDataManager] 缓存数据输出 (前500字符):\n{str(cached_result)[:500]}")
+            if len(str(cached_result)) > 500:
+                print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(cached_result))})")
+            return cached_result
+        
+        vendors = self._get_sorted_vendors(method_name)
+        print(f"[UnifiedDataManager] 可用数据源: {vendors}")
+        
+        if not vendors:
+            raise DataFetchError(f"No vendors available for method '{method_name}'")
+        
+        last_error = None
+        
+        for vendor in vendors:
+            print(f"[UnifiedDataManager] 尝试使用数据源: {vendor}")
+            config = self.vendor_configs.get(vendor, VendorConfig(name=vendor))
+            stats = self.vendor_stats.get(vendor, VendorStats(name=vendor))
+            
+            if not config.enabled:
+                print(f"[UnifiedDataManager] 数据源 {vendor} 已禁用")
+                continue
+            
+            if vendor not in self.method_implementations.get(method_name, {}):
+                print(f"[UnifiedDataManager] 数据源 {vendor} 不支持方法 {method_name}")
+                continue
+            
+            impl = self.method_implementations[method_name][vendor]
+            
+            result = self._try_vendor(
+                vendor=vendor,
+                config=config,
+                stats=stats,
+                impl=impl,
+                args=processed_args,
+                kwargs=kwargs
+            )
+            
+            if result is not None:
+                print(f"[UnifiedDataManager] ✅ 成功使用数据源: {vendor}")
+                self.global_stats.successful_calls += 1
+                self.last_vendor_used = vendor
+                self.cache.set(method_name, result, *processed_args, **kwargs)
+                print(f"[UnifiedDataManager] 数据输出 (前500字符):\n{str(result)[:500]}")
+                if len(str(result)) > 500:
+                    print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(result))})")
+                return result
+            else:
+                print(f"[UnifiedDataManager] ❌ 数据源 {vendor} 失败")
+            
+            last_error = result
+        
+        if method_name == "get_indicators":
+            print(f"[UnifiedDataManager] 尝试在线计算指标")
+            try:
+                result = self._fallback_to_online_calculation(*processed_args, **kwargs)
+                print(f"[UnifiedDataManager] ✅ 在线计算指标成功")
+                self.global_stats.successful_calls += 1
+                self.cache.set(method_name, result, *processed_args, **kwargs)
+                print(f"[UnifiedDataManager] 数据输出 (前500字符):\n{str(result)[:500]}")
+                if len(str(result)) > 500:
+                    print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(result))})")
+                return result
+            except Exception as e:
+                print(f"[UnifiedDataManager] ❌ 在线计算指标失败: {e}")
+                pass
+        
+        if method_name == "get_candlestick_patterns":
+            print(f"[UnifiedDataManager] 尝试蜡烛图形态识别")
+            try:
+                result = self._fallback_to_candlestick_patterns(*args, **kwargs)
+                print(f"[UnifiedDataManager] ✅ 蜡烛图形态识别成功")
+                self.global_stats.successful_calls += 1
+                self.cache.set(method_name, result, *args, **kwargs)
+                print(f"[UnifiedDataManager] 数据输出 (前500字符):\n{str(result)[:500]}")
+                if len(str(result)) > 500:
+                    print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(result))})")
+                return result
+            except Exception as e:
+                print(f"[UnifiedDataManager] ❌ 蜡烛图形态识别失败: {e}")
+                pass
+        
+        self.global_stats.failed_calls += 1
+        print(f"[UnifiedDataManager] ❌ 所有数据源都失败")
+        raise DataFetchError(
+            f"All vendors failed for method '{method_name}'. Last error: {last_error}"
+        )
+    
+    def _fallback_to_candlestick_patterns(self, *args, **kwargs) -> str:
+        """
+        回退到完整蜡烛图形态识别
+        
+        Args:
+            *args: 位置参数
+            **kwargs: 关键字参数
+        
+        Returns:
+            蜡烛图形态数据
+        """
+        from .complete_indicators import CompleteCandlestickPatterns
+        
+        symbol = kwargs.get('symbol') or (args[0] if args else None)
+        start_date = kwargs.get('start_date') or (args[1] if len(args) > 1 else None)
+        end_date = kwargs.get('end_date') or (args[2] if len(args) > 2 else None)
+        
+        if not symbol or not start_date or not end_date:
+            raise ValueError("Missing required parameters for candlestick patterns")
+        
+        stock_data_str = None
+        try:
+            stock_data_str = self.fetch("get_stock_data", symbol, start_date, end_date)
+        except Exception:
+            pass
+        
+        df = self._parse_stock_data(stock_data_str) if stock_data_str else None
+        
+        if df is None:
+            raise DataFetchError("Failed to get stock data for candlestick patterns")
+        
+        df.reset_index(inplace=True)
+        if 'date' in df.columns:
+            df['timestamp'] = df['date']
+        elif df.index.name == 'date':
+            df['timestamp'] = df.index.strftime('%Y-%m-%d')
+        
+        result_df = CompleteCandlestickPatterns.identify_patterns(df)
+        
+        return result_df.to_csv(index=False) if len(result_df) > 0 else "timestamp,open,high,low,close,patterns\n"
+    
+    def _fallback_to_online_calculation(self, *args, **kwargs) -> str:
+        """
+        回退到在线指标计算（使用完整指标库）
+        
+        Args:
+            *args: 位置参数
+            **kwargs: 关键字参数
+        
+        Returns:
+            在线计算的指标数据
+        """
+        from .complete_indicators import CompleteTechnicalIndicators
+        
+        symbol = kwargs.get('symbol') or (args[0] if args else None)
+        indicator = kwargs.get('indicator') or (args[1] if len(args) > 1 else None)
+        curr_date = kwargs.get('curr_date') or (args[2] if len(args) > 2 else None)
+        look_back_days = kwargs.get('look_back_days') or (args[3] if len(args) > 3 else 120)
+        
+        if not symbol or not indicator:
+            raise ValueError("Missing required parameters for online calculation")
+        
+        end_date = curr_date
+        start_date = (datetime.strptime(end_date, "%Y-%m-%d") - timedelta(days=look_back_days + 60)).strftime("%Y-%m-%d")
+        
+        stock_data_str = None
+        try:
+            stock_data_str = self.fetch("get_stock_data", symbol, start_date, end_date)
+        except Exception:
+            pass
+        
+        df = self._parse_stock_data(stock_data_str) if stock_data_str else None
+        
+        if df is None:
+            raise DataFetchError("Failed to get stock data for online calculation")
+        
+        df.reset_index(inplace=True)
+        if 'date' in df.columns:
+            df['timestamp'] = df['date']
+        elif df.index.name == 'date':
+            df['timestamp'] = df.index.strftime('%Y-%m-%d')
+        
+        df_with_indicators = CompleteTechnicalIndicators.calculate_all_indicators(df)
+        result_df = CompleteTechnicalIndicators.get_indicator_group(df_with_indicators, indicator, look_back_days)
+        
+        return result_df.to_csv(index=False)
+    
+    def _try_vendor(
+        self,
+        vendor: str,
+        config: VendorConfig,
+        stats: VendorStats,
+        impl: Callable,
+        args: tuple,
+        kwargs: dict
+    ) -> Any:
+        """
+        尝试使用某个数据源获取数据
+        
+        Args:
+            vendor: 数据源名称
+            config: 数据源配置
+            stats: 数据源统计
+            impl: 实现函数
+            args: 位置参数
+            kwargs: 关键字参数
+        
+        Returns:
+            成功返回数据，失败返回None
+        """
+        rate_limit_retries = 0
+        
+        for attempt in range(config.max_retries):
+            try:
+                stats.stats.total_calls += 1
+                
+                result = impl(*args, **kwargs)
+                
+                stats.stats.successful_calls += 1
+                stats.last_success = datetime.now()
+                
+                return result
+                
+            except Exception as e:
+                stats.stats.failed_calls += 1
+                stats.last_error = str(e)
+                
+                if self._is_rate_limit_error(e):
+                    stats.stats.rate_limit_hits += 1
+                    self.global_stats.rate_limit_hits += 1
+                    rate_limit_retries += 1
+                    
+                    if rate_limit_retries > config.rate_limit_max_retries:
+                        break
+                    
+                    wait_time = config.rate_limit_wait * rate_limit_retries
+                    stats.stats.total_wait_time += wait_time
+                    self.global_stats.total_wait_time += wait_time
+                    
+                    time.sleep(wait_time)
+                    continue
+                
+                if attempt < config.max_retries - 1:
+                    delay = self._exponential_backoff(
+                        attempt,
+                        config.retry_delay_base,
+                        config.retry_delay_max
+                    )
+                    stats.stats.total_wait_time += delay
+                    self.global_stats.total_wait_time += delay
+                    
+                    time.sleep(delay)
+                    continue
+        
+        return None
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        获取统计信息
+        
+        Returns:
+            统计信息字典
+        """
+        return {
+            "last_vendor_used": self.last_vendor_used,
+            "global": {
+                "total_calls": self.global_stats.total_calls,
+                "successful_calls": self.global_stats.successful_calls,
+                "failed_calls": self.global_stats.failed_calls,
+                "rate_limit_hits": self.global_stats.rate_limit_hits,
+                "total_wait_time": self.global_stats.total_wait_time,
+            },
+            "vendors": {
+                name: {
+                    "total_calls": v.stats.total_calls,
+                    "successful_calls": v.stats.successful_calls,
+                    "failed_calls": v.stats.failed_calls,
+                    "rate_limit_hits": v.stats.rate_limit_hits,
+                    "total_wait_time": v.stats.total_wait_time,
+                    "last_success": v.last_success.isoformat() if v.last_success else None,
+                    "last_error": v.last_error,
+                }
+                for name, v in self.vendor_stats.items()
+            }
+        }
+    
+    def reset_stats(self):
+        """重置统计信息"""
+        self.global_stats = FetchStats()
+        for vendor in self.vendor_stats:
+            self.vendor_stats[vendor] = VendorStats(name=vendor)

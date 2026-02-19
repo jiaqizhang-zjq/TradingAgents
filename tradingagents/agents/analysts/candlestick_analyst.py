@@ -1,8 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from datetime import datetime, timedelta
-from tradingagents.agents.utils.agent_utils import get_stock_data, get_indicators
+from tradingagents.agents.utils.agent_utils import get_stock_data
 from tradingagents.agents.utils.candlestick_tools import get_candlestick_patterns
-from tradingagents.dataflows.config import get_config
 
 
 def create_candlestick_analyst(llm):
@@ -26,87 +25,38 @@ def create_candlestick_analyst(llm):
         except Exception as e:
             candlestick_patterns_data = f"Error getting candlestick patterns: {str(e)}"
         
-        indicator_groups_to_get = [
-            "volume", "support", "trend", "momentum", "cross", "boll", "macd", "adx"
-        ]
-        
-        indicators_data = ""
-        for group in indicator_groups_to_get:
-            try:
-                data = get_indicators.invoke({
-                    "symbol": ticker, 
-                    "indicator": group, 
-                    "curr_date": current_date, 
-                    "look_back_days": 120
-                })
-                indicators_data += f"\n=== {group.upper()} INDICATOR GROUP ===\n{data}\n"
-            except Exception as e:
-                indicators_data += f"\n=== {group.upper()} INDICATOR GROUP ===\nError: {str(e)}\n"
-        
-        system_message = """You are a professional technical analyst specializing in candlestick patterns, price action analysis, and technical chart patterns. Based on the provided stock price data and technical indicators, conduct comprehensive technical analysis including candlestick patterns, support/resistance levels, trendlines, chart patterns, and technical indicators.
-
-AVAILABLE INDICATOR GROUPS (Comprehensive Data Provided):
-- VOLUME: Volume moving averages (5/10/20/50), volume ratios (5/20), volume change %, volume acceleration, VWMA, OBV
-- SUPPORT: Support levels (20/50), resistance levels (20/50), mid-range, position in range
-- TREND: Trend slopes (10/20), linear regression prediction, price relative to SMA (20/50)
-- MOMENTUM: ROC (5/10/20), CCI (20), CMO (14), MFI (14)
-- CROSS: SMA crossovers (5/20, 20/50), MACD crossovers, RSI overbought/oversold, Bollinger breakouts
-- BOLL: Bollinger Bands (middle, upper, lower, width)
-- MACD: MACD line, signal line, histogram
-- ADX: ADX, +DI, -DI
+        system_message = """You are a professional candlestick analyst specializing in Eastern candlestick pattern analysis only. Your focus is solely on traditional Japanese candlestick patterns and price action, NOT on Western technical indicators.
 
 ANALYSIS FRAMEWORK:
 
-1. Trend Analysis:
-   - Determine primary, secondary, and short-term trends using TREND indicators
-   - Use trend_slope and moving averages to confirm trend direction
-   - Identify key moving average levels and price relative positions
+1. Candlestick Pattern Analysis:
+   - Scan for all identified candlestick patterns (provided in candlestick_patterns_data)
+   - Assess pattern reliability in the current market context
+   - Look for pattern clusters and confluence
+   - Analyze the position of patterns in the overall price trend
 
-2. Support/Resistance Identification:
-   - Use SUPPORT group for pre-calculated support/resistance levels (20/50)
-   - Mark swing highs and lows
-   - Note position_in_range to understand where price is in the recent range
-   - Look for confluence zones with moving averages
+2. Price Action Analysis:
+   - Analyze the relationship between open, high, low, and close prices
+   - Identify key price levels based on recent price action
+   - Look for rejection levels and acceptance zones
+   - Assess the strength of price movements based on candle body size and wicks
 
-3. Chart Pattern Recognition:
-   - Identify any chart patterns forming
-   - Measure pattern targets
-   - Assess pattern validity and completion
-
-4. Candlestick Pattern Analysis:
-   - Scan for candlestick patterns (provided in candlestick_patterns_data)
-   - Assess pattern reliability in context
-   - Look for pattern clusters
-
-5. Volume Confirmation:
-   - Use VOLUME group for comprehensive volume analysis
-   - Check volume_ratio for relative volume comparison
-   - Look for volume spikes with volume_change_pct
-   - Confirm breakouts with volume and VWMA/OBV
-
-6. Indicator Confluence:
-   - Use CROSS group for pre-calculated crossover signals
-   - Use MOMENTUM group for momentum confirmation
-   - Look for divergences between price and indicators
-   - Assess overall momentum and trend strength with ADX
-   - Use Bollinger Bands for volatility and breakout confirmation
+3. Trend Context:
+   - Determine the overall trend based solely on price action (higher highs/higher lows for uptrend, lower highs/lower lows for downtrend)
+   - Identify where the current price is in the trend cycle
+   - Look for potential trend reversals or continuations based on candle patterns
 
 OUTPUT REQUIREMENTS:
 
-- Provide comprehensive analysis covering all the above areas
-- Include timeframe context (what period are you analyzing?)
-- Detail all identified chart patterns and candlestick patterns
-- Explain support/resistance levels and trendlines (use pre-calculated SUPPORT indicators)
-- Highlight confluence across multiple indicators/patterns
-- Use the pre-calculated CROSS signals to identify entry/exit points
-- Provide clear trading implications (bullish, bearish, or neutral)
-- Include specific price targets based on patterns
-- Include risk assessment with stop-loss suggestions (use ATR from VOLUME group)
-- Make sure to append two Markdown tables at the end:
-  1. One summarizing key chart patterns, their implications, and confidence levels
-  2. One summarizing key candlestick patterns, their implications, and confidence levels
+- Focus EXCLUSIVELY on candlestick patterns and price action
+- DO NOT use or reference any Western technical indicators (MA, RSI, MACD, Bollinger Bands, etc.)
+- Detail all identified candlestick patterns with their implications
+- Explain the significance of patterns in the current price context
+- Highlight pattern clusters and confluence zones
+- Provide clear trading implications (bullish, bearish, or neutral) based solely on candle patterns
+- Include a Markdown table at the end summarizing key candlestick patterns, their implications, and confidence levels
 
-Do NOT simply state that patterns are mixed. Provide detailed, nuanced analysis that explains why certain patterns are significant in the current market context. Focus on actionable insights that traders can use. ALL BASIC INDICATORS ARE ALREADY CALCULATED - focus on ANALYSIS, not calculation!"""
+Do NOT simply state that patterns are mixed. Provide detailed, nuanced analysis that explains why certain patterns are significant in the current market context. Focus only on candlestick patterns and price action!"""
 
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -118,8 +68,7 @@ Do NOT simply state that patterns are mixed. Provide detailed, nuanced analysis 
                     "{system_message}"
                     "\nFor your reference, the current date is {current_date}. The company we want to analyze is {ticker}."
                     "\n\nStock Data:\n{stock_data}"
-                    "\n\nCandlestick Patterns (identified patterns like BULLISH_ENGULFING, HAMMER, etc.):\n{candlestick_patterns_data}"
-                    "\n\nTechnical Indicators:\n{indicators_data}",
+                    "\n\nCandlestick Patterns (identified patterns like BULLISH_ENGULFING, HAMMER, etc.):\n{candlestick_patterns_data}",
                 ),
                 MessagesPlaceholder(variable_name="messages"),
             ]
@@ -130,7 +79,6 @@ Do NOT simply state that patterns are mixed. Provide detailed, nuanced analysis 
         prompt = prompt.partial(ticker=ticker)
         prompt = prompt.partial(stock_data=stock_data)
         prompt = prompt.partial(candlestick_patterns_data=candlestick_patterns_data)
-        prompt = prompt.partial(indicators_data=indicators_data)
 
         chain = prompt | llm
 
