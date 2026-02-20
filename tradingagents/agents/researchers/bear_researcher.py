@@ -146,7 +146,7 @@ Use this information to deliver a compelling bear argument, refute the bull's cl
                 trade_date=trade_date,
                 prediction=prediction,
                 confidence=confidence,
-                reasoning=response_content[:500],  # 前500字符作为推理
+                reasoning=response_content,  # 完整推理内容
                 holding_days=5,
                 metadata={
                     "debate_round": state.get("debate_round", 0),

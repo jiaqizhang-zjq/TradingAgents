@@ -436,7 +436,7 @@ class TradingAgentsGraph:
                     trade_date=trade_date,
                     prediction=bull_prediction,
                     confidence=0.8,
-                    reasoning=bull_history[:500] if bull_history else ""
+                    reasoning=bull_history if bull_history else ""
                 )
             
             # Record bear researcher - bear_history is a string
@@ -450,7 +450,7 @@ class TradingAgentsGraph:
                     trade_date=trade_date,
                     prediction=bear_prediction,
                     confidence=0.8,
-                    reasoning=bear_history[:500] if bear_history else ""
+                    reasoning=bear_history if bear_history else ""
                 )
             
             # Record research manager
@@ -464,7 +464,7 @@ class TradingAgentsGraph:
                     trade_date=trade_date,
                     prediction=manager_prediction,
                     confidence=0.85,
-                    reasoning=judge_decision[:500] if judge_decision else ""
+                    reasoning=judge_decision if judge_decision else ""
                 )
             
             # Record risk debate participants
@@ -481,7 +481,7 @@ class TradingAgentsGraph:
                     trade_date=trade_date,
                     prediction=aggressive_prediction,
                     confidence=0.7,
-                    reasoning=aggressive_history[:500] if aggressive_history else ""
+                    reasoning=aggressive_history if aggressive_history else ""
                 )
             
             # Conservative risk analyst
@@ -495,7 +495,7 @@ class TradingAgentsGraph:
                     trade_date=trade_date,
                     prediction=conservative_prediction,
                     confidence=0.7,
-                    reasoning=conservative_history[:500] if conservative_history else ""
+                    reasoning=conservative_history if conservative_history else ""
                 )
             
             # Neutral risk analyst
@@ -509,7 +509,7 @@ class TradingAgentsGraph:
                     trade_date=trade_date,
                     prediction=neutral_prediction,
                     confidence=0.75,
-                    reasoning=neutral_history[:500] if neutral_history else ""
+                    reasoning=neutral_history if neutral_history else ""
                 )
             
             # Record final trader decision
@@ -522,7 +522,7 @@ class TradingAgentsGraph:
                 trade_date=trade_date,
                 prediction=trader_prediction,
                 confidence=0.9,
-                reasoning=final_decision[:500]
+                reasoning=final_decision
             )
             
             print(f"✅ 研究员预测已记录到胜率追踪器")

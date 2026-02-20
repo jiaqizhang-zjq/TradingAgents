@@ -145,7 +145,7 @@ Debate History:
                 trade_date=trade_date,
                 prediction=prediction,
                 confidence=confidence,
-                reasoning=response_content[:500],
+                reasoning=response_content,
                 holding_days=5,
                 metadata={
                     "role": "research_manager",
