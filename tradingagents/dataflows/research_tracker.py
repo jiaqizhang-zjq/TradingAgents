@@ -651,6 +651,127 @@ class ResearchTracker:
         except Exception as e:
             print(f"❌ 批量验证失败: {e}")
             return 0
+    
+    def get_researcher_win_rate(
+        self,
+        researcher_name: str,
+        symbol: str = None,
+        default_win_rate: float = 0.5
+    ) -> Dict:
+        """
+        获取研究员的胜率统计
+        
+        优先返回特定股票的胜率，如果没有则返回该研究员的平均胜率，
+        如果仍然没有则返回默认胜率（行业均值）
+        
+        Args:
+            researcher_name: 研究员名称
+            symbol: 股票代码（可选）
+            default_win_rate: 默认胜率（行业均值，默认0.5）
+            
+        Returns:
+            {
+                'win_rate': 胜率,
+                'total_predictions': 总预测数,
+                'correct_predictions': 正确预测数,
+                'source': 'symbol_specific'/'researcher_average'/'default',
+                'symbol': 股票代码（如果是特定股票）
+            }
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # 1. 首先尝试获取特定股票的胜率
+                if symbol:
+                    cursor.execute('''
+                        SELECT 
+                            COUNT(*) as total,
+                            SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END) as correct
+                        FROM research_records
+                        WHERE researcher_name = ? 
+                        AND symbol = ?
+                        AND outcome != 'pending'
+                    ''', (researcher_name, symbol))
+                    
+                    row = cursor.fetchone()
+                    total = row['total'] or 0
+                    correct = row['correct'] or 0
+                    
+                    if total >= 3:  # 至少有3次预测才认为数据可靠
+                        return {
+                            'win_rate': correct / total if total > 0 else default_win_rate,
+                            'total_predictions': total,
+                            'correct_predictions': correct,
+                            'source': 'symbol_specific',
+                            'symbol': symbol
+                        }
+                
+                # 2. 如果没有特定股票数据或数据不足，获取该研究员的平均胜率
+                cursor.execute('''
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END) as correct
+                    FROM research_records
+                    WHERE researcher_name = ?
+                    AND outcome != 'pending'
+                ''', (researcher_name,))
+                
+                row = cursor.fetchone()
+                total = row['total'] or 0
+                correct = row['correct'] or 0
+                
+                if total >= 5:  # 至少有5次预测才认为数据可靠
+                    return {
+                        'win_rate': correct / total if total > 0 else default_win_rate,
+                        'total_predictions': total,
+                        'correct_predictions': correct,
+                        'source': 'researcher_average',
+                        'symbol': symbol
+                    }
+                
+                # 3. 如果该研究员没有足够数据，获取同类型研究员的平均胜率
+                researcher_type = researcher_name.split('_')[0] if '_' in researcher_name else researcher_name
+                cursor.execute('''
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END) as correct
+                    FROM research_records
+                    WHERE researcher_type = ?
+                    AND outcome != 'pending'
+                ''', (researcher_type,))
+                
+                row = cursor.fetchone()
+                total = row['total'] or 0
+                correct = row['correct'] or 0
+                
+                if total >= 10:  # 同类型至少有10次预测
+                    return {
+                        'win_rate': correct / total if total > 0 else default_win_rate,
+                        'total_predictions': total,
+                        'correct_predictions': correct,
+                        'source': 'type_average',
+                        'symbol': symbol
+                    }
+                
+                # 4. 返回默认胜率（行业均值）
+                return {
+                    'win_rate': default_win_rate,
+                    'total_predictions': 0,
+                    'correct_predictions': 0,
+                    'source': 'default',
+                    'symbol': symbol
+                }
+                
+        except Exception as e:
+            print(f"❌ 获取胜率失败: {e}")
+            return {
+                'win_rate': default_win_rate,
+                'total_predictions': 0,
+                'correct_predictions': 0,
+                'source': 'default',
+                'symbol': symbol
+            }
 
 
 # 全局追踪器实例

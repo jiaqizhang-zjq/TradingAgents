@@ -43,11 +43,39 @@ def create_bull_researcher(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
+        # 获取历史胜率
+        tracker = get_research_tracker()
+        win_rate_info = tracker.get_researcher_win_rate("bull_researcher", symbol, default_win_rate=0.52)
+        
+        # 构建胜率信息字符串
+        if language == "zh":
+            if win_rate_info['source'] == 'symbol_specific':
+                win_rate_str = f"你在该股票上的历史胜率：{win_rate_info['win_rate']:.1%}（基于{win_rate_info['total_predictions']}次预测）"
+            elif win_rate_info['source'] == 'researcher_average':
+                win_rate_str = f"你的平均胜率：{win_rate_info['win_rate']:.1%}（基于{win_rate_info['total_predictions']}次预测）"
+            elif win_rate_info['source'] == 'type_average':
+                win_rate_str = f"看涨分析师类型平均胜率：{win_rate_info['win_rate']:.1%}（行业参考）"
+            else:
+                win_rate_str = f"使用行业默认胜率：{win_rate_info['win_rate']:.1%}（看涨分析师行业均值）"
+        else:
+            if win_rate_info['source'] == 'symbol_specific':
+                win_rate_str = f"Your win rate on this stock: {win_rate_info['win_rate']:.1%} (based on {win_rate_info['total_predictions']} predictions)"
+            elif win_rate_info['source'] == 'researcher_average':
+                win_rate_str = f"Your average win rate: {win_rate_info['win_rate']:.1%} (based on {win_rate_info['total_predictions']} predictions)"
+            elif win_rate_info['source'] == 'type_average':
+                win_rate_str = f"Bull analyst type average win rate: {win_rate_info['win_rate']:.1%} (industry reference)"
+            else:
+                win_rate_str = f"Using industry default win rate: {win_rate_info['win_rate']:.1%} (bull analyst industry average)"
+        
         # 根据语言选择系统提示词
         system_prompt = SYSTEM_PROMPTS.get(language, SYSTEM_PROMPTS["zh"])
         
         if language == "zh":
             prompt = f"""{system_prompt}
+
+【历史胜率参考】
+{win_rate_str}
+请结合你的历史表现来调整本次分析的置信度。如果你的历史胜率高于行业均值，可以适度提高置信度；如果低于均值，需要更加谨慎。
 
 可用资源：
 市场研究报告：{market_research_report}
@@ -61,6 +89,10 @@ def create_bull_researcher(llm, memory):
 利用这些信息提出一个令人信服的看涨论点，反驳看跌的担忧，并参与一场动态辩论，展示看涨立场的优势。你还必须解决反思问题，并从过去的经验教训中学习。"""
         else:
             prompt = f"""{system_prompt}
+
+[HISTORICAL WIN RATE REFERENCE]
+{win_rate_str}
+Please adjust your confidence level based on your historical performance. If your win rate is above industry average, you can moderately increase confidence; if below, be more cautious.
 
 Resources available:
 Market research report: {market_research_report}
