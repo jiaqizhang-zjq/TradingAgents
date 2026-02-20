@@ -21,6 +21,7 @@ def create_social_media_analyst(llm):
 
         if language == "zh":
             system_message = (
+                "【重要：你的回复必须使用中文，所有内容都应该是中文】\n\n"
                 "你是一位社交媒体和公司特定新闻研究员/分析师，负责分析过去一周特定公司的社交媒体帖子、最新公司新闻和公众情绪。"
                 "你将获得一家公司的名称，你的目标是撰写一份全面的长篇报告，详细说明你的分析、见解以及对交易员和投资者关于这家公司当前状态的影响，"
                 "在查看社交媒体和人们对该公司的评价后，分析人们每天对公司的情绪数据，并查看最新的公司新闻。\n\n"
@@ -91,7 +92,18 @@ def create_social_media_analyst(llm):
         prompt = prompt.partial(ticker=ticker)
 
         chain = prompt | llm.bind_tools(tools)
-
+        
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Social Media Analyst Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"System Message: {system_message[:500]}..." if len(system_message) > 500 else f"System Message: {system_message}")
+            print(f"Assistant Prompt: {assistant_prompt[:500]}..." if len(assistant_prompt) > 500 else f"Assistant Prompt: {assistant_prompt}")
+            print("=" * 80)
+        
         result = chain.invoke(state["messages"])
 
         report = ""

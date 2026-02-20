@@ -35,4 +35,11 @@ DEFAULT_CONFIG = {
         # Example: "get_stock_data": "alpha_vantage",  # Override category default
         # Example: "get_stock_data": "longbridge",      # 使用长桥API
     },
+    # Debug settings
+    "debug": {
+        "enabled": True,  # 调试模式开关
+        "verbose": True,  # 详细日志
+        "show_prompts": True,  # 显示完整prompt
+        "log_level": "INFO",  # 日志级别: DEBUG, INFO, WARNING, ERROR
+    },
 }

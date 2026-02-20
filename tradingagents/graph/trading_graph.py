@@ -246,36 +246,41 @@ class TradingAgentsGraph:
             last_risk_state = None
             
             for chunk in self.graph.stream(init_agent_state, **args):
-                if len(chunk["messages"]) == 0:
-                    pass
-                else:
-                    # 打印最后一条消息
-                    chunk["messages"][-1].pretty_print()
-                    trace.append(chunk)
+                # 打印所有节点的消息
+                for node_name, node_data in chunk.items():
+                    if node_name == "messages" and len(node_data) > 0:
+                        print("\n" + "="*80)
+                        print(f"📝 Messages Output:")
+                        print("="*80)
+                        node_data[-1].pretty_print()
+                    elif node_name == "investment_debate_state":
+                        print("\n" + "="*80)
+                        print(f"📊 Investment Debate State:")
+                        print("="*80)
+                        print(f"Count: {node_data.get('count', 0)}")
+                        print(f"Latest Speaker: {node_data.get('latest_speaker', 'N/A')}")
+                        print(f"\n--- Bull History ---")
+                        print(node_data.get('bull_history', '')[:2000] if node_data.get('bull_history') else "N/A")
+                        print(f"\n--- Bear History ---")
+                        print(node_data.get('bear_history', '')[:2000] if node_data.get('bear_history') else "N/A")
+                        print(f"\n--- Current Response ---")
+                        print(node_data.get('current_response', '')[:2000] if node_data.get('current_response') else "N/A")
+                        print("="*80)
+                    elif node_name == "risk_debate_state":
+                        print("\n" + "="*80)
+                        print(f"⚠️ Risk Debate State:")
+                        print("="*80)
+                        print(f"Count: {node_data.get('count', 0)}")
+                        print(f"Latest Speaker: {node_data.get('latest_speaker', 'N/A')}")
+                        print("="*80)
+                    elif node_name == "trader_investment_plan":
+                        print("\n" + "="*80)
+                        print(f"💰 Trader Investment Plan:")
+                        print("="*80)
+                        print(str(node_data)[:2000])
+                        print("="*80)
                 
-                # 打印研究员辩论过程
-                if "investment_debate_state" in chunk:
-                    current_debate = chunk["investment_debate_state"]
-                    if last_debate_state is None or current_debate.get("current_response") != last_debate_state.get("current_response"):
-                        if current_debate.get("current_response"):
-                            print("\n" + "="*60)
-                            print("📊 研究员辩论过程")
-                            print("="*60)
-                            print(current_debate.get("current_response", ""))
-                            print("="*60 + "\n")
-                    last_debate_state = current_debate
-                
-                # 打印风险管理层辩论过程
-                if "risk_debate_state" in chunk:
-                    current_risk = chunk["risk_debate_state"]
-                    if last_risk_state is None or current_risk.get("current_response") != last_risk_state.get("current_response"):
-                        if current_risk.get("current_response"):
-                            print("\n" + "="*60)
-                            print("⚠️ 风险管理层辩论过程")
-                            print("="*60)
-                            print(current_risk.get("current_response", ""))
-                            print("="*60 + "\n")
-                    last_risk_state = current_risk
+                trace.append(chunk)
 
             final_state = trace[-1] if trace else init_agent_state
         else:

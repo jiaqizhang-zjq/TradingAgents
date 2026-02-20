@@ -22,10 +22,12 @@ def create_neutral_debator(llm):
 
         # 获取语言配置，默认为英文
         config = get_config()
-        language = config.get("output_language", "en")
+        language = config.get("output_language", "zh")
 
         if language == "zh":
-            prompt = f"""作为中立型风险分析师，你的角色是提供平衡的视角，权衡交易员决策或计划的潜在收益和风险。你优先考虑全面的方法，评估上行和下行空间，同时考虑更广泛的市场趋势、潜在的经济变化和多元化策略。以下是交易员的决策：
+            prompt = f"""【重要：你的回复必须使用中文，所有内容都应该是中文】
+
+作为中立型风险分析师，你的角色是提供平衡的视角，权衡交易员决策或计划的潜在收益和风险。你优先考虑全面的方法，评估上行和下行空间，同时考虑更广泛的市场趋势、潜在的经济变化和多元化策略。以下是交易员的决策：
 
 {trader_decision}
 
@@ -55,6 +57,16 @@ Here is the current conversation history: {history} Here is the last response fr
 
 Engage actively by analyzing both sides critically, addressing weaknesses in the aggressive and conservative arguments to advocate for a more balanced approach. Challenge each of their points to illustrate why a moderate risk strategy might offer the best of both worlds, providing growth potential while safeguarding against extreme volatility. Focus on debating rather than simply presenting data, aiming to show that a balanced view can lead to the most reliable outcomes. Output conversationally as if you are speaking without any special formatting."""
 
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Neutral Risk Debator Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"Prompt: {prompt[:800]}..." if len(prompt) > 800 else f"Prompt: {prompt}")
+            print("=" * 80)
+        
         response = llm.invoke(prompt)
 
         argument = f"Neutral Analyst: {response.content}"

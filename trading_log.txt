@@ -1,0 +1,1095 @@
+✅ 数据库初始化完成: trading_analysis.db
+
+================================================================================
+📝 Messages Output:
+================================================================================
+================================ Human Message =================================
+
+LMND
+
+================================================================================
+📊 Investment Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+
+--- Bull History ---
+N/A
+
+--- Bear History ---
+N/A
+
+--- Current Response ---
+N/A
+================================================================================
+
+================================================================================
+⚠️ Risk Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+================================================================================
+
+🔧 Calling get_stock_data for LMND (2025-08-24 to 2026-02-20)...
+[UnifiedDataManager] 调用方法: get_stock_data
+[UnifiedDataManager] 参数: args=('LMND', '2025-08-24', '2026-02-20'), kwargs={}
+[UnifiedDataManager] 调整日期范围: 2025-08-24 -> 2025-08-04
+[UnifiedDataManager] 使用缓存数据
+[UnifiedDataManager] 缓存数据输出 (前500字符):
+timestamp,open,high,low,close,volume,adjusted_close
+2025-08-04,37.50,37.85,36.12,37.00,2530720,37.00
+2025-08-05,41.38,49.30,40.98,47.93,13260431,47.93
+2025-08-06,48.38,51.22,48.30,51.07,5642983,51.07
+2025-08-07,51.76,52.38,45.35,47.26,4196983,47.26
+2025-08-08,48.27,51.13,48.26,48.98,3356680,48.98
+2025-08-11,48.62,53.11,47.60,52.37,3464777,52.37
+2025-08-12,53.28,56.00,50.81,54.59,3829721,54.59
+2025-08-13,56.04,60.41,55.90,59.70,6440690,59.70
+2025-08-14,56.96,60.35,56.67,58.52,3773844,58.52
+2025-0
+[UnifiedDataManager] ... (截断，总长度: 6816)
+
+🔧 [TOOL CALL] get_stock_data (Vendor: None)
+
+🔧 Calling get_all_indicators for LMND, date=2026-02-20...
+[UnifiedDataManager] 调用方法: get_all_indicators
+[UnifiedDataManager] 参数: args=('LMND', '2026-02-20', 120, 'timestamp,open,high,low,close,volume,adjusted_close\n2025-08-04,37.50,37.85,36.12,37.00,2530720,37.00\n2025-08-05,41.38,49.30,40.98,47.93,13260431,47.93\n2025-08-06,48.38,51.22,48.30,51.07,5642983,51.07\n2025-08-07,51.76,52.38,45.35,47.26,4196983,47.26\n2025-08-08,48.27,51.13,48.26,48.98,3356680,48.98\n2025-08-11,48.62,53.11,47.60,52.37,3464777,52.37\n2025-08-12,53.28,56.00,50.81,54.59,3829721,54.59\n2025-08-13,56.04,60.41,55.90,59.70,6440690,59.70\n2025-08-14,56.96,60.35,56.67,58.52,3773844,58.52\n2025-08-15,58.98,59.23,56.51,57.37,1878950,57.37\n2025-08-18,57.76,60.35,57.45,59.74,2800312,59.74\n2025-08-19,59.01,60.27,56.91,57.20,2738767,57.20\n2025-08-20,57.23,57.30,53.20,55.75,2841444,55.75\n2025-08-21,55.65,58.07,54.95,56.10,2360079,56.10\n2025-08-22,56.09,59.93,55.69,56.82,2147318,56.82\n2025-08-25,56.05,56.28,53.13,53.23,1960915,53.23\n2025-08-26,53.37,54.32,52.82,53.53,1605056,53.53\n2025-08-27,53.53,54.09,52.24,53.97,1581616,53.97\n2025-08-28,54.20,55.30,53.20,53.36,1379197,53.36\n2025-08-29,53.55,54.93,52.35,52.90,1501581,52.90\n2025-09-02,51.53,51.92,49.34,51.78,1743648,51.78\n2025-09-03,52.31,52.41,49.20,49.86,1807969,49.86\n2025-09-04,49.96,51.09,49.28,50.70,1333251,50.70\n2025-09-05,51.58,51.64,48.13,50.25,1439386,50.25\n2025-09-08,49.97,53.00,49.52,52.98,1687973,52.98\n2025-09-09,53.78,54.65,52.17,52.85,1991084,52.85\n2025-09-10,53.50,53.59,49.13,49.18,2971475,49.18\n2025-09-11,49.14,50.52,48.58,50.42,1841345,50.42\n2025-09-12,50.60,52.63,50.09,52.57,2191486,52.57\n2025-09-15,55.39,57.60,54.77,56.68,3974936,56.68\n2025-09-16,57.01,57.84,55.13,57.30,2200680,57.30\n2025-09-17,57.44,58.80,55.50,55.81,2171688,55.81\n2025-09-18,56.30,58.31,55.61,57.30,2104218,57.30\n2025-09-19,57.59,61.82,57.14,60.96,4131203,60.96\n2025-09-22,61.71,61.79,58.40,59.68,3280632,59.68\n2025-09-23,59.23,62.00,57.40,57.52,3007330,57.52\n2025-09-24,58.04,58.41,52.88,53.43,3280562,53.43\n2025-09-25,51.74,53.18,49.80,52.46,3406327,52.46\n2025-09-26,52.00,52.70,49.81,51.43,2257238,51.43\n2025-09-29,52.35,54.44,51.75,54.37,2171232,54.37\n2025-09-30,54.36,55.50,52.35,53.53,1967253,53.53\n2025-10-01,53.35,54.84,52.24,52.41,1459444,52.41\n2025-10-02,52.59,53.82,51.25,53.30,1486269,53.30\n2025-10-03,54.58,57.37,53.83,54.52,2352932,54.52\n2025-10-06,55.47,56.80,52.00,56.10,2416451,56.10\n2025-10-07,55.60,58.44,52.60,55.06,3033324,55.06\n2025-10-08,55.48,56.50,53.96,55.50,1775139,55.50\n2025-10-09,55.71,55.71,52.52,53.47,2325227,53.47\n2025-10-10,53.00,53.68,48.03,48.04,4351746,48.04\n2025-10-13,49.61,50.94,48.24,50.36,2121842,50.36\n2025-10-14,49.25,52.59,48.27,52.52,1798569,52.52\n2025-10-15,53.75,54.00,51.14,52.45,1923119,52.45\n2025-10-16,51.98,52.78,47.18,47.55,3572208,47.55\n2025-10-17,48.26,50.00,47.36,48.12,2885570,48.12\n2025-10-20,49.02,50.32,47.60,49.91,1703983,49.91\n2025-10-21,49.25,51.31,48.66,49.79,1667477,49.79\n2025-10-22,49.25,49.59,47.04,49.25,1997024,49.25\n2025-10-23,49.90,51.97,49.58,51.39,1574824,51.39\n2025-10-24,52.79,53.33,51.78,52.14,1913094,52.14\n2025-10-27,54.00,58.80,53.00,58.45,3343997,58.45\n2025-10-28,59.00,59.10,57.27,57.30,1875146,57.30\n2025-10-29,57.30,62.67,55.58,60.71,3782484,60.71\n2025-10-30,60.02,61.03,57.87,59.01,2156701,59.01\n2025-10-31,59.95,60.95,58.77,60.08,1811879,60.08\n2025-11-03,60.34,63.48,60.00,61.54,3171154,61.54\n2025-11-04,59.37,61.49,58.26,58.66,2687829,58.66\n2025-11-05,67.70,79.71,65.69,78.73,13344356,78.73\n2025-11-06,79.20,81.90,73.20,75.13,5428489,75.13\n2025-11-07,73.55,75.04,69.03,75.02,4264195,75.02\n2025-11-10,77.40,80.12,75.52,78.87,3007311,78.87\n2025-11-11,78.06,79.55,74.61,79.14,2501215,79.14\n2025-11-12,80.00,83.77,74.90,77.00,3649579,77.00\n2025-11-13,75.88,76.11,69.34,69.98,2910066,69.98\n2025-11-14,67.00,72.78,66.25,70.49,2301685,70.49\n2025-11-17,69.39,72.40,65.51,67.07,2263334,67.07\n2025-11-18,65.85,71.62,65.01,68.96,2761552,68.96\n2025-11-19,69.18,72.50,68.01,70.94,3028289,70.94\n2025-11-20,72.77,77.34,67.90,67.97,4598853,67.97\n2025-11-21,67.96,69.53,64.05,67.35,2720107,67.35\n2025-11-24,69.32,74.09,68.27,73.00,2341191,73.00\n2025-11-25,72.50,74.79,70.75,74.00,2123572,74.00\n2025-11-26,75.21,78.64,73.49,77.53,2052410,77.53\n2025-11-28,78.49,79.08,77.15,78.12,1193492,78.12\n2025-12-01,76.50,78.00,73.80,75.27,1787947,75.27\n2025-12-02,76.50,77.00,70.13,72.16,2247914,72.16\n2025-12-03,72.00,74.02,70.39,73.59,1537196,73.59\n2025-12-04,74.00,78.76,72.16,76.80,2088061,76.80\n2025-12-05,76.10,80.68,75.71,78.97,2825036,78.97\n2025-12-08,79.00,79.00,73.67,77.17,2158663,77.17\n2025-12-09,76.92,79.48,76.05,79.17,1600137,79.17\n2025-12-10,80.00,81.47,73.88,78.37,4529336,78.37\n2025-12-11,78.00,84.52,77.50,82.01,4180977,82.01\n2025-12-12,82.00,83.36,76.01,77.85,2607712,77.85\n2025-12-15,79.00,80.34,75.01,75.07,1833647,75.07\n2025-12-16,76.13,82.23,75.83,81.36,3252556,81.36\n2025-12-17,83.64,85.20,78.37,79.10,2754417,79.10\n2025-12-18,81.88,85.00,80.89,82.82,2144996,82.82\n2025-12-19,83.12,84.39,80.22,82.61,2636972,82.61\n2025-12-22,82.78,84.84,80.66,82.52,1846569,82.52\n2025-12-23,80.65,81.43,77.54,78.92,2291420,78.92\n2025-12-24,78.00,81.00,77.00,79.80,1017233,79.80\n2025-12-26,79.55,79.76,73.80,74.69,2415601,74.69\n2025-12-29,73.04,74.77,71.12,71.32,2027725,71.32\n2025-12-30,71.30,73.20,69.69,71.80,1584913,71.80\n2025-12-31,71.52,71.72,70.00,71.18,1206795,71.18\n2026-01-02,71.75,76.38,70.61,75.96,2326665,75.96\n2026-01-05,76.70,77.16,73.45,76.85,2014365,76.85\n2026-01-06,77.00,80.43,76.85,80.02,2051987,80.02\n2026-01-07,79.19,81.79,78.82,81.00,1481681,81.00\n2026-01-08,80.49,83.50,79.33,80.76,1467393,80.76\n2026-01-09,81.22,82.49,77.82,79.65,1138796,79.65\n2026-01-12,79.10,86.66,77.80,86.51,3718602,86.51\n2026-01-13,87.90,88.88,80.75,81.42,2482026,81.42\n2026-01-14,80.47,81.21,77.37,81.14,1642839,81.14\n2026-01-15,81.65,82.45,79.08,80.19,1773365,80.19\n2026-01-16,80.60,82.11,78.41,79.41,1443189,79.41\n2026-01-20,76.05,80.68,76.00,78.24,1361865,78.24\n2026-01-21,79.55,85.76,79.55,85.36,2663769,85.36\n2026-01-22,89.30,99.90,87.26,96.57,6473670,96.57\n2026-01-23,94.77,99.34,92.50,93.25,3001459,93.25\n2026-01-26,92.50,92.64,85.75,89.88,3326755,89.88\n2026-01-27,90.81,91.00,86.21,87.75,1482751,87.75\n2026-01-28,88.32,92.55,87.50,92.06,1884891,92.06\n2026-01-29,92.35,94.28,86.01,91.28,2493965,91.28\n2026-01-30,90.36,93.95,86.00,86.73,2209066,86.73\n2026-02-02,86.20,86.70,79.88,80.57,2958925,80.57\n2026-02-03,81.25,83.39,80.23,82.69,3401166,82.69\n2026-02-04,81.27,81.66,69.50,74.18,4206967,74.18\n2026-02-05,72.22,74.87,67.95,68.46,3097487,68.46\n2026-02-06,70.87,74.96,70.60,74.26,2099318,74.26\n2026-02-09,74.14,76.33,72.51,72.80,1698574,72.80\n2026-02-10,72.55,74.22,70.55,71.60,1526873,71.60\n2026-02-11,71.63,72.49,66.61,68.49,2355912,68.49\n2026-02-12,68.84,69.30,59.80,61.96,4598528,61.96\n2026-02-13,62.54,65.19,61.50,63.76,2430587,63.76\n2026-02-17,63.74,65.26,62.19,64.59,2046864,64.59\n2026-02-18,64.65,66.76,64.35,65.73,3138111,65.73\n2026-02-19,73.99,74.85,61.29,62.18,5540757,62.18\n'), kwargs={}
+[UnifiedDataManager] 使用缓存数据
+[UnifiedDataManager] 缓存数据输出 (前500字符):
+
+=== MACD INDICATOR GROUP ===
+timestamp,open,high,low,close,volume,macd,macds,macdh,close_20_sma,close_50_sma,close_200_sma,close_20_ema,close_50_ema,rsi,atr,vwma,obv
+2025-08-14,56.96,60.35,56.67,58.52,3773844,5.111467764640878,3.060417382292859,2.051050382348019,,,,46.06964519243925,41.35824792042468,,,,28024455.0
+2025-08-15,58.98,59.23,56.51,57.37,1878950,5.354101919035514,3.5191542896413903,1.834947629394124,,,,47.14586945982599,41.98615976668254,,,,26145505.0
+2025-08-18,57.76,60.35,57.45,59.
+[UnifiedDataManager] ... (截断，总长度: 289450)
+
+🔧 [TOOL CALL] get_all_indicators (Vendor: None)
+
+🔧 Calling get_chart_patterns for LMND (2025-08-24 to 2026-02-20)...
+[UnifiedDataManager] 调用方法: get_chart_patterns
+[UnifiedDataManager] 参数: args=('LMND', '2025-08-24', '2026-02-20', 60), kwargs={}
+[UnifiedDataManager] 使用缓存数据
+[UnifiedDataManager] 缓存数据输出 (前500字符):
+# Chart Patterns for LMND
+
+| Pattern Type | Detected | Confidence | Volume Confirmed | Breakout Confirmed | Description |
+|--------------|----------|------------|------------------|-------------------|-------------|
+| head_and_shoulders | ❌        | 0.00%      | ❌                | ❌                 |  |
+| double_top   | ✅        | 80.00%     | ❌                | ✅                 | 双顶形态(M顶)，看跌反转信号(等待成交量确认)(突破确认) |
+| double_bottom | ❌        | 0.00%      | ❌                | ❌                 |  
+[UnifiedDataManager] ... (截断，总长度: 1520)
+
+🔧 [TOOL CALL] get_chart_patterns (Vendor: None)
+================================================================================
+DEBUG: Market Analyst Prompt Before LLM Call:
+================================================================================
+Language: zh
+System Message: 你是一位专业的技术分析师，专注于市场趋势分析。基于提供的股票价格数据和技术指标组，进行全面的技术分析。
+
+【重要：你的回复必须使用中文，所有内容都应该是中文】
+
+可用指标组（已提供完整数据）：
+- VOLUME（成交量）: 成交量移动平均线、成交量比率、成交量变化%、成交量加速度、VWMA、OBV
+- SUPPORT（支撑阻力）: 支撑位（20/50）、阻力位（20/50）、中位区间、区间位置
+- TREND（趋势）: 趋势线斜率（10/20）、线性回归预测、价格相对SMA位置（20/50）
+- MOMENTUM（动量）: ROC（5/10/20）、CCI（20）、CMO（14）、MFI（14）
+- CROSS（交叉信号）: SMA交叉（5/20、20/50）、MACD交叉、RSI超买/超卖、布林带突破
+- BOLL（布林带）: 布林带（中轨、上轨、下轨、带宽）
+- MACD: MACD线、信号线、柱状图
+- ADX: ADX、+DI、-DI
+- VOLATILITY（波动率）: 波动率（20/50）、ATR%、布林带宽度
+- DIVERGENCE（背离）: 价格/RSI新高/新低
+
+...
+Assistant Prompt: 你是一个有用的AI助手，与其他助手合作。如果你或任何其他助手有最终交易建议：**买入/持有/卖出**或可交付成果，请在你的回复前加上'最终交易建议：**买入/持有/卖出**'，这样团队就知道要停止了。{system_message}
+参考信息：当前日期是{current_date}。我们要分析的公司是{ticker}。
+
+股票数据：
+{stock_data}
+
+技术指标：
+{indicators_data}
+
+西方图表形态（头肩顶/底、双顶/底、三角形、旗形、楔形、圆形、矩形）：
+{chart_patterns_data}
+================================================================================
+
+================================================================================
+📝 Messages Output:
+================================================================================
+================================== Ai Message ==================================
+
+# LMND (Lemonade Inc.) 技术分析报告
+
+**分析日期：2026年2月20日 | 最后一个交易日：2026年2月19日**
+**收盘价：$62.18**
+
+---
+
+## 一、趋势分析 (Trend Analysis)
+
+### 1.1 长期趋势
+| 指标 | 数值 | 解读 |
+|------|------|------|
+| 20日均线 (SMA) | 77.44 | 价格远低于均线，看跌 |
+| 50日均线 (SMA) | 78.42 | 价格远低于均线，看跌 |
+| 200日均线 | 75.05 | 价格低于长期均线 |
+| 20日线性回归预测 | 57.51 | 价格高于预测值 |
+
+**趋势判断**：**强烈看跌** - 价格目前处于所有主要均线下方，20日趋势斜率为 **-1.90**（负值且数值较大），表明下行趋势强劲。
+
+### 1.2 短期趋势
+- 10日趋势斜率：**-1.14**（负值）
+- 20日趋势斜率：**-1.90**（强负值）
+- 价格相对SMA20位置：**-19.71%**（严重低于均值）
+
+---
+
+## 二、支撑/阻力位分析 (Support & Resistance)
+
+| 支撑/阻力 | 价位 | 备注 |
+|-----------|------|------|
+| **支撑位20** | $59.80 | 近期低点附近 |
+| **阻力位20** | $99.90 | 历史高点 |
+| **支撑位50** | $59.80 | 重要支撑 |
+| **阻力位50** | $99.90 | 重要阻力 |
+| **区间位置** | 5.9% | 处于极低位置，接近区间底部 |
+| **中位区间** | $79.85 | 当前位置距离中位17.7美元 |
+
+**关键观察**：当前价格 **$62.18** 距离重要支撑位 **$59.80** 仅约 **$2.38**（3.8%），若跌破可能加速下行。
+
+---
+
+## 三、图表形态识别 (Chart Pattern Analysis)
+
+### 3.1 双顶形态 (Double Top) - ✅ 已确认
+
+| 形态要素 | 数值 |
+|---------|------|
+| 形态类型 | 双顶 (M顶) |
+| 置信度 | **80%** |
+| 第一峰 | $85.20 (2025-12-17) |
+| 第二峰 | $88.88 (2026-01-22) |
+| 两峰间谷底 | $69.69 |
+| **形态目标位** | **$54.18** |
+| 成交量确认 | ❌ 第一峰成交量275万，第二峰成交量248万（未确认） |
+| 突破确认 | ✅ 价格已跌破颈线支撑 |
+
+**形态意义**：双顶形态是一个强烈的看跌反转信号。价格从$99.90高点回落，目前已经跌破颈线支撑$69.69，下跌目标指向$54.18。
+
+---
+
+## 四、成交量分析 (Volume Analysis)
+
+| 指标 | 数值 | 解读 |
+|------|------|------|
+| 成交量 (2月19日) | 5,540,757 | **巨量**，是5日均线的1.56倍 |
+| 成交量比率 (5日) | 1.56 | 高于平均成交量 |
+| 成交量变化% | +76.6% | **大幅放量** |
+| OBV | 8,249,677 | 近期明显下降 |
+
+**成交量解读**：2月19日出现 **巨量下跌**，成交量激增76.6%，显示恐慌性抛售或机构出货。这种巨量往往伴随着趋势的加速。
+
+---
+
+## 五、指标汇合分析 (Indicator Confluence)
+
+### 5.1 动量指标 (Momentum)
+
+| 指标 | 数值 | 信号 |
+|------|------|------|
+| **RSI (14)** | **22.28** | ⛔ 极度超卖 (<<30) |
+| ROC 5日 | -9.21% | 看跌 |
+| ROC 10日 | -16.18% | 强烈看跌 |
+| ROC 20日 | -27.16% | 极度看跌 |
+| CCI | -78.55 | 超卖 |
+| CMO | -55.45 | 极度负值 |
+
+**汇合点**：RSI处于22.28的极度超卖区域，同时ROC全部为负值，显示强烈的超卖反弹需求。
+
+### 5.2 MACD指标
+
+| 指标 | 数值 | 解读 |
+|------|------|------|
+| MACD线 | -4.84 | 负值 |
+| 信号线 | -3.01 | 负值 |
+| 柱状图 | -1.84 | 看跌 |
+| MACD交叉 | 0 | 无信号 |
+
+**MACD解读**：MACD线位于零轴下方且低于信号线，呈现典型的空头排列。柱状图持续为负，看跌动能强劲。
+
+### 5.3 布林带 (Bollinger Bands)
+
+| 指标 | 数值 |
+|------|------|
+| 上轨 | $100.86 |
+| 中轨 | $77.44 |
+| 下轨 | $54.02 |
+| 带宽 | 0.60 |
+| 位置 | 价格位于下轨下方 |
+
+**布林带解读**：价格位于布林下轨下方，显示当前处于 **极端弱势** 区域。带宽0.60表明波动率较高。
+
+### 5.4 ADX趋势指标
+
+| 指标 | 数值 | 解读 |
+|------|------|------|
+| ADX | 37.87 | **强趋势** (>25) |
+| +DI | 12.33 | 弱势 |
+| -DI | **34.51** | 强势力 |
+| DI差值 | -22.18 | **强烈看跌** |
+
+**ADX解读**：ADX大于25表明趋势强劲，-DI远大于+DI，确认 **强劲下降趋势**。
+
+---
+
+## 六、交叉信号汇总 (Cross Signals)
+
+| 信号类型 | 当前状态 | 信号 |
+|----------|----------|------|
+| SMA 5/20交叉 | 无 | 中性 |
+| SMA 20/50交叉 | **死叉** (-1) | ⛔ 看跌 |
+| MACD交叉 | 0 | 中性 |
+| RSI超买 | 0 | 无 |
+| **RSI超卖** | **1** | ✅ 超卖 |
+| 布林上突破 | 0 | 无 |
+| **布林下突破** | **1** | ⛔ 极端弱势 |
+
+---
+
+## 七、交易建议
+
+### 7.1 当前市场判断：**极度看跌**
+
+多个指标形成强烈看跌汇合：
+1. ✅ **双顶形态**完成（80%置信度），目标$54.18
+2. ✅ **RSI极度超卖**（22.28）
+3. ✅ **价格位于布林下轨下方**
+4. ✅ **ADX确认强下降趋势**
+5. ✅ **成交量巨量放大**
+
+### 7.2 入场策略
+
+| 策略 | 价格 | 备注 |
+|------|------|------|
+| 突破做空 | $59.80以下 | 等待跌破支撑确认 |
+| 反弹做空 | $65-68区间 | 均线反弹阻力位 |
+
+### 7.3 止损建议
+
+| 止损类型 | 价格 | 距离当前 |
+|----------|------|----------|
+| 保守止损 | $68.00 | +9.4% |
+| 激进止损 | $59.80 | -3.8% |
+
+### 7.4 盈利目标
+
+| 目标 | 价格 | 距离当前 |
+|------|------|----------|
+| 第一目标 | $54.18 | -12.9% |
+| 第二目标 | $50.00 | -19.6% |
+
+---
+
+## 八、风险评估
+
+### 8.1 波动率分析
+- ATR (14): $6.44
+- ATR% : **10.36%** （**极高波动率**）
+- 波动率20: 0.94
+
+### 8.2 风险提示
+⚠️ **高风险警告**：
+- 当前波动率极高，止损需适当放宽
+- RSI极端超卖可能引发短期反弹
+- 接近重要支撑位可能触发空头回补
+- 建议仓位控制在**10-15%**以内
+
+---
+
+## 九、关键总结表
+
+| 分析维度 | 状态 | 置信度 |
+|----------|------|---------|
+| 趋势方向 | 强烈看跌 | 95% |
+| 双顶形态 | 已完成 | 80% |
+| RSI超卖 | 极度超卖 | 100% |
+| 成交量确认 | 巨量下跌 | 90% |
+| 布林带 | 跌破下轨 | 95% |
+| ADX趋势 | 强下降 | 90% |
+| 总体判断 | **看跌** | **高置信度** |
+
+---
+
+## 最终交易建议：**卖出**
+
+**理由**：
+1. 双顶形态明确形成且已突破颈线
+2. RSI处于极度超卖区域但无反转信号
+3. 巨量下跌确认下降趋势延续
+4. 布林带显示价格处于极端弱势
+5. 目标位$54.18具有技术意义
+
+**操作建议**：等待反弹至$65-68区间做空，止损设置在$68上方，或等待跌破$59.80后追空。
+
+---
+
+### 风险警示
+⚠️ 本分析仅供技术参考，不构成投资建议。LMND目前波动率极高，建议谨慎操作，设置合理止损。
+
+================================================================================
+📊 Investment Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+
+--- Bull History ---
+N/A
+
+--- Bear History ---
+N/A
+
+--- Current Response ---
+N/A
+================================================================================
+
+================================================================================
+⚠️ Risk Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+================================================================================
+
+================================================================================
+📝 Messages Output:
+================================================================================
+================================ Human Message =================================
+
+Continue
+
+================================================================================
+📊 Investment Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+
+--- Bull History ---
+N/A
+
+--- Bear History ---
+N/A
+
+--- Current Response ---
+N/A
+================================================================================
+
+================================================================================
+⚠️ Risk Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+================================================================================
+================================================================================
+DEBUG: Social Media Analyst Prompt Before LLM Call:
+================================================================================
+Language: zh
+System Message: 【重要：你的回复必须使用中文，所有内容都应该是中文】
+
+你是一位社交媒体和公司特定新闻研究员/分析师，负责分析过去一周特定公司的社交媒体帖子、最新公司新闻和公众情绪。你将获得一家公司的名称，你的目标是撰写一份全面的长篇报告，详细说明你的分析、见解以及对交易员和投资者关于这家公司当前状态的影响，在查看社交媒体和人们对该公司的评价后，分析人们每天对公司的情绪数据，并查看最新的公司新闻。
+
+可用工具:
+1. get_news(query, start_date, end_date): 检索有关公司的传统新闻文章
+2. get_social_media_data(ticker, platforms, limit): 从Reddit和/或Twitter检索社交媒体提及。此工具提供来自社交平台的实时公众情绪和讨论。
+
+分析指南:
+- 首先，使用 get_social_media_data 收集来自 Reddit 和 Twitter 的社交媒体情绪
+- 然后，使用 get_news 收集传统新闻文章
+- 分析两个来源的情绪和主题
+- 寻找社交媒体和传统新闻之间的模式、趋势和差异
+- 关注可能影响市场...
+Assistant Prompt: 你是一个有用的AI助手，与其他助手合作。使用提供的工具来推进问题的回答。如果你无法完全回答，没关系；另一个拥有不同工具的助手会在你离开的地方继续。执行你能做的来取得进展。如果你或任何其他助手有最终交易建议：**买入/持有/卖出**或可交付成果，请在你的回复前加上'最终交易建议：**买入/持有/卖出**'，这样团队就知道要停止了。你可以使用以下工具：{tool_names}。
+{system_message}参考信息：当前日期是{current_date}。我们要分析的当前公司是{ticker}
+================================================================================
+
+================================================================================
+📝 Messages Output:
+================================================================================
+================================== Ai Message ==================================
+Tool Calls:
+  get_social_media_data (call_function_kiqeacrqnv61_1)
+ Call ID: call_function_kiqeacrqnv61_1
+  Args:
+    limit: 20
+    platforms: ['reddit', 'twitter']
+    ticker: LMND
+
+================================================================================
+📊 Investment Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+
+--- Bull History ---
+N/A
+
+--- Bear History ---
+N/A
+
+--- Current Response ---
+N/A
+================================================================================
+
+================================================================================
+⚠️ Risk Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+================================================================================
+
+================================================================================
+📝 Messages Output:
+================================================================================
+================================= Tool Message =================================
+Name: get_social_media_data
+
+Error: get_social_media_data is not a valid tool, try one of [get_news].
+
+================================================================================
+📊 Investment Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+
+--- Bull History ---
+N/A
+
+--- Bear History ---
+N/A
+
+--- Current Response ---
+N/A
+================================================================================
+
+================================================================================
+⚠️ Risk Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+================================================================================
+================================================================================
+DEBUG: Social Media Analyst Prompt Before LLM Call:
+================================================================================
+Language: zh
+System Message: 【重要：你的回复必须使用中文，所有内容都应该是中文】
+
+你是一位社交媒体和公司特定新闻研究员/分析师，负责分析过去一周特定公司的社交媒体帖子、最新公司新闻和公众情绪。你将获得一家公司的名称，你的目标是撰写一份全面的长篇报告，详细说明你的分析、见解以及对交易员和投资者关于这家公司当前状态的影响，在查看社交媒体和人们对该公司的评价后，分析人们每天对公司的情绪数据，并查看最新的公司新闻。
+
+可用工具:
+1. get_news(query, start_date, end_date): 检索有关公司的传统新闻文章
+2. get_social_media_data(ticker, platforms, limit): 从Reddit和/或Twitter检索社交媒体提及。此工具提供来自社交平台的实时公众情绪和讨论。
+
+分析指南:
+- 首先，使用 get_social_media_data 收集来自 Reddit 和 Twitter 的社交媒体情绪
+- 然后，使用 get_news 收集传统新闻文章
+- 分析两个来源的情绪和主题
+- 寻找社交媒体和传统新闻之间的模式、趋势和差异
+- 关注可能影响市场...
+Assistant Prompt: 你是一个有用的AI助手，与其他助手合作。使用提供的工具来推进问题的回答。如果你无法完全回答，没关系；另一个拥有不同工具的助手会在你离开的地方继续。执行你能做的来取得进展。如果你或任何其他助手有最终交易建议：**买入/持有/卖出**或可交付成果，请在你的回复前加上'最终交易建议：**买入/持有/卖出**'，这样团队就知道要停止了。你可以使用以下工具：{tool_names}。
+{system_message}参考信息：当前日期是{current_date}。我们要分析的当前公司是{ticker}
+================================================================================
+
+================================================================================
+📝 Messages Output:
+================================================================================
+================================== Ai Message ==================================
+Tool Calls:
+  get_news (call_function_0u71linq8dn7_1)
+ Call ID: call_function_0u71linq8dn7_1
+  Args:
+    end_date: 2026-02-20
+    start_date: 2026-02-13
+    ticker: LMND
+
+================================================================================
+📊 Investment Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+
+--- Bull History ---
+N/A
+
+--- Bear History ---
+N/A
+
+--- Current Response ---
+N/A
+================================================================================
+
+================================================================================
+⚠️ Risk Debate State:
+================================================================================
+Count: 0
+Latest Speaker: N/A
+================================================================================
+
+🔧 Calling get_news for LMND (2026-02-13 to 2026-02-20)...
+[UnifiedDataManager] 调用方法: get_news
+[UnifiedDataManager] 参数: args=('LMND', '2026-02-13', '2026-02-20'), kwargs={}
+[UnifiedDataManager] 使用缓存数据
+[UnifiedDataManager] 缓存数据输出 (前500字符):
+{
+    "items": "13",
+    "sentiment_score_definition": "x <= -0.35: Bearish; -0.35 < x <= -0.15: Somewhat-Bearish; -0.15 < x < 0.15: Neutral; 0.15 <= x < 0.35: Somewhat_Bullish; x >= 0.35: Bullish",
+    "relevance_score_definition": "0 < x <= 1, with a higher score indicating higher relevance.",
+    "feed": [
+        {
+            "title": "Lemonade Q4 2025 Earnings: Revenue Up 53%, Beats Market Forecasts - News and Statistics",
+            "url": "https://www.indexbox.io/blog/lemonade-q4-2025-e
+[UnifiedDataManager] ... (截断，总长度: 26898)
+
+🔧 [TOOL CALL] get_news (Vendor: None)
+
+================================================================================
+📝 Messages Output:
+================================================================================
+================================= Tool Message =================================
+Name: get_news
+
+{
+    "items": "13",
+    "sentiment_score_definition": "x <= -0.35: Bearish; -0.35 < x <= -0.15: Somewhat-Bearish; -0.15 < x < 0.15: Neutral; 0.15 <= x < 0.35: Somewhat_Bullish; x >= 0.35: Bullish",
+    "relevance_score_definition": "0 < x <= 1, with a higher score indicating higher relevance.",
+    "feed": [
+        {
+            "title": "Lemonade Q4 2025 Earnings: Revenue Up 53%, Beats Market Forecasts - News and Statistics",
+            "url": "https://www.indexbox.io/blog/lemonade-q4-2025-earnings-surpass-expectations-with-53-revenue-growth/",
+            "time_published": "20260219T140858",
+            "authors": [],
+            "summary": "Lemonade reported its Q4 2025 financial results, exceeding market expectations with a 53.3% increase in revenue year-over-year, reaching $228.1 million. The company's net premiums earned grew by 77.4% to $179.5 million, beating analyst estimates. Despite a pre-tax loss of $20.6 million, its annualized revenue growth over five years was 50.9%, highlighting strong customer reception for its technology-driven insurance model.",
+            "banner_image": null,
+            "source": "IndexBox",
+            "category_within_source": "General",
+            "source_domain": "IndexBox",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.912312"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.749795"
+                }
+            ],
+            "overall_sentiment_score": 0.412471,
+            "overall_sentiment_label": "Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.435562",
+                    "ticker_sentiment_label": "Bullish"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade's (NYSE:LMND) Q4 CY2025: Strong Sales, Stock Jumps 11.1%",
+            "url": "https://finviz.com/news/315595/lemonades-nyse-lmnd-q4-cy2025-strong-sales-stock-jumps-111",
+            "time_published": "20260219T135758",
+            "authors": [
+                "Anthony Lee"
+            ],
+            "summary": "Lemonade (NYSE:LMND) exceeded Q4 CY2025 revenue expectations with sales up 53.3% year-on-year to $228.1 million, significantly beating analyst estimates. The company also reported a GAAP loss of $0.29 per share, which was better than consensus estimates. Following these strong results, Lemonade's stock jumped 11.1% to $73.05.",
+            "banner_image": "https://news-assets.stockstory.org/cover-images/_1400x700_crop_center-center_none/lemonade-cover-image-4a029893aff8_2025-06-24-162651_ypbq.jpeg",
+            "source": "Finviz - Stock Screener",
+            "category_within_source": "General",
+            "source_domain": "Finviz - Stock Screener",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.910068"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.847670"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.706079"
+                },
+                {
+                    "topic": "technology",
+                    "relevance_score": "0.635983"
+                }
+            ],
+            "overall_sentiment_score": 0.400426,
+            "overall_sentiment_label": "Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.449062",
+                    "ticker_sentiment_label": "Bullish"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade (LMND) Q4 2025 Earnings Call Transcript",
+            "url": "https://www.theglobeandmail.com/investing/markets/stocks/TSLA-Q/pressreleases/305844/lemonade-lmnd-q4-2025-earnings-call-transcript/",
+            "time_published": "20260219T125758",
+            "authors": [
+                "Motley Fool"
+            ],
+            "summary": "Lemonade (LMND) reported its strongest-ever Q4 2025 financial performance, marked by significant growth in in-force premium, revenue, and gross profit, alongside improved profitability with positive adjusted free cash flow and a narrowed adjusted EBITDA loss. The company emphasized its strategic investments in AI, particularly for its autonomous car insurance product, which prices based on real-time driving data and differentiates between human- and AI-driven miles. Lemonade provided optimistic guidance for 2026, projecting continued top-line and revenue growth, and reaffirming its target for positive adjusted EBITDA by Q4 2026 and for the full year 2027.",
+            "banner_image": "https://barchart-news-media-prod.aws.barchart.com/FC/4b5f44d91680daabd4911a82471ecf4e/%3Furl%3Dhttps%253a%252f%252fg.foolcdn.com%252fmisc-assets%252ffool-transcripts-logo.png%26amp%3Bw%3D700",
+            "source": "The Globe and Mail",
+            "category_within_source": "General",
+            "source_domain": "The Globe and Mail",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.923252"
+                },
+                {
+                    "topic": "technology",
+                    "relevance_score": "0.718213"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.637374"
+                }
+            ],
+            "overall_sentiment_score": 0.289897,
+            "overall_sentiment_label": "Somewhat-Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.464745",
+                    "ticker_sentiment_label": "Bullish"
+                },
+                {
+                    "ticker": "TSLA",
+                    "relevance_score": "0.714877",
+                    "ticker_sentiment_score": "0.275242",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                },
+                {
+                    "ticker": "NFLX",
+                    "relevance_score": "0.563619",
+                    "ticker_sentiment_score": "0.083679",
+                    "ticker_sentiment_label": "Neutral"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade stock jumps amid impressive Q4 earnings beat, robust 2026 guidance (LMND:NYSE)",
+            "url": "https://seekingalpha.com/news/4553864-lemonade-stock-jumps-amid-impressive-q4-earnings-beat-robust-2026-guidance",
+            "time_published": "20260219T125758",
+            "authors": [
+                "Liz Kiesche"
+            ],
+            "summary": "Lemonade (LMND) stock jumped 13% in premarket trading on Thursday due to impressive Q4 2025 earnings and strong 2026 guidance that surpassed analyst expectations. The company saw an increase in customer count and an improved net loss ratio, with pet insurance policies and AI-driven initiatives contributing significantly to its growth. Lemonade projects higher 2026 revenue and in-force premium, alongside a substantially narrowed EBITDA loss.",
+            "banner_image": "https://static.seekingalpha.com/cdn/s3/uploads/getty_images/2209651470/image_2209651470.jpg?io=getty-c-w630",
+            "source": "Seeking Alpha",
+            "category_within_source": "General",
+            "source_domain": "Seeking Alpha",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.948195"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.812768"
+                },
+                {
+                    "topic": "technology",
+                    "relevance_score": "0.620411"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.601797"
+                }
+            ],
+            "overall_sentiment_score": 0.739926,
+            "overall_sentiment_label": "Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.726957",
+                    "ticker_sentiment_label": "Bullish"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade rallies on strong results, shows AI is paying off",
+            "url": "https://www.calcalistech.com/ctechnews/article/r1el11y40011x",
+            "time_published": "20260219T125758",
+            "authors": [
+                "Sophie Shulman"
+            ],
+            "summary": "Lemonade, the Israeli insurtech company, saw its stock jump 15% in pre-market trading after reporting strong fourth-quarter and full-year 2025 results, pushing its market value past $5 billion. The company attributes its success to leveraging AI, evidenced by a reduced workforce, 1.2 million new customers, and a significant decrease in pet insurance claim costs. While profitability remains a challenge with a net loss in 2025, Lemonade projects continued substantial growth in gross premiums and revenue for 2026.",
+            "banner_image": "https://pic1.calcalist.co.il/picserver3/crop_images/2021/01/13/1051652/1051652_0_0_1200_743_0_large.jpg",
+            "source": "CTech",
+            "category_within_source": "General",
+            "source_domain": "CTech",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.941186"
+                },
+                {
+                    "topic": "technology",
+                    "relevance_score": "0.811037"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.734298"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.645338"
+                }
+            ],
+            "overall_sentiment_score": 0.41907,
+            "overall_sentiment_label": "Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.409421",
+                    "ticker_sentiment_label": "Bullish"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade (LMND) Surpasses Earnings Expectations with Strong Q3 R",
+            "url": "https://www.gurufocus.com/news/8630811/lemonade-lmnd-surpasses-earnings-expectations-with-strong-q3-results",
+            "time_published": "20260219T115758",
+            "authors": [
+                "GuruFocus News"
+            ],
+            "summary": "Lemonade Inc. (LMND) reported better-than-expected Q3 results with a GAAP EPS of -$0.29 and revenue of $228.1 million, surpassing analyst estimates. Despite profitability challenges, the AI-powered insurance company demonstrates strong revenue growth potential. The stock's valuation is high, and its high volatility should be considered by investors.",
+            "banner_image": "https://static.gurufocus.com/cdn-cgi/image/width=600,quality=100/logos/0C0000BUVD.png?20",
+            "source": "GuruFocus",
+            "category_within_source": "General",
+            "source_domain": "GuruFocus",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.940755"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.838898"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.724445"
+                },
+                {
+                    "topic": "technology",
+                    "relevance_score": "0.604976"
+                }
+            ],
+            "overall_sentiment_score": 0.315865,
+            "overall_sentiment_label": "Somewhat-Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.336034",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade: Q4 Earnings Snapshot",
+            "url": "https://www.barchart.com/story/news/299412/lemonade-q4-earnings-snapshot",
+            "time_published": "20260219T105758",
+            "authors": [],
+            "summary": "Lemonade, Inc. (LMND) reported a Q4 loss of 29 cents per share, surpassing Wall Street expectations of a 41-cent loss. The company's revenue for the quarter was $228.1 million, also exceeding analyst forecasts. Looking ahead, Lemonade projects Q1 revenue between $246 million and $251 million and full-year revenue of $1.19 billion.",
+            "banner_image": null,
+            "source": "Barchart.com",
+            "category_within_source": "General",
+            "source_domain": "Barchart.com",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.938248"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.637744"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.610177"
+                }
+            ],
+            "overall_sentiment_score": 0.333597,
+            "overall_sentiment_label": "Somewhat-Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.306293",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade: Q4 Earnings Snapshot",
+            "url": "https://www.kare11.com/article/syndication/associatedpress/lemonade-q4-earnings-snapshot/616-45a78ff2-20f0-42f9-b3e1-3e7bc30a824a",
+            "time_published": "20260219T050800",
+            "authors": [
+                "Associated Press"
+            ],
+            "summary": "Lemonade, Inc. (LMND) reported a Q4 loss of $21.7 million, or 29 cents per share, surpassing analyst expectations for a 41-cent loss. The company's revenue reached $228.1 million, also beating Street forecasts. For the full year, Lemonade posted a loss of $165.5 million on revenue of $737.9 million and provided optimistic revenue guidance for the current quarter and the full year.",
+            "banner_image": "https://media.kare11.com/assets/AssociatedPress/images/391d85a1-a024-4611-9c00-be0ff6e23c79/20260219T114004/391d85a1-a024-4611-9c00-be0ff6e23c79_360x203.jpg",
+            "source": "kare11.com",
+            "category_within_source": "General",
+            "source_domain": "kare11.com",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.924212"
+                }
+            ],
+            "overall_sentiment_score": 0.287234,
+            "overall_sentiment_label": "Somewhat-Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.284087",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade (LMND) Set to Announce Q4 Earnings with Strong Revenue Growth",
+            "url": "https://www.gurufocus.com/news/8628544/lemonade-lmnd-set-to-announce-q4-earnings-with-strong-revenue-growth",
+            "time_published": "20260218T172734",
+            "authors": [
+                "GuruFocus News"
+            ],
+            "summary": "Lemonade (LMND) is expected to report strong year-over-year revenue growth of 46.6% for its upcoming Q4 earnings, projected to hit $218.07 million. While the AI-powered insurance company demonstrates robust revenue expansion, it continues to face challenges with profitability and has seen significant insider selling activity. Investors are advised to consider these factors alongside the company's valuation metrics and market sentiment.",
+            "banner_image": "https://static.gurufocus.com/cdn-cgi/image/width=600,quality=100/logos/0C0000BUVD.png?20",
+            "source": "GuruFocus",
+            "category_within_source": "General",
+            "source_domain": "GuruFocus",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.945450"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.849677"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.712263"
+                },
+                {
+                    "topic": "technology",
+                    "relevance_score": "0.616837"
+                }
+            ],
+            "overall_sentiment_score": 0.141767,
+            "overall_sentiment_label": "Neutral",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.111083",
+                    "ticker_sentiment_label": "Neutral"
+                }
+            ]
+        },
+        {
+            "title": "Will Lemonade Stock Enjoy Another Major Post-Earnings Win?",
+            "url": "https://www.schaeffersresearch.com/content/analysis/2026/02/17/will-lemonade-stock-enjoy-another-major-post-earnings-win",
+            "time_published": "20260217T082755",
+            "authors": [
+                "Laura McCandless"
+            ],
+            "summary": "Lemonade Inc (LMND) is set to release its fourth-quarter earnings report on Thursday, February 19, with analysts anticipating losses of 41 cents per share and a revenue increase of 45.6%. The stock has historically seen significant post-earnings pops, averaging 17.7% movement, and with current technical indicators like an oversold RSI and high short interest, another rally could be on the horizon. Options traders are pricing in a larger-than-usual 25% swing after this report.",
+            "banner_image": "https://schaeffers-cdn.s3.amazonaws.com/images/default-source/schaeffers-cdn-images/default-images/earnings/bigstock-business-growth-wooden-arrow--282136408.jpg?sfvrsn=ae8d506_4",
+            "source": "Schaeffer's Investment Research",
+            "category_within_source": "General",
+            "source_domain": "Schaeffer's Investment Research",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "1.000000"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.849772"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.634146"
+                },
+                {
+                    "topic": "life_sciences",
+                    "relevance_score": "0.644452"
+                }
+            ],
+            "overall_sentiment_score": 0.285262,
+            "overall_sentiment_label": "Somewhat-Bullish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.340097",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                },
+                {
+                    "ticker": "GE",
+                    "relevance_score": "0.729619",
+                    "ticker_sentiment_score": "0.328502",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                },
+                {
+                    "ticker": "TJX",
+                    "relevance_score": "0.610056",
+                    "ticker_sentiment_score": "0.314000",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                },
+                {
+                    "ticker": "ORCL",
+                    "relevance_score": "0.644520",
+                    "ticker_sentiment_score": "0.278291",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                },
+                {
+                    "ticker": "MDT",
+                    "relevance_score": "0.562317",
+                    "ticker_sentiment_score": "0.237266",
+                    "ticker_sentiment_label": "Somewhat-Bullish"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade Insurance Company Shows Strong Growth",
+            "url": "https://intellectia.ai/news/stock/lemonade-insurance-company-shows-strong-growth",
+            "time_published": "20260214T232728",
+            "authors": [
+                "Emily J. Thompson"
+            ],
+            "summary": "Lemonade's stock has doubled in the past year, reflecting market confidence in its digital insurance platform and future growth despite a high price-to-sales ratio. The company is accelerating customer acquisition with lower-priced products, particularly in rentals and homeownership, and its loss ratio significantly declined to 67% in Q3 2025 due to improved machine learning. Lemonade anticipates a 29% increase in in-force premiums and a 48% rise in revenue for Q4, projecting adjusted EBITDA profitability by year-end.",
+            "banner_image": null,
+            "source": "Intellectia AI",
+            "category_within_source": "General",
+            "source_domain": "Intellectia AI",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "1.000000"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.935177"
+                },
+                {
+                    "topic": "technology",
+                    "relevance_score": "0.803737"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.702491"
+                }
+            ],
+            "overall_sentiment_score": 0.007913,
+            "overall_sentiment_label": "Neutral",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "0.335965",
+                    "ticker_sentiment_score": "0.015555",
+                    "ticker_sentiment_label": "Neutral"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade (LMND) Expected to Announce Earnings on Thursday",
+            "url": "https://www.marketbeat.com/instant-alerts/lemonade-lmnd-expected-to-announce-earnings-on-thursday-2026-02-12/",
+            "time_published": "20260213T042728",
+            "authors": [
+                "MarketBeat"
+            ],
+            "summary": "Lemonade (LMND) is scheduled to announce its Q4 2025 earnings before the market opens on Thursday, February 19th, with analysts projecting a loss of ($0.41) per share and revenue of $218.07 million. The stock was trading down approximately 4.4% at $68.49, holding an average analyst rating of \"Hold\" and a price target of $71.50. Recent insider transactions show net selling, while institutional investors own a significant portion of the company.",
+            "banner_image": "https://www.marketbeat.com/logos/lemonade-inc-logo-1200x675.png?v=20240515131932",
+            "source": "MarketBeat",
+            "category_within_source": "General",
+            "source_domain": "MarketBeat",
+            "topics": [
+                {
+                    "topic": "earnings",
+                    "relevance_score": "0.943067"
+                },
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.836245"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.602696"
+                },
+                {
+                    "topic": "technology",
+                    "relevance_score": "0.612868"
+                }
+            ],
+            "overall_sentiment_score": 0.039366,
+            "overall_sentiment_label": "Neutral",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "0.004583",
+                    "ticker_sentiment_label": "Neutral"
+                }
+            ]
+        },
+        {
+            "title": "Lemonade (NYSE:LMND) Shares Down 11.3% - What's Next?",
+            "url": "https://www.marketbeat.com/instant-alerts/lemonade-nyselmnd-shares-down-113-whats-next-2026-02-12/",
+            "time_published": "20260213T035802",
+            "authors": [
+                "MarketBeat"
+            ],
+            "summary": "Lemonade (NYSE:LMND) shares dropped 11.3% on Thursday to $60.74, trading significantly below its 50-day and 200-day simple moving averages. Analyst sentiment is mixed, with an average \"Hold\" rating and a price target of $71.50, despite recent insider selling totaling $23.4 million. Institutional investors and company insiders collectively hold a majority stake in the insurance company.",
+            "banner_image": "https://www.marketbeat.com/logos/lemonade-inc-logo-1200x675.png?v=20240515131932",
+            "source": "MarketBeat",
+            "category_within_source": "General",
+            "source_domain": "MarketBeat",
+            "topics": [
+                {
+                    "topic": "financial_markets",
+                    "relevance_score": "0.916212"
+                },
+                {
+                    "topic": "finance",
+                    "relevance_score": "0.741130"
+                }
+            ],
+            "overall_sentiment_score": -0.42318,
+            "overall_sentiment_label": "Bearish",
+            "ticker_sentiment": [
+                {
+                    "ticker": "LMND",
+                    "relevance_score": "1.000000",
+                    "ticker_sentiment_score": "-0.412321",
+                    "ticker_sentiment_label": "Bearish"
+                }
+            ]
+        }
+    ]
+}

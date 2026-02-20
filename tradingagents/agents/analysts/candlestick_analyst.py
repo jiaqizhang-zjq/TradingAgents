@@ -144,7 +144,18 @@ def create_candlestick_analyst(llm):
         prompt = prompt.partial(candlestick_patterns_data=candlestick_patterns_data)
 
         chain = prompt | llm
-
+        
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Candlestick Analyst Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"System Message: {system_message[:500]}..." if len(system_message) > 500 else f"System Message: {system_message}")
+            print(f"Assistant Prompt: {assistant_prompt[:500]}..." if len(assistant_prompt) > 500 else f"Assistant Prompt: {assistant_prompt}")
+            print("=" * 80)
+        
         result = chain.invoke(state["messages"])
         report = result.content
 

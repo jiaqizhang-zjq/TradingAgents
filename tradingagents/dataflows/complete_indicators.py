@@ -841,6 +841,8 @@ class ChartPatterns:
         """识别双顶形态 (M顶)"""
         peaks, _ = ChartPatterns._find_peaks_and_troughs(df)
         
+        avg_volume = df['volume'].mean()
+        
         if len(peaks) < 2:
             return {"detected": False, "type": None, "confidence": 0}
         

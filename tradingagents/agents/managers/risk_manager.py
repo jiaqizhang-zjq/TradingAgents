@@ -25,7 +25,7 @@ def create_risk_manager(llm, memory):
             past_memory_str += rec["recommendation"] + "\n\n"
 
         config = get_config()
-        language = config.get("output_language", "en")
+        language = config.get("output_language", "zh")
         
         if language == "zh":
             prompt = f"""作为风险管理评委和辩论主持人，你的目标是评估三位风险分析师——激进、中性和保守——之间的辩论，并确定交易员的最佳行动方案。
@@ -75,6 +75,16 @@ Deliverables:
 
 Focus on actionable insights and continuous improvement. Build on past lessons, critically evaluate all perspectives, and ensure each decision advances better outcomes."""
 
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Risk Manager Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"Prompt: {prompt[:1000]}..." if len(prompt) > 1000 else f"Prompt: {prompt}")
+            print("=" * 80)
+        
         response = llm.invoke(prompt)
         response_content = response.content
 

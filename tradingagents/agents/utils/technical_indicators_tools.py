@@ -1,7 +1,7 @@
 from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import get_data_manager
-from tradingagents.agents.utils.agent_utils import log_tool_call
+from tradingagents.agents.utils.logging_utils import log_tool_call
 
 
 @tool

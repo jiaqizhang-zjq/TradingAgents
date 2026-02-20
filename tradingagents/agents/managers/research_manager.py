@@ -107,6 +107,16 @@ Here are your past reflections on mistakes:
 Here is the debate:
 Debate History:
 {history}"""
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Research Manager Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"Prompt: {prompt[:1000]}..." if len(prompt) > 1000 else f"Prompt: {prompt}")
+            print("=" * 80)
+        
         response = llm.invoke(prompt)
         response_content = response.content
 

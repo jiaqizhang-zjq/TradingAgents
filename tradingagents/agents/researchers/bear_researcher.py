@@ -108,12 +108,31 @@ Reflections from similar situations and lessons learned: {past_memory_str}
 Use this information to deliver a compelling bear argument, refute the bull's claims, and engage in a dynamic debate that demonstrates the risks and weaknesses of investing in the stock. You must also address reflections and learn from lessons and mistakes you made in the past.
 """
 
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Bear Researcher Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"Prompt: {prompt[:1000]}..." if len(prompt) > 1000 else f"Prompt: {prompt}")
+            print("=" * 80)
+        
         response = llm.invoke(prompt)
         response_content = response.content
 
-        # 根据语言设置分析师名称
-        analyst_name = "看跌分析师" if language == "zh" else "Bear Analyst"
-        argument = f"{analyst_name}: {response_content}"
+        # 获取胜率信息添加到输出中
+        win_rate_percent = win_rate_info['win_rate'] * 100
+        
+        # 根据语言设置分析师名称和胜率
+        if language == "zh":
+            analyst_name = "Bear Analyst"
+            win_rate_display = f"[胜率: {win_rate_percent:.1f}%]"
+            argument = f"{analyst_name} {win_rate_display}: {response_content}"
+        else:
+            analyst_name = "Bear Analyst"
+            win_rate_display = f"[Win Rate: {win_rate_percent:.1f}%]"
+            argument = f"{analyst_name} {win_rate_display}: {response_content}"
         
         # 解析预测结果并记录到数据库
         try:

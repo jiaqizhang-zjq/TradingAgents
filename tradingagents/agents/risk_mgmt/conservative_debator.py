@@ -23,10 +23,12 @@ def create_conservative_debator(llm):
 
         # 获取语言配置，默认为英文
         config = get_config()
-        language = config.get("output_language", "en")
+        language = config.get("output_language", "zh")
 
         if language == "zh":
-            prompt = f"""作为保守型风险分析师，你的首要目标是保护资产、最小化波动性并确保稳定、可靠的增长。你优先考虑稳定性、安全性和风险缓解，仔细评估潜在损失、经济衰退和市场波动。在评估交易员的决策或计划时，批判性地检查高风险因素，指出决策可能在哪些地方使公司面临不当风险，以及在哪些地方更谨慎的替代方案可以确保长期收益。以下是交易员的决策：
+            prompt = f"""【重要：你的回复必须使用中文，所有内容都应该是中文】
+
+作为保守型风险分析师，你的首要目标是保护资产、最小化波动性并确保稳定、可靠的增长。你优先考虑稳定性、安全性和风险缓解，仔细评估潜在损失、经济衰退和市场波动。在评估交易员的决策或计划时，批判性地检查高风险因素，指出决策可能在哪些地方使公司面临不当风险，以及在哪些地方更谨慎的替代方案可以确保长期收益。以下是交易员的决策：
 
 {trader_decision}
 
@@ -56,6 +58,16 @@ Here is the current conversation history: {history} Here is the last response fr
 
 Engage by questioning their optimism and emphasizing the potential downsides they may have overlooked. Address each of their counterpoints to showcase why a conservative stance is ultimately the safest path for the firm's assets. Focus on debating and critiquing their arguments to demonstrate the strength of a low-risk strategy over their approaches. Output conversationally as if you are speaking without any special formatting."""
 
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Conservative Risk Debator Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"Prompt: {prompt[:800]}..." if len(prompt) > 800 else f"Prompt: {prompt}")
+            print("=" * 80)
+        
         response = llm.invoke(prompt)
 
         argument = f"Conservative Analyst: {response.content}"

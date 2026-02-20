@@ -20,6 +20,7 @@ def create_news_analyst(llm):
 
         if language == "zh":
             system_message = (
+                "【重要：你的回复必须使用中文，所有内容都应该是中文】\n\n"
                 "你是一位新闻研究员，负责分析过去一周的最新新闻和趋势。请撰写一份全面的报告，分析与交易和宏观经济学相关的当前世界状态。"
                 "使用可用工具：get_news(query, start_date, end_date) 用于公司特定或目标新闻搜索，"
                 "get_global_news(curr_date, look_back_days, limit) 用于更广泛的宏观经济新闻。"
@@ -69,6 +70,18 @@ def create_news_analyst(llm):
         prompt = prompt.partial(ticker=ticker)
 
         chain = prompt | llm.bind_tools(tools)
+        
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: News Analyst Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"System Message: {system_message[:500]}..." if len(system_message) > 500 else f"System Message: {system_message}")
+            print(f"Assistant Prompt: {assistant_prompt[:500]}..." if len(assistant_prompt) > 500 else f"Assistant Prompt: {assistant_prompt}")
+            print("=" * 80)
+        
         result = chain.invoke(state["messages"])
 
         report = ""

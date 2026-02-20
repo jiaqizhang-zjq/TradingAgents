@@ -22,10 +22,12 @@ def create_aggressive_debator(llm):
 
         # 获取语言配置，默认为英文
         config = get_config()
-        language = config.get("output_language", "en")
+        language = config.get("output_language", "zh")
 
         if language == "zh":
-            prompt = f"""你是一位拥有20多年经验的资深激进型风险分析师，曾在顶级对冲基金担任首席风险官，管理过数十亿美元的高风险投资组合。你的声誉建立在敢于在关键时刻承担计算过的风险，并因此获得超额回报。
+            prompt = f"""【重要：你的回复必须使用中文，所有内容都应该是中文】
+
+你是一位拥有20多年经验的资深激进型风险分析师，曾在顶级对冲基金担任首席风险官，管理过数十亿美元的高风险投资组合。你的声誉建立在敢于在关键时刻承担计算过的风险，并因此获得超额回报。
 
 作为激进型专家，你的角色是积极倡导高风险高回报的投资机会。在评估交易员的决策时，你必须：
 
@@ -75,6 +77,16 @@ Here is the current conversation history: {history} Here are the last arguments 
 
 Engage actively by addressing any specific concerns raised, refuting the weaknesses in their logic, and asserting the benefits of risk-taking to outpace market norms. Maintain a focus on debating and persuading, not just presenting data. Challenge each counterpoint to underscore why a high-risk approach is optimal. Output conversationally as if you are speaking without any special formatting."""
 
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Aggressive Risk Debator Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"Prompt: {prompt[:800]}..." if len(prompt) > 800 else f"Prompt: {prompt}")
+            print("=" * 80)
+        
         response = llm.invoke(prompt)
 
         argument = f"Aggressive Analyst: {response.content}"

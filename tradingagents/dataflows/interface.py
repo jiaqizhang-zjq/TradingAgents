@@ -63,6 +63,22 @@ _data_manager: UnifiedDataManager = None
 def _parse_stock_data(stock_data_str):
     """解析股票数据字符串为DataFrame"""
     try:
+        # 尝试解析CSV格式 (timestamp,open,high,low,close,volume,adjusted_close)
+        if 'timestamp' in stock_data_str and 'open' in stock_data_str and 'high' in stock_data_str:
+            df = pd.read_csv(io.StringIO(stock_data_str))
+            
+            if 'timestamp' in df.columns:
+                df['Date'] = pd.to_datetime(df['timestamp'])
+                df = df.set_index('Date')
+                
+                for col in ['open', 'high', 'low', 'close', 'volume']:
+                    if col in df.columns:
+                        df[col.capitalize()] = pd.to_numeric(df[col], errors='coerce')
+                        df = df.drop(columns=[col])
+                
+                return df
+        
+        # 尝试解析表格格式 (| Date | Open | ... |)
         if 'Date' in stock_data_str and 'Open' in stock_data_str:
             lines = stock_data_str.strip().split('\n')
             filtered_lines = [line for line in lines if not line.strip().startswith('|-') and line.strip()]
@@ -81,7 +97,10 @@ def _parse_stock_data(stock_data_str):
                         df[col] = pd.to_numeric(df[col], errors='coerce')
                 
                 return df
-    except Exception:
+    except Exception as e:
+        print(f"[_parse_stock_data] Error: {e}")
+        import traceback
+        print(f"[_parse_stock_data] Traceback:\n{traceback.format_exc()}")
         pass
     return None
 
@@ -102,61 +121,73 @@ def _local_get_indicators(symbol, indicator, curr_date, look_back_days, *args, *
     if df is None:
         raise DataFetchError("Failed to parse stock data")
     
-    df_renamed = df.rename(columns={
-        'Open': 'open',
-        'High': 'high',
-        'Low': 'low',
-        'Close': 'close',
-        'Volume': 'volume'
-    })
+    df.reset_index(inplace=True)
     
-    df_renamed.reset_index(inplace=True)
-    if 'Date' in df_renamed.columns:
-        df_renamed['timestamp'] = df_renamed['Date']
-    elif df.index.name == 'Date':
-        df_renamed['timestamp'] = df.index.strftime('%Y-%m-%d')
+    df_clean = pd.DataFrame()
+    df_clean['timestamp'] = df['timestamp']
+    df_clean['open'] = df['Open']
+    df_clean['high'] = df['High']
+    df_clean['low'] = df['Low']
+    df_clean['close'] = df['Close']
+    df_clean['volume'] = df['Volume']
     
-    df_with_indicators = CompleteTechnicalIndicators.calculate_all_indicators(df_renamed)
+    df_with_indicators = CompleteTechnicalIndicators.calculate_all_indicators(df_clean)
     result_df = CompleteTechnicalIndicators.get_indicator_group(df_with_indicators, indicator, look_back_days)
     
     return result_df.to_csv(index=False)
 
 
-def _local_get_all_indicators(symbol, curr_date, look_back_days, *args, **kwargs):
+def _local_get_all_indicators(symbol, curr_date, look_back_days, stock_data='', *args, **kwargs):
     """本地计算所有技术指标，一次性返回所有分组"""
     from datetime import datetime, timedelta
+    import traceback
     
-    stock_data = kwargs.get('stock_data', '')
-    manager = get_data_manager()
-    
-    if not stock_data:
-        end_date = curr_date
-        start_date = (datetime.strptime(end_date, "%Y-%m-%d") - timedelta(days=look_back_days + 60)).strftime("%Y-%m-%d")
-        stock_data = manager.fetch("get_stock_data", symbol, start_date, end_date)
-    
-    df = _parse_stock_data(stock_data)
-    
-    if df is None:
-        raise DataFetchError("Failed to parse stock data")
-    
-    df_renamed = df.rename(columns={
-        'Open': 'open',
-        'High': 'high',
-        'Low': 'low',
-        'Close': 'close',
-        'Volume': 'volume'
-    })
-    
-    df_renamed.reset_index(inplace=True)
-    if 'Date' in df_renamed.columns:
-        df_renamed['timestamp'] = df_renamed['Date']
-    elif df.index.name == 'Date':
-        df_renamed['timestamp'] = df.index.strftime('%Y-%m-%d')
-    
-    df_with_indicators = CompleteTechnicalIndicators.calculate_all_indicators(df_renamed)
-    result = CompleteTechnicalIndicators.get_all_indicator_groups(df_with_indicators, look_back_days)
-    
-    return result
+    try:
+        print(f"[_local_get_all_indicators] symbol={symbol}, curr_date={curr_date}, look_back_days={look_back_days}")
+        print(f"[_local_get_all_indicators] stock_data length={len(stock_data) if stock_data else 0}")
+        
+        manager = get_data_manager()
+        
+        if not stock_data:
+            end_date = curr_date
+            start_date = (datetime.strptime(end_date, "%Y-%m-%d") - timedelta(days=look_back_days + 60)).strftime("%Y-%m-%d")
+            stock_data = manager.fetch("get_stock_data", symbol, start_date, end_date)
+        
+        df = _parse_stock_data(stock_data)
+        
+        if df is None:
+            raise DataFetchError("Failed to parse stock data")
+        
+        print(f"[_local_get_all_indicators] df parsed, shape={df.shape}")
+        print(f"[_local_get_all_indicators] df columns={list(df.columns)}")
+        
+        df.reset_index(inplace=True)
+        
+        df_clean = pd.DataFrame()
+        df_clean['timestamp'] = df['timestamp']
+        df_clean['open'] = df['Open']
+        df_clean['high'] = df['High']
+        df_clean['low'] = df['Low']
+        df_clean['close'] = df['Close']
+        df_clean['volume'] = df['Volume']
+        
+        print(f"[_local_get_all_indicators] df_clean shape={df_clean.shape}")
+        print(f"[_local_get_all_indicators] df_clean columns={list(df_clean.columns)}")
+        print(f"[_local_get_all_indicators] calling calculate_all_indicators...")
+        
+        df_with_indicators = CompleteTechnicalIndicators.calculate_all_indicators(df_clean)
+        
+        print(f"[_local_get_all_indicators] calculate_all_indicators done, calling get_all_indicator_groups...")
+        
+        result = CompleteTechnicalIndicators.get_all_indicator_groups(df_with_indicators, look_back_days)
+        
+        print(f"[_local_get_all_indicators] get_all_indicator_groups done, result length={len(result) if result else 0}")
+        
+        return result
+    except Exception as e:
+        print(f"[_local_get_all_indicators] ERROR: {e}")
+        print(f"[_local_get_all_indicators] Traceback:\n{traceback.format_exc()}")
+        raise DataFetchError(f"_local_get_all_indicators failed: {e}")
 
 def _local_get_candlestick_patterns(symbol, start_date, end_date, *args, **kwargs):
     """本地识别蜡烛图形态"""
@@ -173,21 +204,17 @@ def _local_get_candlestick_patterns(symbol, start_date, end_date, *args, **kwarg
     if df is None:
         raise DataFetchError("Failed to parse stock data")
     
-    df_renamed = df.rename(columns={
-        'Open': 'open',
-        'High': 'high',
-        'Low': 'low',
-        'Close': 'close',
-        'Volume': 'volume'
-    })
+    df.reset_index(inplace=True)
     
-    df_renamed.reset_index(inplace=True)
-    if 'Date' in df_renamed.columns:
-        df_renamed['timestamp'] = df_renamed['Date']
-    elif df.index.name == 'Date':
-        df_renamed['timestamp'] = df.index.strftime('%Y-%m-%d')
+    df_clean = pd.DataFrame()
+    df_clean['timestamp'] = df['timestamp']
+    df_clean['open'] = df['Open']
+    df_clean['high'] = df['High']
+    df_clean['low'] = df['Low']
+    df_clean['close'] = df['Close']
+    df_clean['volume'] = df['Volume']
     
-    result_df = CompleteCandlestickPatterns.identify_patterns(df_renamed)
+    result_df = CompleteCandlestickPatterns.identify_patterns(df_clean)
     
     if len(result_df) == 0:
         return f"No candlestick patterns identified for {symbol} in the date range {start_date} to {end_date}"
@@ -243,59 +270,70 @@ def _local_get_candlestick_patterns(symbol, start_date, end_date, *args, **kwarg
 def _local_get_chart_patterns(symbol, start_date, end_date, lookback=60, *args, **kwargs):
     """本地识别西方图表形态"""
     from datetime import datetime, timedelta
+    import traceback
     
-    stock_data = kwargs.get('stock_data', '')
-    manager = get_data_manager()
-    
-    if not stock_data:
-        stock_data = manager.fetch("get_stock_data", symbol, start_date, end_date)
-    
-    df = _parse_stock_data(stock_data)
-    
-    if df is None:
-        raise DataFetchError("Failed to parse stock data")
-    
-    df_renamed = df.rename(columns={
-        'Open': 'open',
-        'High': 'high',
-        'Low': 'low',
-        'Close': 'close',
-        'Volume': 'volume'
-    })
-    
-    df_renamed.reset_index(inplace=True)
-    if 'Date' in df_renamed.columns:
-        df_renamed['timestamp'] = df_renamed['Date']
-    elif df.index.name == 'Date':
-        df_renamed['timestamp'] = df.index.strftime('%Y-%m-%d')
-    
-    patterns = ChartPatterns.identify_all_patterns(df_renamed, lookback)
-    
-    result_lines = [
-        f"# Chart Patterns for {symbol}",
-        "",
-        "| Pattern Type | Detected | Confidence | Volume Confirmed | Breakout Confirmed | Description |",
-        "|--------------|----------|------------|------------------|-------------------|-------------|"
-    ]
-    
-    for pattern_name, pattern_info in patterns.items():
-        detected = "✅" if pattern_info.get("detected", False) else "❌"
-        confidence = f"{pattern_info.get('confidence', 0):.2%}"
-        volume_confirmed = "✅" if pattern_info.get("volume_confirmed", False) else "❌"
-        breakout_confirmed = "✅" if pattern_info.get("breakout_confirmed", False) else "❌"
-        description = pattern_info.get("description", "")
-        result_lines.append(f"| {pattern_name:<12} | {detected:<8} | {confidence:<10} | {volume_confirmed:<16} | {breakout_confirmed:<17} | {description} |")
-    
-    result_lines.extend(["", "## Detailed Pattern Information", ""])
-    for pattern_name, pattern_info in patterns.items():
-        if pattern_info.get("detected", False):
-            result_lines.append(f"### {pattern_name}")
-            for key, value in pattern_info.items():
-                if key not in ["detected", "description"]:
-                    result_lines.append(f"- {key}: {value}")
-            result_lines.append("")
-    
-    return "\n".join(result_lines)
+    try:
+        print(f"[_local_get_chart_patterns] symbol={symbol}, start_date={start_date}, end_date={end_date}")
+        
+        stock_data = kwargs.get('stock_data', '')
+        manager = get_data_manager()
+        
+        if not stock_data:
+            print(f"[_local_get_chart_patterns] fetching stock data...")
+            stock_data = manager.fetch("get_stock_data", symbol, start_date, end_date)
+        
+        print(f"[_local_get_chart_patterns] parsing stock data...")
+        df = _parse_stock_data(stock_data)
+        
+        if df is None:
+            raise DataFetchError("Failed to parse stock data")
+        
+        print(f"[_local_get_chart_patterns] df parsed, shape={df.shape}")
+        print(f"[_local_get_chart_patterns] df columns={list(df.columns)}")
+        
+        df.reset_index(inplace=True)
+        
+        df_clean = pd.DataFrame()
+        df_clean['timestamp'] = df['timestamp']
+        df_clean['open'] = df['Open']
+        df_clean['high'] = df['High']
+        df_clean['low'] = df['Low']
+        df_clean['close'] = df['Close']
+        df_clean['volume'] = df['Volume']
+        
+        print(f"[_local_get_chart_patterns] calling identify_all_patterns...")
+        patterns = ChartPatterns.identify_all_patterns(df_clean, lookback)
+        print(f"[_local_get_chart_patterns] identify_all_patterns done")
+        
+        result_lines = [
+            f"# Chart Patterns for {symbol}",
+            "",
+            "| Pattern Type | Detected | Confidence | Volume Confirmed | Breakout Confirmed | Description |",
+            "|--------------|----------|------------|------------------|-------------------|-------------|"
+        ]
+        
+        for pattern_name, pattern_info in patterns.items():
+            detected = "✅" if pattern_info.get("detected", False) else "❌"
+            confidence = f"{pattern_info.get('confidence', 0):.2%}"
+            volume_confirmed = "✅" if pattern_info.get("volume_confirmed", False) else "❌"
+            breakout_confirmed = "✅" if pattern_info.get("breakout_confirmed", False) else "❌"
+            description = pattern_info.get("description", "")
+            result_lines.append(f"| {pattern_name:<12} | {detected:<8} | {confidence:<10} | {volume_confirmed:<16} | {breakout_confirmed:<17} | {description} |")
+        
+        result_lines.extend(["", "## Detailed Pattern Information", ""])
+        for pattern_name, pattern_info in patterns.items():
+            if pattern_info.get("detected", False):
+                result_lines.append(f"### {pattern_name}")
+                for key, value in pattern_info.items():
+                    if key not in ["detected", "description"]:
+                        result_lines.append(f"- {key}: {value}")
+                result_lines.append("")
+        
+        return "\n".join(result_lines)
+    except Exception as e:
+        print(f"[_local_get_chart_patterns] ERROR: {e}")
+        print(f"[_local_get_chart_patterns] Traceback:\n{traceback.format_exc()}")
+        raise DataFetchError(f"_local_get_chart_patterns failed: {e}")
 
 # ========== 数据管理器初始化 ==========
 def get_data_manager() -> UnifiedDataManager:

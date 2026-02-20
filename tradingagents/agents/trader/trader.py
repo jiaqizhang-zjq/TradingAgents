@@ -33,7 +33,9 @@ def create_trader(llm, memory):
                 "role": "user",
                 "content": f"基于分析师团队的综合分析，这里是为{company_name}制定的投资计划。该计划整合了当前技术市场趋势、宏观经济指标和社交媒体情绪的见解。请以此为基础评估你的下一个交易决策。\n\n建议投资计划：{investment_plan}\n\n利用这些见解做出明智和战略性的决策。",
             }
-            system_content = f"""你是一位拥有20多年经验的首席交易员，曾在顶级投资银行和对冲基金工作，管理过数十亿美元的交易组合。你的声誉建立在精准的执行和严格的风险控制上。
+            system_content = f"""【重要：你的回复必须使用中文，所有内容都应该是中文】
+
+你是一位拥有20多年经验的首席交易员，曾在顶级投资银行和对冲基金工作，管理过数十亿美元的交易组合。你的声誉建立在精准的执行和严格的风险控制上。
 
 作为资深交易员，你必须：
 1. 根据技术分析确定精确的入场点、止损点和止盈点
@@ -86,6 +88,17 @@ Do not forget to utilize lessons from past decisions to learn from your mistakes
             },
             context,
         ]
+        
+        # 调试信息：打印完整prompt（由debug开关控制）
+        debug_config = config.get("debug", {})
+        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
+            print("=" * 80)
+            print("DEBUG: Trader Prompt Before LLM Call:")
+            print("=" * 80)
+            print(f"Language: {language}")
+            print(f"System Content: {system_content[:500]}..." if len(system_content) > 500 else f"System Content: {system_content}")
+            print(f"User Content: {context['content'][:300]}..." if len(context['content']) > 300 else f"User Content: {context['content']}")
+            print("=" * 80)
 
         result = llm.invoke(messages)
 
