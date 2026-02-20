@@ -85,6 +85,7 @@ class ReportSaver:
         candlestick_report: str = "",
         investment_debate_state: Dict = None,
         risk_debate_state: Dict = None,
+        trader_report: str = "",
         investment_plan: str = "",
         final_trade_decision: str = ""
     ):
@@ -101,6 +102,7 @@ class ReportSaver:
             candlestick_report: 蜡烛图分析报告
             investment_debate_state: 投资辩论状态
             risk_debate_state: 风险辩论状态
+            trader_report: 交易员报告
             investment_plan: 投资计划
             final_trade_decision: 最终交易决策
         """
@@ -176,10 +178,17 @@ class ReportSaver:
                 {"type": "risk_manager_decision", "symbol": symbol, "date": trade_date}
             ))
         
-        # 10. 最终决策
+        # 10. 交易员报告
+        if trader_report:
+            saved_files.append(self._save_report(
+                report_dir, "10_trader_report.md", trader_report,
+                {"type": "trader_report", "symbol": symbol, "date": trade_date}
+            ))
+        
+        # 11. 最终决策
         if final_trade_decision:
             saved_files.append(self._save_report(
-                report_dir, "10_final_decision.md", final_trade_decision,
+                report_dir, "11_final_decision.md", final_trade_decision,
                 {"type": "final_decision", "symbol": symbol, "date": trade_date}
             ))
         

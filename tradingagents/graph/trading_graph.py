@@ -406,6 +406,7 @@ class TradingAgentsGraph:
                 candlestick_report=final_state.get("candlestick_report", ""),
                 investment_debate_state=investment_debate_state,
                 risk_debate_state=risk_debate_state,
+                trader_report=final_state.get("trader_investment_plan", ""),
                 investment_plan=final_state.get("investment_plan", ""),
                 final_trade_decision=final_state.get("final_trade_decision", "")
             )
