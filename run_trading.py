@@ -173,7 +173,7 @@ def main():
     parser.add_argument("date", nargs="?", default=None, help="分析日期 YYYY-MM-DD (默认: 今天)")
 
     # 选项
-    parser.add_argument("--debug", action="store_true", help="开启调试模式")
+    parser.add_argument("--debug", action="store_true", default=True, help="开启调试模式 (默认开启)")
     parser.add_argument("--analysts", nargs="+", help="选择的分析师 (如: market news fundamentals)")
     parser.add_argument("--llm-provider", "--provider", dest="llm_provider",
                         help="LLM 提供商 (openai/anthropic/google/xai/openrouter/ollama)")
