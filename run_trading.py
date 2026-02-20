@@ -65,28 +65,11 @@ def run_trading_analysis(
         analysts: 分析师列表
         output_lang: 输出语言
     """
-    # 设置日志文件输出
-    log_dir = os.path.join(BASE_DIR, "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    log_file = os.path.join(log_dir, f"{symbol}-{date}-h.log")
-    
-    # 如果没有设置 stdout 到文件，则同时输出到日志文件和控制台
-    import logging
-    logging.basicConfig(
-        level=logging.DEBUG if debug else logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file, encoding='utf-8'),
-            logging.StreamHandler()
-        ]
-    )
-    
     print(f"\n{'='*50}")
     print(f"TradingAgents 分析")
     print(f"股票: {symbol}")
     print(f"日期: {date}")
     print(f"Debug: {'开启' if debug else '关闭'}")
-    print(f"日志: {log_file}")
     print(f"{'='*50}\n")
 
     # 创建配置（默认关闭 debug）
