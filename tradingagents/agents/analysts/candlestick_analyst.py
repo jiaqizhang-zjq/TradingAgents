@@ -1,7 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from datetime import datetime, timedelta
-from tradingagents.agents.utils.agent_utils import get_stock_data
-from tradingagents.agents.utils.candlestick_tools import get_candlestick_patterns
+from tradingagents.agents.utils.agent_utils import get_stock_data, get_candlestick_patterns
 from tradingagents.dataflows.config import get_config
 
 

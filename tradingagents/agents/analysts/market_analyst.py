@@ -1,7 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from datetime import datetime, timedelta
-from tradingagents.agents.utils.agent_utils import get_stock_data, get_indicators
-from tradingagents.dataflows.indicator_groups import INDICATOR_GROUPS
+from tradingagents.agents.utils.agent_utils import get_stock_data, get_all_indicators, get_chart_patterns
 from tradingagents.dataflows.config import get_config
 
 
@@ -148,19 +147,25 @@ def create_market_analyst(llm):
         
         stock_data = get_stock_data.invoke({"symbol": ticker, "start_date": start_date, "end_date": end_date})
         
-        indicators_data = ""
+        indicators_data = get_all_indicators.invoke({
+            "symbol": ticker,
+            "curr_date": current_date,
+            "look_back_days": 120,
+            "stock_data": stock_data
+        })
         
-        for group_name in INDICATOR_GROUPS.keys():
-            try:
-                data = get_indicators.invoke({
-                    "symbol": ticker, 
-                    "indicator": group_name, 
-                    "curr_date": current_date, 
-                    "look_back_days": 120
-                })
-                indicators_data += f"\n=== {group_name.upper()} INDICATOR GROUP ===\n{data}\n"
-            except Exception as e:
-                indicators_data += f"\n=== {group_name.upper()} INDICATOR GROUP ===\nError: {str(e)}\n"
+        # 获取西方图表形态
+        chart_patterns_data = ""
+        try:
+            chart_patterns_data = get_chart_patterns.invoke({
+                "symbol": ticker,
+                "start_date": start_date,
+                "end_date": end_date,
+                "lookback": 60,
+                "stock_data": stock_data
+            })
+        except Exception as e:
+            chart_patterns_data = f"Error getting chart patterns: {str(e)}"
         
         # 根据语言选择系统提示词
         system_message = SYSTEM_PROMPTS.get(language, SYSTEM_PROMPTS["zh"])
@@ -175,6 +180,7 @@ def create_market_analyst(llm):
                 "\n参考信息：当前日期是{current_date}。我们要分析的公司是{ticker}。"
                 "\n\n股票数据：\n{stock_data}"
                 "\n\n技术指标：\n{indicators_data}"
+                "\n\n西方图表形态（头肩顶/底、双顶/底、三角形、旗形、楔形、圆形、矩形）：\n{chart_patterns_data}"
             )
         else:
             assistant_prompt = (
@@ -185,6 +191,7 @@ def create_market_analyst(llm):
                 "\nFor your reference, the current date is {current_date}. The company we want to analyze is {ticker}."
                 "\n\nStock Data:\n{stock_data}"
                 "\n\nTechnical Indicators:\n{indicators_data}"
+                "\n\nWestern Chart Patterns (Head & Shoulders, Double Top/Bottom, Triangles, Flags, Wedges, Rounding, Rectangle):\n{chart_patterns_data}"
             )
 
         prompt = ChatPromptTemplate.from_messages(
@@ -202,6 +209,7 @@ def create_market_analyst(llm):
         prompt = prompt.partial(ticker=ticker)
         prompt = prompt.partial(stock_data=stock_data)
         prompt = prompt.partial(indicators_data=indicators_data)
+        prompt = prompt.partial(chart_patterns_data=chart_patterns_data)
 
         chain = prompt | llm
 

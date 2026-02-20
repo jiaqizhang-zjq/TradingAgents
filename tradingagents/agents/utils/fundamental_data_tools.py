@@ -1,25 +1,7 @@
 from langchain_core.tools import tool
 from typing import Annotated
-from tradingagents.dataflows.interface import route_to_vendor, get_data_manager
-from datetime import datetime
-
-
-def log_tool_call(tool_name: str, vendor_used: str, result: str):
-    """记录工具调用信息"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_file = "langgraph_outputs/tool_calls.log"
-    
-    log_entry = f"\n{'='*100}\n"
-    log_entry += f"[{timestamp}] 🔧 Tool: {tool_name}\n"
-    log_entry += f"          📊 Vendor Used: {vendor_used}\n"
-    log_entry += f"          📄 Result Preview:\n"
-    log_entry += f"{result[:500]}{'...' if len(result) > 500 else ''}\n"
-    log_entry += f"{'='*100}\n"
-    
-    with open(log_file, "a", encoding="utf-8") as f:
-        f.write(log_entry)
-    
-    print(f"\n🔧 [TOOL CALL] {tool_name} (Vendor: {vendor_used})")
+from tradingagents.dataflows.interface import get_data_manager
+from tradingagents.agents.utils.agent_utils import log_tool_call
 
 
 @tool
@@ -40,7 +22,7 @@ def get_fundamentals(
     
     manager = get_data_manager()
     
-    result = route_to_vendor("get_fundamentals", ticker, curr_date)
+    result = manager.fetch("get_fundamentals", ticker, curr_date)
     
     vendor_used = "unknown"
     if hasattr(manager, 'get_stats'):
@@ -72,7 +54,7 @@ def get_balance_sheet(
     
     manager = get_data_manager()
     
-    result = route_to_vendor("get_balance_sheet", ticker, freq, curr_date)
+    result = manager.fetch("get_balance_sheet", ticker, freq, curr_date)
     
     vendor_used = "unknown"
     if hasattr(manager, 'get_stats'):
@@ -104,7 +86,7 @@ def get_cashflow(
     
     manager = get_data_manager()
     
-    result = route_to_vendor("get_cashflow", ticker, freq, curr_date)
+    result = manager.fetch("get_cashflow", ticker, freq, curr_date)
     
     vendor_used = "unknown"
     if hasattr(manager, 'get_stats'):
@@ -136,7 +118,7 @@ def get_income_statement(
     
     manager = get_data_manager()
     
-    result = route_to_vendor("get_income_statement", ticker, freq, curr_date)
+    result = manager.fetch("get_income_statement", ticker, freq, curr_date)
     
     vendor_used = "unknown"
     if hasattr(manager, 'get_stats'):

@@ -1,6 +1,7 @@
 from langchain_core.tools import tool
 from typing import Annotated, List
-from tradingagents.dataflows.interface import route_to_vendor
+from tradingagents.dataflows.interface import get_data_manager
+from tradingagents.agents.utils.agent_utils import log_tool_call
 
 try:
     from tradingagents.dataflows.social_media import get_stock_mentions
@@ -25,7 +26,20 @@ def get_news(
     Returns:
         str: A formatted string containing news data
     """
-    return route_to_vendor("get_news", ticker, start_date, end_date)
+    print(f"\n🔧 Calling get_news for {ticker} ({start_date} to {end_date})...")
+    
+    manager = get_data_manager()
+    
+    result = manager.fetch("get_news", ticker, start_date, end_date)
+    
+    vendor_used = "unknown"
+    if hasattr(manager, 'get_stats'):
+        stats = manager.get_stats()
+        vendor_used = stats.get('last_vendor_used', 'unknown')
+    
+    log_tool_call("get_news", vendor_used, result)
+    
+    return result
 
 
 @tool
@@ -44,7 +58,20 @@ def get_global_news(
     Returns:
         str: A formatted string containing global news data
     """
-    return route_to_vendor("get_global_news", curr_date, look_back_days, limit)
+    print(f"\n🔧 Calling get_global_news for date {curr_date}, look_back_days={look_back_days}...")
+    
+    manager = get_data_manager()
+    
+    result = manager.fetch("get_global_news", curr_date, look_back_days, limit)
+    
+    vendor_used = "unknown"
+    if hasattr(manager, 'get_stats'):
+        stats = manager.get_stats()
+        vendor_used = stats.get('last_vendor_used', 'unknown')
+    
+    log_tool_call("get_global_news", vendor_used, result)
+    
+    return result
 
 
 @tool
@@ -59,7 +86,20 @@ def get_insider_transactions(
     Returns:
         str: A report of insider transaction data
     """
-    return route_to_vendor("get_insider_transactions", ticker)
+    print(f"\n🔧 Calling get_insider_transactions for {ticker}...")
+    
+    manager = get_data_manager()
+    
+    result = manager.fetch("get_insider_transactions", ticker)
+    
+    vendor_used = "unknown"
+    if hasattr(manager, 'get_stats'):
+        stats = manager.get_stats()
+        vendor_used = stats.get('last_vendor_used', 'unknown')
+    
+    log_tool_call("get_insider_transactions", vendor_used, result)
+    
+    return result
 
 
 @tool

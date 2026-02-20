@@ -241,6 +241,32 @@ class CompleteTechnicalIndicators:
         return result_df
     
     @staticmethod
+    def get_all_indicator_groups(df: pd.DataFrame, look_back_days: int = 120) -> str:
+        """
+        获取所有指标组的数据，按组格式化输出
+        
+        Args:
+            df: 包含所有指标的 DataFrame
+            look_back_days: 回看天数
+            
+        Returns:
+            格式化的字符串，包含所有指标组
+        """
+        result = ""
+        
+        for group_name, group_cols in INDICATOR_GROUPS.items():
+            # 获取该组的指标
+            keep_cols = get_indicator_columns(group_name, list(df.columns))
+            group_df = df[[col for col in keep_cols if col in df.columns]].copy()
+            group_df = group_df.tail(look_back_days + 10)
+            
+            result += f"\n=== {group_name.upper()} INDICATOR GROUP ===\n"
+            result += group_df.to_csv(index=False)
+            result += "\n"
+        
+        return result
+    
+    @staticmethod
     def _calculate_rsi(prices, period=14):
         """计算RSI指标"""
         delta = prices.diff()
@@ -362,6 +388,9 @@ class CompleteCandlestickPatterns:
         """
         patterns = []
         
+        # 计算平均成交量用于验证
+        avg_volume = df['volume'].mean() if 'volume' in df.columns else 0
+        
         for i in range(3, len(df)):
             prev3 = df.iloc[i-3] if i >= 3 else None
             prev2 = df.iloc[i-2]
@@ -374,6 +403,8 @@ class CompleteCandlestickPatterns:
                 "high": curr["high"],
                 "low": curr["low"],
                 "close": curr["close"],
+                "volume": curr.get("volume", 0),
+                "volume_confirmed": False,
                 "patterns": []
             }
             
@@ -383,15 +414,18 @@ class CompleteCandlestickPatterns:
             curr_lower_shadow = min(curr["open"], curr["close"]) - curr["low"]
             curr_is_bullish = curr["close"] > curr["open"]
             curr_is_bearish = curr["close"] < curr["open"]
+            curr_vol = curr.get("volume", avg_volume)
             
             prev1_body = abs(prev1["close"] - prev1["open"])
             prev1_range = prev1["high"] - prev1["low"]
             prev1_is_bullish = prev1["close"] > prev1["open"]
             prev1_is_bearish = prev1["close"] < prev1["open"]
+            prev1_vol = prev1.get("volume", avg_volume)
             
             prev2_body = abs(prev2["close"] - prev2["open"])
             prev2_is_bullish = prev2["close"] > prev2["open"]
             prev2_is_bearish = prev2["close"] < prev2["open"]
+            prev2_vol = prev2.get("volume", avg_volume)
             
             if curr_body < curr_range * 0.1:
                 if curr_upper_shadow > curr_body * 3 and curr_lower_shadow > curr_body * 3:
@@ -408,16 +442,28 @@ class CompleteCandlestickPatterns:
                 curr_upper_shadow < curr_body * 0.5):
                 if curr_is_bullish:
                     pattern_info["patterns"].append("HAMMER")
+                    # 锤子线：成交量验证 - 应放量
+                    if curr_vol > avg_volume * 1.2:
+                        pattern_info["volume_confirmed"] = True
                 else:
                     pattern_info["patterns"].append("HANGING_MAN")
+                    # 上吊线：成交量验证 - 应放量
+                    if curr_vol > avg_volume * 1.2:
+                        pattern_info["volume_confirmed"] = True
             
             if (curr_body < curr_range * 0.35 and
                 curr_upper_shadow > curr_body * 2 and
                 curr_lower_shadow < curr_body * 0.5):
                 if curr_is_bearish:
                     pattern_info["patterns"].append("INVERTED_HAMMER")
+                    # 倒锤子线：成交量验证
+                    if curr_vol > avg_volume * 1.2:
+                        pattern_info["volume_confirmed"] = True
                 else:
                     pattern_info["patterns"].append("SHOOTING_STAR")
+                    # 流星线：成交量验证 - 应放量
+                    if curr_vol > avg_volume * 1.2:
+                        pattern_info["volume_confirmed"] = True
             
             if (curr_body < curr_range * 0.5 and
                 curr_body > curr_range * 0.2 and
@@ -442,6 +488,9 @@ class CompleteCandlestickPatterns:
                 curr["close"] > prev1["open"] and
                 curr_body > prev1_body * 1.3):
                 pattern_info["patterns"].append("BULLISH_ENGULFING")
+                # 看涨吞没：成交量验证 - 应放量
+                if curr_vol > avg_volume * 1.3:
+                    pattern_info["volume_confirmed"] = True
             
             if (prev1_is_bullish and
                 curr_is_bearish and
@@ -449,6 +498,9 @@ class CompleteCandlestickPatterns:
                 curr["close"] < prev1["open"] and
                 curr_body > prev1_body * 1.3):
                 pattern_info["patterns"].append("BEARISH_ENGULFING")
+                # 看跌吞没：成交量验证 - 应放量
+                if curr_vol > avg_volume * 1.3:
+                    pattern_info["volume_confirmed"] = True
             
             if (prev1_is_bearish and
                 curr_is_bullish and
@@ -456,6 +508,9 @@ class CompleteCandlestickPatterns:
                 curr["close"] > (prev1["open"] + prev1["close"]) / 2 and
                 curr["close"] < prev1["open"]):
                 pattern_info["patterns"].append("PIERCING_PATTERN")
+                # 刺穿形态：成交量验证 - 应放量
+                if curr_vol > avg_volume * 1.3:
+                    pattern_info["volume_confirmed"] = True
             
             if (prev1_is_bullish and
                 curr_is_bearish and
@@ -463,6 +518,9 @@ class CompleteCandlestickPatterns:
                 curr["close"] < (prev1["open"] + prev1["close"]) / 2 and
                 curr["close"] > prev1["close"]):
                 pattern_info["patterns"].append("DARK_CLOUD_COVER")
+                # 乌云盖顶：成交量验证 - 应放量
+                if curr_vol > avg_volume * 1.3:
+                    pattern_info["volume_confirmed"] = True
             
             if (curr_body < prev1_body * 0.6 and
                 curr["high"] < prev1["high"] and
@@ -494,12 +552,18 @@ class CompleteCandlestickPatterns:
                     prev1_is_bullish and
                     prev1_body > prev2_body * 1.5):
                     pattern_info["patterns"].append("MORNING_STAR")
+                    # 早晨之星：成交量验证 - 第三根K线应放量
+                    if prev1_vol > avg_volume * 1.3:
+                        pattern_info["volume_confirmed"] = True
                 
                 if (prev3_is_bullish and
                     prev2_body < prev3_body * 0.5 and
                     prev1_is_bearish and
                     prev1_body > prev2_body * 1.5):
                     pattern_info["patterns"].append("EVENING_STAR")
+                    # 黄昏之星：成交量验证 - 第三根K线应放量
+                    if prev1_vol > avg_volume * 1.3:
+                        pattern_info["volume_confirmed"] = True
                 
                 if (prev2_is_bearish and
                     prev1_is_bearish and
@@ -509,6 +573,9 @@ class CompleteCandlestickPatterns:
                     prev1_body > prev2_body * 0.7 and
                     curr_body > prev1_body * 0.7):
                     pattern_info["patterns"].append("THREE_BLACK_CROWS")
+                    # 三只乌鸦：成交量验证 - 应伴随放量
+                    if (prev2_vol + prev1_vol + curr_vol) / 3 > avg_volume * 1.2:
+                        pattern_info["volume_confirmed"] = True
                 
                 if (prev2_is_bullish and
                     prev1_is_bullish and
@@ -518,6 +585,9 @@ class CompleteCandlestickPatterns:
                     prev1_body > prev2_body * 0.7 and
                     curr_body > prev1_body * 0.7):
                     pattern_info["patterns"].append("THREE_WHITE_SOLDIERS")
+                    # 三白兵：成交量验证 - 应伴随放量
+                    if (prev2_vol + prev1_vol + curr_vol) / 3 > avg_volume * 1.2:
+                        pattern_info["volume_confirmed"] = True
                 
                 if (prev3_is_bullish and
                     prev3_body > prev2_body * 2 and
@@ -668,6 +738,8 @@ class ChartPatterns:
         avg_volume = df['volume'].mean()
         
         # 检查头肩顶 (三个峰值，中间最高)
+        avg_volume = df['volume'].mean()
+        
         for i in range(len(peaks) - 2):
             left_shoulder = df.iloc[peaks[i]]['high']
             head = df.iloc[peaks[i+1]]['high']
@@ -690,10 +762,10 @@ class ChartPatterns:
                     head_vol = df.iloc[peaks[i+1]]['volume']
                     right_shoulder_vol = df.iloc[peaks[i+2]]['volume']
                     
-                    volume_confirmed = head_vol < left_shoulder_vol and right_shoulder_vol < head_vol
+                    volume_confirmed = head_vol < left_shoulder_vol * 0.8 and right_shoulder_vol < head_vol * 0.8
                     
                     # 突破验证：价格应跌破颈线
-                    breakout_confirmed = df['close'].iloc[-1] < neckline
+                    breakout_confirmed = df['close'].iloc[-1] < neckline * 0.995
                     
                     confidence = 0.75
                     if volume_confirmed:
@@ -711,7 +783,7 @@ class ChartPatterns:
                         "target_price": neckline - (head - neckline),
                         "volume_confirmed": volume_confirmed,
                         "breakout_confirmed": breakout_confirmed,
-                        "volume_analysis": f"左肩成交量: {left_shoulder_vol:.0f}, 头部成交量: {head_vol:.0f}, 右肩成交量: {right_shoulder_vol:.0f}",
+                        "volume_analysis": f"左肩成交量: {left_shoulder_vol:.0f}, 头部成交量: {head_vol:.0f}, 右肩成交量: {right_shoulder_vol:.0f}, 平均: {avg_volume:.0f}",
                         "description": "头肩顶形态，看跌信号" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                     }
         
@@ -737,10 +809,10 @@ class ChartPatterns:
                         head_vol = df.iloc[troughs[i+1]]['volume']
                         right_shoulder_vol = df.iloc[troughs[i+2]]['volume']
                         
-                        volume_confirmed = head_vol > left_shoulder_vol * 1.2  # 头部放量
+                        volume_confirmed = head_vol > left_shoulder_vol * 1.3  # 头部放量30%以上
                         
                         # 突破验证：价格应突破颈线
-                        breakout_confirmed = df['close'].iloc[-1] > neckline
+                        breakout_confirmed = df['close'].iloc[-1] > neckline * 1.005
                         
                         confidence = 0.75
                         if volume_confirmed:
@@ -758,7 +830,7 @@ class ChartPatterns:
                             "target_price": neckline + (neckline - head),
                             "volume_confirmed": volume_confirmed,
                             "breakout_confirmed": breakout_confirmed,
-                            "volume_analysis": f"左肩成交量: {left_shoulder_vol:.0f}, 头部成交量: {head_vol:.0f}, 右肩成交量: {right_shoulder_vol:.0f}",
+                            "volume_analysis": f"左肩成交量: {left_shoulder_vol:.0f}, 头部成交量: {head_vol:.0f}, 右肩成交量: {right_shoulder_vol:.0f}, 平均: {avg_volume:.0f}",
                             "description": "头肩底形态，看涨信号" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                         }
         
@@ -782,14 +854,33 @@ class ChartPatterns:
                 trough_between = df.iloc[peaks[i]:peaks[i+1]]['low'].min()
                 
                 if trough_between < first_peak * 0.95:  # 至少回调5%
+                    # 成交量验证：第二个峰成交量应小于第一个峰
+                    first_peak_vol = df.iloc[peaks[i]]['volume']
+                    second_peak_vol = df.iloc[peaks[i+1]]['volume']
+                    
+                    volume_confirmed = second_peak_vol < first_peak_vol * 0.85  # 第二个峰放量小于第一个峰15%以上
+                    
+                    # 突破验证：价格跌破颈线
+                    neckline = trough_between
+                    breakout_confirmed = df['close'].iloc[-1] < neckline * 0.995
+                    
+                    confidence = 0.70
+                    if volume_confirmed:
+                        confidence += 0.10
+                    if breakout_confirmed:
+                        confidence += 0.10
+                    
                     return {
                         "detected": True,
                         "type": "DOUBLE_TOP",
-                        "confidence": 0.70,
+                        "confidence": min(confidence, 0.95),
                         "peak_prices": [first_peak, second_peak],
                         "trough_between": trough_between,
                         "target_price": trough_between - (first_peak - trough_between),
-                        "description": "双顶形态(M顶)，看跌反转信号"
+                        "volume_confirmed": volume_confirmed,
+                        "breakout_confirmed": breakout_confirmed,
+                        "volume_analysis": f"第一峰成交量: {first_peak_vol:.0f}, 第二峰成交量: {second_peak_vol:.0f}, 平均: {avg_volume:.0f}",
+                        "description": "双顶形态(M顶)，看跌反转信号" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                     }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -802,6 +893,8 @@ class ChartPatterns:
         if len(troughs) < 2:
             return {"detected": False, "type": None, "confidence": 0}
         
+        avg_volume = df['volume'].mean()
+        
         for i in range(len(troughs) - 1):
             first_trough = df.iloc[troughs[i]]['low']
             second_trough = df.iloc[troughs[i+1]]['low']
@@ -812,14 +905,33 @@ class ChartPatterns:
                 peak_between = df.iloc[troughs[i]:troughs[i+1]]['high'].max()
                 
                 if peak_between > first_trough * 1.05:  # 至少反弹5%
+                    # 成交量验证：第二个底成交量应大于第一个底（恐慌性抛盘后萎缩）
+                    first_trough_vol = df.iloc[troughs[i]]['volume']
+                    second_trough_vol = df.iloc[troughs[i+1]]['volume']
+                    
+                    volume_confirmed = second_trough_vol < first_trough_vol * 0.85  # 第二个底成交量小于第一个底15%以上
+                    
+                    # 突破验证：价格突破颈线
+                    neckline = peak_between
+                    breakout_confirmed = df['close'].iloc[-1] > neckline * 1.005
+                    
+                    confidence = 0.70
+                    if volume_confirmed:
+                        confidence += 0.10
+                    if breakout_confirmed:
+                        confidence += 0.10
+                    
                     return {
                         "detected": True,
                         "type": "DOUBLE_BOTTOM",
-                        "confidence": 0.70,
+                        "confidence": min(confidence, 0.95),
                         "trough_prices": [first_trough, second_trough],
                         "peak_between": peak_between,
                         "target_price": peak_between + (peak_between - first_trough),
-                        "description": "双底形态(W底)，看涨反转信号"
+                        "volume_confirmed": volume_confirmed,
+                        "breakout_confirmed": breakout_confirmed,
+                        "volume_analysis": f"第一底成交量: {first_trough_vol:.0f}, 第二底成交量: {second_trough_vol:.0f}, 平均: {avg_volume:.0f}",
+                        "description": "双底形态(W底)，看涨反转信号" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                     }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -832,6 +944,8 @@ class ChartPatterns:
         if len(peaks) < 2 or len(troughs) < 2:
             return {"detected": False, "type": None, "confidence": 0}
         
+        avg_volume = df['volume'].mean()
+        
         # 检查最近的高点是否大致相同（水平阻力线）
         recent_peaks = [df.iloc[p]['high'] for p in peaks[-3:]]
         recent_troughs = [df.iloc[t]['low'] for t in troughs[-3:]]
@@ -843,15 +957,33 @@ class ChartPatterns:
         if high_variance / avg_high < 0.03:  # 高点变化小于3%
             # 检查低点是否上升
             if len(recent_troughs) >= 2 and recent_troughs[-1] > recent_troughs[0]:
+                # 成交量验证：整理期间成交量应递减，突破时放量
+                
+                # 简单验证：最近成交量低于平均
+                recent_vol = df['volume'].iloc[-5:].mean()
+                volume_confirmed = recent_vol < avg_volume * 0.9  # 整理期成交量萎缩
+                
+                # 突破验证：价格接近或突破阻力线
+                breakout_confirmed = df['close'].iloc[-1] > avg_high * 0.995
+                
+                confidence = 0.65
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": "ASCENDING_TRIANGLE",
-                    "confidence": 0.65,
+                    "confidence": min(confidence, 0.95),
                     "resistance_level": avg_high,
                     "trend_line_start": recent_troughs[0],
                     "trend_line_end": recent_troughs[-1],
                     "target_price": avg_high + (avg_high - recent_troughs[0]),
-                    "description": "上升三角形，看涨持续形态"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "volume_analysis": f"最近5日平均成交量: {recent_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": "上升三角形，看涨持续形态" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -864,6 +996,8 @@ class ChartPatterns:
         if len(peaks) < 2 or len(troughs) < 2:
             return {"detected": False, "type": None, "confidence": 0}
         
+        avg_volume = df['volume'].mean()
+        
         recent_peaks = [df.iloc[p]['high'] for p in peaks[-3:]]
         recent_troughs = [df.iloc[t]['low'] for t in troughs[-3:]]
         
@@ -874,15 +1008,31 @@ class ChartPatterns:
         if low_variance / avg_low < 0.03:  # 低点变化小于3%
             # 检查高点是否下降
             if len(recent_peaks) >= 2 and recent_peaks[-1] < recent_peaks[0]:
+                # 成交量验证：整理期间成交量递减，突破时放量
+                recent_vol = df['volume'].iloc[-5:].mean()
+                volume_confirmed = recent_vol < avg_volume * 0.9
+                
+                # 突破验证：价格跌破支撑线
+                breakout_confirmed = df['close'].iloc[-1] < avg_low * 0.995
+                
+                confidence = 0.65
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": "DESCENDING_TRIANGLE",
-                    "confidence": 0.65,
+                    "confidence": min(confidence, 0.95),
                     "support_level": avg_low,
                     "trend_line_start": recent_peaks[0],
                     "trend_line_end": recent_peaks[-1],
                     "target_price": avg_low - (recent_peaks[0] - avg_low),
-                    "description": "下降三角形，看跌持续形态"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "volume_analysis": f"最近5日平均成交量: {recent_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": "下降三角形，看跌持续形态" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -894,6 +1044,8 @@ class ChartPatterns:
         
         if len(peaks) < 3 or len(troughs) < 3:
             return {"detected": False, "type": None, "confidence": 0}
+        
+        avg_volume = df['volume'].mean()
         
         recent_peaks = [df.iloc[p]['high'] for p in peaks[-4:]]
         recent_troughs = [df.iloc[t]['low'] for t in troughs[-4:]]
@@ -910,14 +1062,35 @@ class ChartPatterns:
             # 高点下降，低点上升（斜率相反）
             if high_slope < 0 and low_slope > 0:
                 apex = (recent_peaks[-1] + recent_troughs[-1]) / 2
+                
+                # 成交量验证：整理期间成交量递减
+                recent_vol = df['volume'].iloc[-5:].mean()
+                volume_confirmed = recent_vol < avg_volume * 0.9
+                
+                # 突破验证：价格接近上沿或下沿
+                current_close = df['close'].iloc[-1]
+                breakout_up = current_close > recent_peaks[-1] * 0.995
+                breakout_down = current_close < recent_troughs[-1] * 1.005
+                breakout_confirmed = breakout_up or breakout_down
+                
+                confidence = 0.60
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": "SYMMETRICAL_TRIANGLE",
-                    "confidence": 0.60,
+                    "confidence": min(confidence, 0.95),
                     "upper_trendline": recent_peaks,
                     "lower_trendline": recent_troughs,
                     "apex_price": apex,
-                    "description": "对称三角形，中性整理形态，突破方向决定趋势"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "breakout_direction": "up" if breakout_up else "down" if breakout_down else None,
+                    "volume_analysis": f"最近5日平均成交量: {recent_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": "对称三角形，中性整理形态，突破方向决定趋势" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -928,6 +1101,8 @@ class ChartPatterns:
         if len(df) < 20:
             return {"detected": False, "type": None, "confidence": 0}
         
+        avg_volume = df['volume'].mean()
+        
         # 检查是否有急剧的价格变动（旗杆）
         price_change_5d = (df['close'].iloc[-5] - df['close'].iloc[-20]) / df['close'].iloc[-20]
         
@@ -937,16 +1112,38 @@ class ChartPatterns:
             
             if recent_range < 0.05:  # 整理区间小于5%
                 direction = "BULL_FLAG" if price_change_5d > 0 else "BEAR_FLAG"
+                
+                # 成交量验证：旗杆期间放量，整理期间萎缩
+                pole_vol = df['volume'].iloc[-20:-5].mean()
+                flag_vol = df['volume'].iloc[-5:].mean()
+                volume_confirmed = pole_vol > avg_volume * 1.2 and flag_vol < avg_volume * 0.8
+                
+                # 突破验证：价格突破整理区间
+                current_close = df['close'].iloc[-1]
+                recent_high = df['high'].iloc[-5:].max()
+                recent_low = df['low'].iloc[-5:].min()
+                breakout_confirmed = (direction == "BULL_FLAG" and current_close > recent_high * 1.005) or \
+                                    (direction == "BEAR_FLAG" and current_close < recent_low * 0.995)
+                
+                confidence = 0.60
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": direction,
-                    "confidence": 0.60,
+                    "confidence": min(confidence, 0.95),
                     "pole_height": abs(price_change_5d),
                     "consolidation_range": recent_range,
                     "target_price": (df['close'].iloc[-5:].max() + abs(price_change_5d) * df['close'].iloc[-5]) 
                                     if direction == "BULL_FLAG" else
                                     (df['close'].iloc[-5:].min() - abs(price_change_5d) * df['close'].iloc[-5]),
-                    "description": f"{'看涨' if direction == 'BULL_FLAG' else '看跌'}旗形，持续形态"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "volume_analysis": f"旗杆期平均成交量: {pole_vol:.0f}, 旗形期平均成交量: {flag_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": f"{'看涨' if direction == 'BULL_FLAG' else '看跌'}旗形，持续形态" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -959,6 +1156,8 @@ class ChartPatterns:
         if len(peaks) < 3 or len(troughs) < 3:
             return {"detected": False, "type": None, "confidence": 0}
         
+        avg_volume = df['volume'].mean()
+        
         recent_peaks = [df.iloc[p]['high'] for p in peaks[-4:]]
         recent_troughs = [df.iloc[t]['low'] for t in troughs[-4:]]
         
@@ -968,13 +1167,29 @@ class ChartPatterns:
             low_slope = (recent_troughs[-1] - recent_troughs[0]) / len(recent_troughs)
             
             if high_slope < low_slope:  # 收敛
+                # 成交量验证：上升楔形通常伴随着成交量递减
+                recent_vol = df['volume'].iloc[-5:].mean()
+                volume_confirmed = recent_vol < avg_volume * 0.9
+                
+                # 突破验证：价格跌破下轨
+                breakout_confirmed = df['close'].iloc[-1] < recent_troughs[-1] * 0.995
+                
+                confidence = 0.60
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": "RISING_WEDGE",
-                    "confidence": 0.60,
+                    "confidence": min(confidence, 0.95),
                     "upper_trendline": recent_peaks,
                     "lower_trendline": recent_troughs,
-                    "description": "上升楔形，看跌反转形态"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "volume_analysis": f"最近5日平均成交量: {recent_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": "上升楔形，看跌反转形态" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         # 下降楔形：高点和低点都下降，但高点斜率小于低点斜率（更平缓）
@@ -983,13 +1198,29 @@ class ChartPatterns:
             low_slope = (recent_troughs[-1] - recent_troughs[0]) / len(recent_troughs)
             
             if abs(high_slope) < abs(low_slope):  # 收敛
+                # 成交量验证：下降楔形通常伴随着成交量递减
+                recent_vol = df['volume'].iloc[-5:].mean()
+                volume_confirmed = recent_vol < avg_volume * 0.9
+                
+                # 突破验证：价格突破上轨
+                breakout_confirmed = df['close'].iloc[-1] > recent_peaks[-1] * 1.005
+                
+                confidence = 0.60
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": "FALLING_WEDGE",
-                    "confidence": 0.60,
+                    "confidence": min(confidence, 0.95),
                     "upper_trendline": recent_peaks,
                     "lower_trendline": recent_troughs,
-                    "description": "下降楔形，看涨反转形态"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "volume_analysis": f"最近5日平均成交量: {recent_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": "下降楔形，看涨反转形态" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -999,6 +1230,8 @@ class ChartPatterns:
         """识别圆形顶"""
         if len(df) < 30:
             return {"detected": False, "type": None, "confidence": 0}
+        
+        avg_volume = df['volume'].mean()
         
         # 检查价格是否呈现弧形顶部
         highs = df['high'].values[-30:]
@@ -1011,14 +1244,32 @@ class ChartPatterns:
             
             # 检查是否平滑（没有尖锐的峰）
             if np.std(highs[mid-5:mid+5]) < np.std(highs[:5]) * 0.5:
+                # 成交量验证：左侧上升时放量，右侧下跌时缩量
+                left_vol = df['volume'].iloc[-30:-15].mean()
+                right_vol = df['volume'].iloc[-15:].mean()
+                volume_confirmed = left_vol > avg_volume * 1.1 and right_vol < avg_volume * 0.9
+                
+                # 突破验证：价格跌破颈线（左侧起点）
+                neckline = df['close'].iloc[-30]
+                breakout_confirmed = df['close'].iloc[-1] < neckline * 0.995
+                
+                confidence = 0.55
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": "ROUNDING_TOP",
-                    "confidence": 0.55,
+                    "confidence": min(confidence, 0.95),
                     "top_price": highs[mid],
                     "start_price": highs[0],
                     "end_price": highs[-1],
-                    "description": "圆形顶，看跌反转形态"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "volume_analysis": f"左侧平均成交量: {left_vol:.0f}, 右侧平均成交量: {right_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": "圆形顶，看跌反转形态" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -1028,6 +1279,8 @@ class ChartPatterns:
         """识别圆形底"""
         if len(df) < 30:
             return {"detected": False, "type": None, "confidence": 0}
+        
+        avg_volume = df['volume'].mean()
         
         # 检查价格是否呈现弧形底部
         lows = df['low'].values[-30:]
@@ -1040,14 +1293,32 @@ class ChartPatterns:
             
             # 检查是否平滑
             if np.std(lows[mid-5:mid+5]) < np.std(lows[:5]) * 0.5:
+                # 成交量验证：左侧下跌时缩量，右侧上升时放量
+                left_vol = df['volume'].iloc[-30:-15].mean()
+                right_vol = df['volume'].iloc[-15:].mean()
+                volume_confirmed = right_vol > left_vol * 1.3  # 右侧放量30%以上
+                
+                # 突破验证：价格突破颈线（左侧起点）
+                neckline = df['close'].iloc[-30]
+                breakout_confirmed = df['close'].iloc[-1] > neckline * 1.005
+                
+                confidence = 0.55
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": "ROUNDING_BOTTOM",
-                    "confidence": 0.55,
+                    "confidence": min(confidence, 0.95),
                     "bottom_price": lows[mid],
                     "start_price": lows[0],
                     "end_price": lows[-1],
-                    "description": "圆形底，看涨反转形态"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "volume_analysis": f"左侧平均成交量: {left_vol:.0f}, 右侧平均成交量: {right_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": "圆形底，看涨反转形态" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         return {"detected": False, "type": None, "confidence": 0}
@@ -1058,6 +1329,7 @@ class ChartPatterns:
         if len(df) < 20:
             return {"detected": False, "type": None, "confidence": 0}
         
+        avg_volume = df['volume'].mean()
         recent_df = df.tail(20)
         
         # 检查是否在一定区间内震荡
@@ -1075,14 +1347,34 @@ class ChartPatterns:
             low_touches = sum(1 for l in recent_df['low'] if l < support * 1.02)
             
             if high_touches >= 2 and low_touches >= 2:
+                # 成交量验证：整理期间成交量应递减
+                recent_vol = df['volume'].iloc[-5:].mean()
+                volume_confirmed = recent_vol < avg_volume * 0.9
+                
+                # 突破验证：价格接近或突破上沿或下沿
+                current_close = df['close'].iloc[-1]
+                breakout_up = current_close > resistance * 0.995
+                breakout_down = current_close < support * 1.005
+                breakout_confirmed = breakout_up or breakout_down
+                
+                confidence = 0.60
+                if volume_confirmed:
+                    confidence += 0.10
+                if breakout_confirmed:
+                    confidence += 0.10
+                
                 return {
                     "detected": True,
                     "type": "RECTANGLE",
-                    "confidence": 0.60,
+                    "confidence": min(confidence, 0.95),
                     "resistance": resistance,
                     "support": support,
                     "range_height": resistance - support,
-                    "description": "矩形整理形态，突破方向决定趋势"
+                    "volume_confirmed": volume_confirmed,
+                    "breakout_confirmed": breakout_confirmed,
+                    "breakout_direction": "up" if breakout_up else "down" if breakout_down else None,
+                    "volume_analysis": f"最近5日平均成交量: {recent_vol:.0f}, 总体平均: {avg_volume:.0f}",
+                    "description": "矩形整理形态，突破方向决定趋势" + ("(成交量确认)" if volume_confirmed else "(等待成交量确认)") + ("(突破确认)" if breakout_confirmed else "(等待突破确认)")
                 }
         
         return {"detected": False, "type": None, "confidence": 0}
