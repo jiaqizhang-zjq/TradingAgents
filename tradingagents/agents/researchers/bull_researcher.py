@@ -119,9 +119,20 @@ Use this information to deliver a compelling bull argument, refute the bear's co
                 prediction = prediction_map.get(prediction, prediction)
                 confidence = int(prediction_match.group(2)) / 100.0
             else:
-                # 默认预测
-                prediction = "BUY" if language == "en" else "买入"
-                confidence = 0.7
+                # 默认预测 - 当LLM没有按格式输出时使用
+                # 尝试从内容中推断置信度
+                prediction = "BUY"
+                # 基于文本长度和关键词密度估算置信度
+                text_length = len(response_content)
+                has_strong_words = any(word in response_content.lower() for word in ['strong', 'confident', 'clear', '明显', '强烈', '确定'])
+                has_weak_words = any(word in response_content.lower() for word in ['uncertain', 'unclear', 'mixed', '模糊', '不确定', '混杂'])
+                
+                if has_strong_words and not has_weak_words:
+                    confidence = 0.75
+                elif has_weak_words and not has_strong_words:
+                    confidence = 0.55
+                else:
+                    confidence = 0.65
             
             # 记录到数据库
             tracker.record_research(

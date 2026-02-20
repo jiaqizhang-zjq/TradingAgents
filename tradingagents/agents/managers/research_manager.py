@@ -122,7 +122,20 @@ Debate History:
                         prediction = "SELL"
                     else:
                         prediction = "HOLD"
-                confidence = 0.6 if prediction in ["BUY", "SELL"] else 0.5
+                # 基于预测类型和文本内容调整置信度
+                if prediction in ["BUY", "SELL"]:
+                    # 检查文本中的强弱信号词
+                    has_strong_words = any(word in response_content.lower() for word in ['strong', 'confident', 'clear', 'convincing', '明显', '强烈', '确定', '有说服力'])
+                    has_weak_words = any(word in response_content.lower() for word in ['uncertain', 'unclear', 'mixed', 'weak', '模糊', '不确定', '混杂', '弱'])
+                    
+                    if has_strong_words and not has_weak_words:
+                        confidence = 0.72
+                    elif has_weak_words and not has_strong_words:
+                        confidence = 0.58
+                    else:
+                        confidence = 0.65
+                else:
+                    confidence = 0.55
             
             # 记录到数据库
             tracker.record_research(
