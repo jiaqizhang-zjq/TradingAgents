@@ -21,6 +21,7 @@ from tradingagents.agents.utils.agent_states import (
 from tradingagents.dataflows.config import set_config
 from tradingagents.dataflows.database import AnalysisReport, get_db
 from tradingagents.dataflows.research_tracker import get_research_tracker
+from tradingagents.report_saver import get_report_saver
 
 # Import the new abstract tool methods from agent_utils
 from tradingagents.agents.utils.agent_utils import (
@@ -341,7 +342,7 @@ class TradingAgentsGraph:
         self._record_research_predictions(final_state)
     
     def _save_to_database(self, final_state):
-        """Save the analysis results to database."""
+        """Save the analysis results to database and files."""
         try:
             db = get_db()
             
@@ -375,9 +376,42 @@ class TradingAgentsGraph:
                 print(f"✅ 分析结果已保存到数据库: {symbol} @ {trade_date}")
             else:
                 print(f"❌ 保存到数据库失败")
+            
+            # Save to files
+            self._save_to_files(final_state)
                 
         except Exception as e:
             print(f"❌ 数据库保存错误: {e}")
+    
+    def _save_to_files(self, final_state):
+        """Save the analysis results to files."""
+        try:
+            saver = get_report_saver()
+            
+            symbol = final_state["company_of_interest"]
+            trade_date = final_state["trade_date"]
+            
+            # Get debate states
+            investment_debate_state = final_state.get("investment_debate_state", {})
+            risk_debate_state = final_state.get("risk_debate_state", {})
+            
+            # Save all reports
+            saver.save_analysis_reports(
+                symbol=symbol,
+                trade_date=trade_date,
+                market_report=final_state.get("market_report", ""),
+                sentiment_report=final_state.get("sentiment_report", ""),
+                news_report=final_state.get("news_report", ""),
+                fundamentals_report=final_state.get("fundamentals_report", ""),
+                candlestick_report=final_state.get("candlestick_report", ""),
+                investment_debate_state=investment_debate_state,
+                risk_debate_state=risk_debate_state,
+                investment_plan=final_state.get("investment_plan", ""),
+                final_trade_decision=final_state.get("final_trade_decision", "")
+            )
+                
+        except Exception as e:
+            print(f"❌ 文件保存错误: {e}")
     
     def _record_research_predictions(self, final_state):
         """Record bull and bear researcher predictions for win rate tracking."""
