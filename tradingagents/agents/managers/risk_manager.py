@@ -28,7 +28,11 @@ def create_risk_manager(llm, memory):
         language = config.get("output_language", "en")
         
         if language == "zh":
-            prompt = f"""作为风险管理评委和辩论主持人，你的目标是评估三位风险分析师——激进、中性和保守——之间的辩论，并确定交易员的最佳行动方案。你的决定必须导致明确的建议：买入、卖出或持有。只有在特定论点充分支持的情况下才选择持有，而不是在所有方面似乎都有效时作为退路。努力做到清晰和果断。
+            prompt = f"""作为风险管理评委和辩论主持人，你的目标是评估三位风险分析师——激进、中性和保守——之间的辩论，并确定交易员的最佳行动方案。
+
+【重要：你的回复必须使用中文，所有内容都应该是中文】
+
+你的决定必须导致明确的建议：买入、卖出或持有。只有在特定论点充分支持的情况下才选择持有，而不是在所有方面似乎都有效时作为退路。努力做到清晰和果断。
 
 决策指南：
 1. **总结关键论点**：从每位分析师中提取最强的观点，专注于与上下文的相关性。
@@ -39,6 +43,7 @@ def create_risk_manager(llm, memory):
 交付物：
 - 清晰且可操作的建议：买入、卖出或持有。
 - 基于辩论和过去反思的详细推理。
+- 你的整个回复必须使用中文，包括标题、表格、分析内容。
 
 ---
 
@@ -71,9 +76,10 @@ Deliverables:
 Focus on actionable insights and continuous improvement. Build on past lessons, critically evaluate all perspectives, and ensure each decision advances better outcomes."""
 
         response = llm.invoke(prompt)
+        response_content = response.content
 
         new_risk_debate_state = {
-            "judge_decision": response.content,
+            "judge_decision": response_content,
             "history": risk_debate_state["history"],
             "aggressive_history": risk_debate_state["aggressive_history"],
             "conservative_history": risk_debate_state["conservative_history"],
@@ -82,6 +88,7 @@ Focus on actionable insights and continuous improvement. Build on past lessons, 
             "current_aggressive_response": risk_debate_state["current_aggressive_response"],
             "current_conservative_response": risk_debate_state["current_conservative_response"],
             "current_neutral_response": risk_debate_state["current_neutral_response"],
+            "current_response": response_content,  # 添加 current_response 用于打印
             "count": risk_debate_state["count"],
         }
 
