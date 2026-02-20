@@ -241,6 +241,9 @@ class TradingAgentsGraph:
             # 调试模式，带跟踪输出
             # 使用stream方法逐块执行，便于调试和观察中间状态
             trace = []
+            last_debate_state = None
+            last_risk_state = None
+            
             for chunk in self.graph.stream(init_agent_state, **args):
                 if len(chunk["messages"]) == 0:
                     pass
@@ -248,8 +251,32 @@ class TradingAgentsGraph:
                     # 打印最后一条消息
                     chunk["messages"][-1].pretty_print()
                     trace.append(chunk)
+                
+                # 打印研究员辩论过程
+                if "investment_debate_state" in chunk:
+                    current_debate = chunk["investment_debate_state"]
+                    if last_debate_state is None or current_debate.get("current_response") != last_debate_state.get("current_response"):
+                        if current_debate.get("current_response"):
+                            print("\n" + "="*60)
+                            print("📊 研究员辩论过程")
+                            print("="*60)
+                            print(current_debate.get("current_response", ""))
+                            print("="*60 + "\n")
+                    last_debate_state = current_debate
+                
+                # 打印风险管理层辩论过程
+                if "risk_debate_state" in chunk:
+                    current_risk = chunk["risk_debate_state"]
+                    if last_risk_state is None or current_risk.get("current_response") != last_risk_state.get("current_response"):
+                        if current_risk.get("current_response"):
+                            print("\n" + "="*60)
+                            print("⚠️ 风险管理层辩论过程")
+                            print("="*60)
+                            print(current_risk.get("current_response", ""))
+                            print("="*60 + "\n")
+                    last_risk_state = current_risk
 
-            final_state = trace[-1]
+            final_state = trace[-1] if trace else init_agent_state
         else:
             # 标准模式，不带跟踪
             # 使用invoke方法一次性执行完整个图

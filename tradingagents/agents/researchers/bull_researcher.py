@@ -32,7 +32,7 @@ PREDICTION: [BUY/SELL/HOLD] (Confidence: [0-100]%)
 - 参与度：以对话式风格提出你的论点，直接与看跌分析师的观点互动并进行有效辩论，而不是仅仅列出数据。
 
 重要：在你的回复末尾，你必须包含一个明确的预测，格式如下：
-PREDICTION: [BUY/SELL/HOLD] (Confidence: [0-100]%)
+预测：[买入/卖出/持有]（置信度：[0-100]%）
 """
 }
 
@@ -99,20 +99,28 @@ Use this information to deliver a compelling bull argument, refute the bear's co
         response = llm.invoke(prompt)
         response_content = response.content
 
-        argument = f"Bull Analyst: {response_content}"
+        # 根据语言设置分析师名称
+        analyst_name = "看涨分析师" if language == "zh" else "Bull Analyst"
+        argument = f"{analyst_name}: {response_content}"
         
         # 解析预测结果并记录到数据库
         try:
             tracker = get_research_tracker()
             
-            # 提取预测结果
-            prediction_match = re.search(r'PREDICTION:\s*(BUY|SELL|HOLD).*?Confidence:\s*(\d+)%?', response_content, re.IGNORECASE)
+            # 提取预测结果 - 支持中英文格式
+            if language == "zh":
+                prediction_match = re.search(r'预测[:：]\s*(买入|卖出|持有|BUY|SELL|HOLD).*?置信度[:：]\s*(\d+)%?', response_content, re.IGNORECASE)
+            else:
+                prediction_match = re.search(r'PREDICTION:\s*(BUY|SELL|HOLD).*?Confidence:\s*(\d+)%?', response_content, re.IGNORECASE)
             if prediction_match:
                 prediction = prediction_match.group(1).upper()
+                # 转换中文预测为英文
+                prediction_map = {"买入": "BUY", "卖出": "SELL", "持有": "HOLD"}
+                prediction = prediction_map.get(prediction, prediction)
                 confidence = int(prediction_match.group(2)) / 100.0
             else:
                 # 默认预测
-                prediction = "BUY"
+                prediction = "BUY" if language == "en" else "买入"
                 confidence = 0.7
             
             # 记录到数据库
