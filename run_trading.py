@@ -46,7 +46,7 @@ def run_trading_analysis(
     deep_think_llm: str = None,
     quick_think_llm: str = None,
     backend_url: str = None,
-    max_debate_rounds: int = None,
+    max_debate_rounds: int = 2,
     analysts: list = None,
     output_lang: str = None,
 ):
