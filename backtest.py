@@ -33,7 +33,6 @@ def get_price_on_date(symbol: str, target_date: str) -> float:
         try:
             data = json.loads(stock_data)
             if isinstance(data, list) and len(data) > 0:
-                # 找最接近目标日期的数据
                 for row in data:
                     if 'Date' in row:
                         row_date = row['Date'][:10] if isinstance(row['Date'], str) else str(row['Date'])
@@ -70,14 +69,30 @@ def calculate_return(buy_price: float, current_price: float) -> float:
     return (current_price - buy_price) / buy_price
 
 
+def calculate_profit(buy_price: float, current_price: float, initial_capital: float = 10000) -> float:
+    """计算利润"""
+    if buy_price is None or current_price is None:
+        return None
+    shares = initial_capital / buy_price
+    return (current_price - buy_price) * shares
+
+
 def run_backtest(db_path: str = "research_tracker.db"):
     """运行回测"""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
+    # 确保表结构正确
+    try:
+        cursor.execute("ALTER TABLE research_records ADD COLUMN buy_price REAL")
+        cursor.execute("ALTER TABLE research_records ADD COLUMN initial_capital REAL DEFAULT 10000")
+        conn.commit()
+    except:
+        pass
+    
     # 获取所有 pending 的记录
     cursor.execute("""
-        SELECT id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days
+        SELECT id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital
         FROM research_records 
         WHERE outcome = 'pending'
         ORDER BY trade_date
@@ -86,34 +101,37 @@ def run_backtest(db_path: str = "research_tracker.db"):
     pending_records = cursor.fetchall()
     
     print(f"找到 {len(pending_records)} 条待回测记录")
-    print("-" * 80)
+    print("-" * 100)
     
     updated_count = 0
     
     for record in pending_records:
-        record_id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days = record
+        record_id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital = record
         
-        # 获取交易日期的价格
-        buy_price = get_price_on_date(symbol, trade_date)
+        # 如果没有买入价格，获取交易日期的价格
+        if buy_price is None:
+            buy_price = get_price_on_date(symbol, trade_date)
+            if buy_price:
+                cursor.execute("""
+                    UPDATE research_records SET buy_price = ? WHERE id = ?
+                """, (buy_price, record_id))
         
         if buy_price is None:
             print(f"⚠️ {symbol} {trade_date}: 无法获取买入价格，跳过")
             continue
         
-        # 更新买入价格到数据库
-        cursor.execute("""
-            UPDATE research_records
-            SET metadata = ?
-            WHERE id = ?
-        """, (f'{{"buy_price": {buy_price}}}', record_id))
+        # 设置默认初始资金
+        if initial_capital is None:
+            initial_capital = 10000
         
         # 获取当前价格
         current_price = get_price_on_date(symbol, datetime.now().strftime("%Y-%m-%d"))
         if current_price is None:
             current_price = buy_price
         
-        # 计算实际收益
+        # 计算收益
         actual_return = calculate_return(buy_price, current_price)
+        profit = calculate_profit(buy_price, current_price, initial_capital)
         
         # 判断预测是否正确
         if prediction == "BUY":
@@ -149,15 +167,16 @@ def run_backtest(db_path: str = "research_tracker.db"):
         
         # 打印结果
         return_str = f"{actual_return*100:+.2f}%" if actual_return is not None else "N/A"
+        profit_str = f"${profit:+.2f}" if profit is not None else "N/A"
         
-        print(f"{symbol:6s} | {trade_date} | {prediction:4s} | 买入: ${buy_price:.2f} | 当前: ${current_price:.2f} | 收益: {return_str} | {outcome}")
+        print(f"{symbol:6s} | {trade_date} | {prediction:4s} | 买入: ${buy_price:.2f} | 当前: ${current_price:.2f} | 收益: {return_str:10s} | 利润: {profit_str:12s} | {outcome}")
         
         updated_count += 1
     
     conn.commit()
     conn.close()
     
-    print("-" * 80)
+    print("-" * 100)
     print(f"回测完成！更新了 {updated_count} 条记录")
     
     # 打印统计
@@ -173,22 +192,24 @@ def run_backtest(db_path: str = "research_tracker.db"):
             SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END) as correct,
             SUM(CASE WHEN outcome = 'incorrect' THEN 1 ELSE 0 END) as incorrect,
             SUM(CASE WHEN outcome = 'partial' THEN 1 ELSE 0 END) as partial,
-            AVG(actual_return) as avg_return
+            AVG(actual_return) as avg_return,
+            AVG(actual_return * initial_capital) as avg_profit
         FROM research_records 
         WHERE outcome != 'pending'
         GROUP BY researcher_type
     """)
     
     print("\n按研究员类型:")
-    print(f"{'类型':15s} | {'总数':5s} | {'正确':5s} | {'错误':5s} | {'部分':5s} | {'胜率':8s} | {'平均收益':10s}")
-    print("-" * 80)
+    print(f"{'类型':15s} | {'总数':5s} | {'正确':5s} | {'错误':5s} | {'部分':5s} | {'胜率':8s} | {'平均收益':10s} | {'平均利润':12s}")
+    print("-" * 100)
     
     for row in cursor.fetchall():
-        researcher_type, total, correct, incorrect, partial, avg_return = row
+        researcher_type, total, correct, incorrect, partial, avg_return, avg_profit = row
         if total and total > 0:
             win_rate = (correct / total * 100)
             avg_return_str = f"{avg_return*100:+.2f}%" if avg_return else "N/A"
-            print(f"{researcher_type:15s} | {total:5d} | {correct:5d} | {incorrect:5d} | {partial:5d} | {win_rate:7.1f}% | {avg_return_str:10s}")
+            avg_profit_str = f"${avg_profit:+.2f}" if avg_profit else "N/A"
+            print(f"{researcher_type:15s} | {total:5d} | {correct:5d} | {incorrect:5d} | {partial:5d} | {win_rate:7.1f}% | {avg_return_str:10s} | {avg_profit_str:12s}")
     
     # 按股票统计
     cursor.execute("""
@@ -196,22 +217,39 @@ def run_backtest(db_path: str = "research_tracker.db"):
             symbol,
             COUNT(*) as total,
             SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END) as correct,
-            AVG(actual_return) as avg_return
+            AVG(actual_return) as avg_return,
+            AVG(actual_return * initial_capital) as avg_profit
         FROM research_records 
         WHERE outcome != 'pending'
         GROUP BY symbol
     """)
     
     print("\n按股票:")
-    print(f"{'股票':8s} | {'总数':5s} | {'正确':5s} | {'胜率':8s} | {'平均收益':10s}")
-    print("-" * 60)
+    print(f"{'股票':8s} | {'总数':5s} | {'正确':5s} | {'胜率':8s} | {'平均收益':10s} | {'平均利润':12s}")
+    print("-" * 70)
     
     for row in cursor.fetchall():
-        symbol, total, correct, avg_return = row
+        symbol, total, correct, avg_return, avg_profit = row
         if total and total > 0:
             win_rate = (correct / total * 100)
             avg_return_str = f"{avg_return*100:+.2f}%" if avg_return else "N/A"
-            print(f"{symbol:8s} | {total:5d} | {correct:5d} | {win_rate:7.1f}% | {avg_return_str:10s}")
+            avg_profit_str = f"${avg_profit:+.2f}" if avg_profit else "N/A"
+            print(f"{symbol:8s} | {total:5d} | {correct:5d} | {win_rate:7.1f}% | {avg_return_str:10s} | {avg_profit_str:12s}")
+    
+    # 总利润统计
+    cursor.execute("""
+        SELECT 
+            SUM(actual_return * initial_capital) as total_profit,
+            SUM(actual_return * initial_capital) / COUNT(*) as avg_profit
+        FROM research_records 
+        WHERE outcome != 'pending'
+    """)
+    
+    row = cursor.fetchone()
+    if row:
+        total_profit, avg_profit = row
+        print(f"\n总利润: ${total_profit:+.2f}" if total_profit else "\n总利润: N/A")
+        print(f"平均利润: ${avg_profit:+.2f}" if avg_profit else "平均利润: N/A")
     
     conn.close()
 

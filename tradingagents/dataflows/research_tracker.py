@@ -126,6 +126,8 @@ class ResearchTracker:
                     holding_days INTEGER DEFAULT 5,
                     created_at TEXT NOT NULL,
                     metadata TEXT DEFAULT '{}',
+                    buy_price REAL,  -- 买入价格（交易当天收盘价）
+                    initial_capital REAL DEFAULT 10000,  -- 初始资金，默认1万美元
                     
                     -- 复合索引
                     UNIQUE(researcher_name, symbol, trade_date)
