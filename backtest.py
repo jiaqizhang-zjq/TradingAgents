@@ -19,7 +19,6 @@ def get_price_on_date(symbol: str, target_date: str) -> float:
     try:
         manager = get_data_manager()
         
-        # 获取目标日期前后的数据
         target_dt = datetime.strptime(target_date, "%Y-%m-%d")
         start_date = (target_dt - timedelta(days=3)).strftime("%Y-%m-%d")
         end_date = (target_dt + timedelta(days=3)).strftime("%Y-%m-%d")
@@ -77,6 +76,13 @@ def calculate_profit(buy_price: float, current_price: float, initial_capital: fl
     return (current_price - buy_price) * shares
 
 
+def calculate_shares(buy_price: float, initial_capital: float = 10000) -> float:
+    """计算可以买入的股数"""
+    if buy_price is None or buy_price <= 0:
+        return 0
+    return initial_capital / buy_price
+
+
 def run_backtest(db_path: str = "research_tracker.db"):
     """运行回测"""
     conn = sqlite3.connect(db_path)
@@ -86,13 +92,29 @@ def run_backtest(db_path: str = "research_tracker.db"):
     try:
         cursor.execute("ALTER TABLE research_records ADD COLUMN buy_price REAL")
         cursor.execute("ALTER TABLE research_records ADD COLUMN initial_capital REAL DEFAULT 10000")
+        cursor.execute("ALTER TABLE research_records ADD COLUMN shares REAL")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS position_changes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                date TEXT NOT NULL,
+                action TEXT NOT NULL,
+                shares REAL,
+                price REAL,
+                amount REAL,
+                balance REAL,
+                researcher_name TEXT,
+                created_at TEXT NOT NULL,
+                UNIQUE(symbol, date, action)
+            )
+        """)
         conn.commit()
     except:
         pass
     
     # 获取所有 pending 的记录
     cursor.execute("""
-        SELECT id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital
+        SELECT id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital, shares
         FROM research_records 
         WHERE outcome = 'pending'
         ORDER BY trade_date
@@ -101,20 +123,16 @@ def run_backtest(db_path: str = "research_tracker.db"):
     pending_records = cursor.fetchall()
     
     print(f"找到 {len(pending_records)} 条待回测记录")
-    print("-" * 100)
+    print("-" * 120)
     
     updated_count = 0
     
     for record in pending_records:
-        record_id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital = record
+        record_id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital, shares = record
         
         # 如果没有买入价格，获取交易日期的价格
         if buy_price is None:
             buy_price = get_price_on_date(symbol, trade_date)
-            if buy_price:
-                cursor.execute("""
-                    UPDATE research_records SET buy_price = ? WHERE id = ?
-                """, (buy_price, record_id))
         
         if buy_price is None:
             print(f"⚠️ {symbol} {trade_date}: 无法获取买入价格，跳过")
@@ -123,6 +141,10 @@ def run_backtest(db_path: str = "research_tracker.db"):
         # 设置默认初始资金
         if initial_capital is None:
             initial_capital = 10000
+        
+        # 计算头寸数量
+        if shares is None or shares == 0:
+            shares = calculate_shares(buy_price, initial_capital)
         
         # 获取当前价格
         current_price = get_price_on_date(symbol, datetime.now().strftime("%Y-%m-%d"))
@@ -135,24 +157,14 @@ def run_backtest(db_path: str = "research_tracker.db"):
         
         # 判断预测是否正确
         if prediction == "BUY":
-            if actual_return > 0:
-                outcome = "correct"
-            elif actual_return < 0:
-                outcome = "incorrect"
-            else:
-                outcome = "partial"
+            outcome = "correct" if actual_return > 0 else ("incorrect" if actual_return < 0 else "partial")
+            action = "BUY"
         elif prediction == "SELL":
-            if actual_return < 0:
-                outcome = "correct"
-            elif actual_return > 0:
-                outcome = "incorrect"
-            else:
-                outcome = "partial"
-        else:  # HOLD
-            if -0.02 <= actual_return <= 0.02:
-                outcome = "correct"
-            else:
-                outcome = "partial"
+            outcome = "correct" if actual_return < 0 else ("incorrect" if actual_return > 0 else "partial")
+            action = "SELL"
+        else:
+            outcome = "correct" if -0.02 <= actual_return <= 0.02 else "partial"
+            action = "HOLD"
         
         # 更新数据库
         verified_date = datetime.now().strftime("%Y-%m-%d")
@@ -161,22 +173,31 @@ def run_backtest(db_path: str = "research_tracker.db"):
             SET outcome = ?,
                 actual_return = ?,
                 verified_date = ?,
-                holding_days = ?
+                holding_days = ?,
+                buy_price = ?,
+                shares = ?
             WHERE id = ?
-        """, (outcome, actual_return, verified_date, holding_days, record_id))
+        """, (outcome, actual_return, verified_date, holding_days, buy_price, shares, record_id))
+        
+        # 记录头寸变化
+        cursor.execute("""
+            INSERT OR IGNORE INTO position_changes (symbol, date, action, shares, price, amount, balance, researcher_name, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (symbol, trade_date, action, shares, buy_price, initial_capital, initial_capital, researcher_name, datetime.now().isoformat()))
         
         # 打印结果
         return_str = f"{actual_return*100:+.2f}%" if actual_return is not None else "N/A"
         profit_str = f"${profit:+.2f}" if profit is not None else "N/A"
+        shares_str = f"{shares:.2f}"
         
-        print(f"{symbol:6s} | {trade_date} | {prediction:4s} | 买入: ${buy_price:.2f} | 当前: ${current_price:.2f} | 收益: {return_str:10s} | 利润: {profit_str:12s} | {outcome}")
+        print(f"{symbol:6s} | {trade_date} | {prediction:4s} | 买入: ${buy_price:.2f} | 股数: {shares_str:8s} | 当前: ${current_price:.2f} | 收益: {return_str:10s} | 利润: {profit_str:12s} | {outcome}")
         
         updated_count += 1
     
     conn.commit()
     conn.close()
     
-    print("-" * 100)
+    print("-" * 120)
     print(f"回测完成！更新了 {updated_count} 条记录")
     
     # 打印统计
@@ -193,7 +214,7 @@ def run_backtest(db_path: str = "research_tracker.db"):
             SUM(CASE WHEN outcome = 'incorrect' THEN 1 ELSE 0 END) as incorrect,
             SUM(CASE WHEN outcome = 'partial' THEN 1 ELSE 0 END) as partial,
             AVG(actual_return) as avg_return,
-            AVG(actual_return * initial_capital) as avg_profit
+            AVG(actual_return * COALESCE(initial_capital, 10000)) as avg_profit
         FROM research_records 
         WHERE outcome != 'pending'
         GROUP BY researcher_type
@@ -218,7 +239,7 @@ def run_backtest(db_path: str = "research_tracker.db"):
             COUNT(*) as total,
             SUM(CASE WHEN outcome = 'correct' THEN 1 ELSE 0 END) as correct,
             AVG(actual_return) as avg_return,
-            AVG(actual_return * initial_capital) as avg_profit
+            AVG(actual_return * COALESCE(initial_capital, 10000)) as avg_profit
         FROM research_records 
         WHERE outcome != 'pending'
         GROUP BY symbol
@@ -236,11 +257,28 @@ def run_backtest(db_path: str = "research_tracker.db"):
             avg_profit_str = f"${avg_profit:+.2f}" if avg_profit else "N/A"
             print(f"{symbol:8s} | {total:5d} | {correct:5d} | {win_rate:7.1f}% | {avg_return_str:10s} | {avg_profit_str:12s}")
     
+    # 头寸变化统计
+    print("\n=== 头寸变化记录 ===")
+    cursor.execute("""
+        SELECT symbol, date, action, shares, price, amount, researcher_name
+        FROM position_changes
+        ORDER BY date DESC
+        LIMIT 20
+    """)
+    
+    print(f"\n{'股票':8s} | {'日期':12s} | {'操作':6s} | {'股数':12s} | {'价格':10s} | {'金额':12s} | {'研究员':20s}")
+    print("-" * 90)
+    
+    for row in cursor.fetchall():
+        symbol, date, action, shares, price, amount, researcher_name = row
+        shares_str = f"{shares:.2f}" if shares else "0.00"
+        print(f"{symbol:8s} | {date:12s} | {action:6s} | {shares_str:12s} | ${price:9.2f} | ${amount:11.2f} | {research_name:20s}")
+    
     # 总利润统计
     cursor.execute("""
         SELECT 
-            SUM(actual_return * initial_capital) as total_profit,
-            SUM(actual_return * initial_capital) / COUNT(*) as avg_profit
+            SUM(actual_return * COALESCE(initial_capital, 10000)) as total_profit,
+            AVG(actual_return * COALESCE(initial_capital, 10000)) as avg_profit
         FROM research_records 
         WHERE outcome != 'pending'
     """)

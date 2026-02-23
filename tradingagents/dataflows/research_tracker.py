@@ -128,9 +128,44 @@ class ResearchTracker:
                     metadata TEXT DEFAULT '{}',
                     buy_price REAL,  -- 买入价格（交易当天收盘价）
                     initial_capital REAL DEFAULT 10000,  -- 初始资金，默认1万美元
+                    shares REAL,  -- 头寸数量
                     
                     -- 复合索引
                     UNIQUE(researcher_name, symbol, trade_date)
+                )
+            ''')
+            
+            # 每日头寸记录表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS daily_positions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    shares REAL DEFAULT 0,  -- 持有股数
+                    cash REAL DEFAULT 0,  -- 现金
+                    total_value REAL DEFAULT 0,  -- 总价值
+                    price REAL,  -- 当天收盘价
+                    created_at TEXT NOT NULL,
+                    
+                    UNIQUE(symbol, date)
+                )
+            ''')
+            
+            # 头寸变化记录表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS position_changes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    symbol TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    action TEXT NOT NULL,  -- BUY, SELL, HOLD
+                    shares REAL,  -- 变动股数
+                    price REAL,  -- 成交价格
+                    amount REAL,  -- 变动金额
+                    balance REAL,  -- 变动后余额
+                    researcher_name TEXT,  -- 触发该操作的研究员
+                    created_at TEXT NOT NULL,
+                    
+                    UNIQUE(symbol, date, action)
                 )
             ''')
             
