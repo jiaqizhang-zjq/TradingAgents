@@ -198,7 +198,11 @@ class ResearchTracker:
         confidence: float = 0.0,
         reasoning: str = "",
         holding_days: int = 5,
-        metadata: Dict = None
+        metadata: Dict = None,
+        buy_price: float = None,
+        initial_capital: float = 10000.0,
+        shares: float = None,
+        total_return: float = None
     ) -> bool:
         """
         记录一次研究预测
@@ -213,6 +217,10 @@ class ResearchTracker:
             reasoning: 推理过程
             holding_days: 持仓天数
             metadata: 额外元数据
+            buy_price: 买入价格
+            initial_capital: 初始资金
+            shares: 头寸数量
+            total_return: 总收益
             
         Returns:
             bool: 是否记录成功
@@ -227,8 +235,9 @@ class ResearchTracker:
                     INSERT OR REPLACE INTO research_records (
                         researcher_name, researcher_type, symbol, trade_date,
                         prediction, confidence, reasoning, outcome,
-                        holding_days, created_at, metadata
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        holding_days, created_at, metadata,
+                        buy_price, initial_capital, shares, total_return
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     researcher_name,
                     researcher_type,
@@ -240,7 +249,11 @@ class ResearchTracker:
                     ResearchOutcome.PENDING.value,
                     holding_days,
                     created_at,
-                    json.dumps(metadata or {})
+                    json.dumps(metadata or {}),
+                    buy_price,  # 买入价格
+                    initial_capital,  # 初始资金
+                    shares,  # 头寸数量
+                    total_return  # 总收益
                 ))
                 
                 print(f"✅ 记录研究预测: {researcher_name} -> {symbol} {prediction}")
