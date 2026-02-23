@@ -16,8 +16,8 @@ DEFAULT_CONFIG = {
     "google_thinking_level": None,      # "high", "minimal", etc.
     "openai_reasoning_effort": None,    # "medium", "high", "low"
     # Debate and discussion settings
-    "max_debate_rounds": 1,
-    "max_risk_discuss_rounds": 1,
+    "max_debate_rounds": 2,
+    "max_risk_discuss_rounds": 2,
     "max_recur_limit": 100,
     # Language configuration - 输出语言设置
     # Options: "zh" (中文), "en" (English), "auto" (自动检测)
