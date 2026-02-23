@@ -180,7 +180,7 @@ def main():
     parser.add_argument("--deep-think", dest="deep_think_llm", help="深度思考模型")
     parser.add_argument("--quick-think", dest="quick_think_llm", help="快速思考模型")
     parser.add_argument("--backend-url", dest="backend_url", help="API 端点 URL")
-    parser.add_argument("--debate-rounds", type=int, default=None, help="辩论轮数 (默认: 1)")
+    parser.add_argument("--debate-rounds", type=int, default=2, help="辩论轮数 (默认: 2)")
     parser.add_argument("--lang", choices=["zh", "en"], help="输出语言")
 
     args = parser.parse_args()

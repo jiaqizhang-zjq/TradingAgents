@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingAgents 投资研究报告</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.2.0/github-markdown.min.css">
+    <style>
+        :root {
+            --primary: #1a365d;
+            --primary-light: #2c5282;
+            --accent: #c53030;
+            --success: #276749;
+            --warning: #b7791f;
+            --danger: #c53030;
+            --text-primary: #1a202c;
+            --text-secondary: #4a5568;
+            --text-muted: #718096;
+            --bg-primary: #f7fafc;
+            --bg-secondary: #ffffff;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+        
+        /* Header */
+        .report-header {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .brand-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 24px;
+        }
+        
+        .brand-text h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+        
+        .brand-text p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        
+        .report-meta {
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        
+        .report-meta .date {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+        
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-box .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .stat-box .value {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .stat-box .value.up { color: var(--success); }
+        .stat-box .value.down { color: var(--danger); }
+        .stat-box .value.neutral { color: var(--warning); }
+        
+        /* Rating Box */
+        .rating-box {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border-radius: 12px;
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .rating-main {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        
+        .rating-action {
+            font-size: 32px;
+            font-weight: 700;
+            padding: 8px 24px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+        }
+        
+        .rating-confidence {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .rating-confidence strong {
+            font-size: 24px;
+            display: block;
+        }
+        
+        .rating-target {
+            text-align: right;
+        }
+        
+        .rating-target .label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .rating-target .price {
+            font-size: 36px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .rating-target .upside {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        /* Filters */
+        .filters-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-group label {
+            font-size: 13px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            background: var(--bg-secondary);
+            min-width: 140px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover { background: var(--primary-light); }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        
+        .btn-outline:hover { background: var(--bg-primary); }
+        
+        /* Report List */
+        .report-list { display: flex; flex-direction: column; gap: 16px; }
+        
+        .report-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: grid;
+            grid-template-columns: 120px 1fr auto;
+            gap: 24px;
+            align-items: center;
+        }
+        
+        .report-item:hover {
+            box-shadow: var(--shadow);
+            border-color: var(--primary-light);
+        }
+        
+        .report-item .symbol-date {
+            text-align: center;
+        }
+        
+        .report-item .symbol {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .report-item .date {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .report-item .info h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .report-item .info p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .report-item .rating-badge {
+            padding: 8px 20px;
+            border-radius: 24px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .rating-buy {
+            background: #c6f6d5;
+            color: #276749;
+        }
+        
+        .rating-hold {
+            background: #fefcbf;
+            color: #975a16;
+        }
+        
+        .rating-sell {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 40px 20px;
+        }
+        
+        .modal.show { display: block; }
+        
+        .modal-content {
+            background: var(--bg-secondary);
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+        
+        .modal-header {
+            background: var(--primary);
+            color: white;
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .modal-header .close {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .modal-body { padding: 32px; }
+        
+        /* Markdown */
+        .markdown-body {
+            font-size: 15px;
+            line-height: 1.8;
+        }
+        
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+            color: var(--primary);
+            margin-top: 24px;
+        }
+        
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+        
+        .markdown-body th, .markdown-body td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+        }
+        
+        .markdown-body th {
+            background: var(--bg-primary);
+            font-weight: 600;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+        }
+        
+        /* Theme options */
+        .theme-toggle {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .theme-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+        }
+        
+        .theme-btn.active { border-color: var(--primary); }
+        .theme-dark { background: #1a202c; }
+        .theme-light { background: #f7fafc; }
+        .theme-blue { background: linear-gradient(135deg, #1a365d, #2c5282); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="report-header">
+            <div class="header-top">
+                <div class="brand">
+                    <div class="brand-icon">TA</div>
+                    <div class="brand-text">
+                        <h1>TradingAgents 投资研究报告</h1>
+                        <p>AI-Driven Equity Research | 多代理智能分析系统</p>
+                    </div>
+                </div>
+                <div class="report-meta">
+                    <div class="date" id="currentDate"></div>
+                    <div>Reports</div>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="label">Total Reports</div>
+                    <div class="value" id="totalCount">—</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Coverage</div>
+                    <div class="value" id="stockCount">—</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Buy</div>
+                    <div class="value up" id="buyCount">—</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Hold</div>
+                    <div class="value neutral" id="holdCount">—</div>
+                </div>
+            </div>
+            
+            <!-- Rating Summary -->
+            <div class="rating-box">
+                <div class="rating-main">
+                    <div class="rating-action">投资评级</div>
+                    <div class="rating-confidence">
+                        置信度
+                        <strong>—%</strong>
+                    </div>
+                </div>
+                <div class="rating-target">
+                    <div class="label">目标价</div>
+                    <div class="price">—</div>
+                    <div class="upside">上行空间 —%</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="filters-bar">
+            <div class="filter-group">
+                <label>股票:</label>
+                <select id="stockFilter">
+                    <option value="">全部</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>日期:</label>
+                <select id="dateFilter">
+                    <option value="">全部</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="applyFilters()">筛选</button>
+            <button class="btn btn-outline" onclick="clearFilters()">重置</button>
+            <div style="flex:1"></div>
+            <div class="theme-toggle">
+                <div class="theme-btn theme-dark" onclick="setTheme('dark')" title="深色"></div>
+                <div class="theme-btn theme-light" onclick="setTheme('light')" title="浅色"></div>
+                <div class="theme-btn theme-blue" onclick="setTheme('blue')" title="蓝色"></div>
+            </div>
+        </div>
+        
+        <!-- Report List -->
+        <div class="report-list" id="reportList">
+            <div class="empty">加载中...</div>
+        </div>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">报告详情</h2>
+                <button class="close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="markdown-body" id="modalContent"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Simple inline markdown renderer
+        function renderMarkdown(text) {
+            if (!text) return '';
+            let html = text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/```json\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                .replace(/`(.+?)`/g, '<code>$1</code>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+                .replace(/\|(.+)\|/g, function(m) {
+                    const cells = m.split('|').filter(c => c.trim());
+                    if (cells.some(c => c.match(/^-+$/))) return '';
+                    return '<tr>' + cells.map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>';
+                })
+                .replace(/(<tr>.*<\/tr>)+/g, '<table>$&</table>')
+                .replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+            return '<p>' + html + '</p>';
+        }
+        
+        const REPORTS_DIR = './reports/';
+        let allReports = [];
+        let stockDates = {};
+        
+        // 设置当前日期
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-CN', { 
+            year: 'numeric', month: 'long', day: 'numeric' 
+        });
+        
+        async function loadReports() {
+            try {
+                const response = await fetch(REPORTS_DIR);
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = doc.querySelectorAll('a');
+                
+                const stocks = [];
+                links.forEach(a => {
+                    const text = a.textContent;
+                    if (text && text.endsWith('/') && !text.includes('?')) {
+                        stocks.push(text.replace('/', ''));
+                    }
+                });
+                
+                // 更新股票下拉
+                document.getElementById('stockFilter').innerHTML = '<option value="">全部</option>' + 
+                    stocks.map(s => `<option value="${s}">${s}</option>`).join('');
+                
+                document.getElementById('stockCount').textContent = stocks.length;
+                
+                // 加载所有报告
+                allReports = [];
+                stockDates = {};
+                
+                for (const stock of stocks) {
+                    stockDates[stock] = [];
+                    try {
+                        const stockResponse = await fetch(REPORTS_DIR + stock);
+                        const stockHtml = await stockResponse.text();
+                        const stockDoc = parser.parseFromString(stockHtml, 'text/html');
+                        const stockLinks = stockDoc.querySelectorAll('a');
+                        stockLinks.forEach(a => {
+                            const dateText = a.textContent;
+                            if (dateText && dateText.match(/^\d{4}-\d{2}-\d{2}\/$/)) {
+                                const date = dateText.replace('/', '');
+                                stockDates[stock].push(date);
+                                allReports.push({ stock, date });
+                            }
+                        });
+                    } catch (e) { console.error(e); }
+                }
+                
+                updateDateFilter();
+                document.getElementById('totalCount').textContent = allReports.length;
+                
+                // 默认选中最新
+                if (allReports.length > 0) {
+                    const latest = allReports.sort((a,b) => b.date.localeCompare(a.date))[0];
+                    document.getElementById('stockFilter').value = latest.stock;
+                    updateDateFilter();
+                    document.getElementById('dateFilter').value = latest.date;
+                }
+                
+                renderReports();
+            } catch (e) {
+                document.getElementById('reportList').innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
+            }
+        }
+        
+        function updateDateFilter() {
+            const stock = document.getElementById('stockFilter').value;
+            const dateSelect = document.getElementById('dateFilter');
+            
+            let dates;
+            if (stock) {
+                dates = stockDates[stock] || [];
+            } else {
+                dates = [...new Set(allReports.map(r => r.date))];
+            }
+            
+            dateSelect.innerHTML = '<option value="">全部</option>' + 
+                dates.sort((a,b) => b.localeCompare(a)).map(d => `<option value="${d}">${d}</option>`).join('');
+        }
+        
+        function applyFilters() { renderReports(); }
+        
+        function renderReports() {
+            const stock = document.getElementById('stockFilter').value;
+            const date = document.getElementById('dateFilter').value;
+            
+            let filtered = allReports.filter(r => {
+                if (stock && r.stock !== stock) return false;
+                if (date && r.date !== date) return false;
+                return true;
+            });
+            
+            filtered.sort((a,b) => b.date.localeCompare(a.date));
+            
+            if (filtered.length === 0) {
+                document.getElementById('reportList').innerHTML = '<div class="empty">暂无报告</div>';
+                return;
+            }
+            
+            document.getElementById('reportList').innerHTML = filtered.map(r => `
+                <div class="report-item" onclick="openReport('${r.stock}', '${r.date}')">
+                    <div class="symbol-date">
+                        <div class="symbol">${r.stock}</div>
+                        <div class="date">${r.date}</div>
+                    </div>
+                    <div class="info">
+                        <h3>${r.stock} 投资研究报告</h3>
+                        <p>分析日期: ${r.date} | 点击查看完整研究报告</p>
+                    </div>
+                    <div class="rating-badge rating-hold">查看</div>
+                </div>
+            `).join('');
+        }
+        
+        async function openReport(stock, date) {
+            const res = await fetch(REPORTS_DIR + stock + '/' + date + '/11_final_decision.md');
+            const content = await res.text();
+            
+            // 解析决策
+            let decision = '持有', ratingClass = 'rating-hold';
+            if (content.includes('买入') || content.includes('BUY')) { decision = '买入'; ratingClass = 'rating-buy'; }
+            else if (content.includes('卖出') || content.includes('SELL')) { decision = '卖出'; ratingClass = 'rating-sell'; }
+            
+            document.getElementById('modalTitle').innerHTML = `${stock} <span style="opacity:0.7;font-weight:400;">| ${date}</span>`;
+            document.getElementById('modalContent').innerHTML = renderMarkdown(content);
+            document.getElementById('reportModal').classList.add('show');
+        }
+        
+        function closeModal() { document.getElementById('reportModal').classList.remove('show'); }
+        
+        function clearFilters() {
+            document.getElementById('stockFilter').value = '';
+            updateDateFilter();
+            renderReports();
+        }
+        
+        document.getElementById('stockFilter').addEventListener('change', updateDateFilter);
+        
+        function setTheme(theme) {
+            const r = document.documentElement;
+            const body = document.body;
+            
+            if (theme === 'light') {
+                r.style.setProperty('--bg-primary', '#f7fafc');
+                r.style.setProperty('--bg-secondary', '#ffffff');
+                r.style.setProperty('--text-primary', '#1a202c');
+                r.style.setProperty('--text-secondary', '#4a5568');
+                r.style.setProperty('--border', '#e2e8f0');
+                r.style.setProperty('--primary', '#2b6cb0');
+                body.style.background = '#f7fafc';
+            } else if (theme === 'blue') {
+                r.style.setProperty('--bg-primary', '#0f172a');
+                r.style.setProperty('--bg-secondary', '#1e293b');
+                r.style.setProperty('--text-primary', '#f1f5f9');
+                r.style.setProperty('--text-secondary', '#94a3b8');
+                r.style.setProperty('--border', '#334155');
+                r.style.setProperty('--primary', '#3b82f6');
+                body.style.background = 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)';
+            } else {
+                r.style.setProperty('--bg-primary', '#f7fafc');
+                r.style.setProperty('--bg-secondary', '#ffffff');
+                r.style.setProperty('--text-primary', '#1a202c');
+                r.style.setProperty('--text-secondary', '#4a5568');
+                r.style.setProperty('--border', '#e2e8f0');
+                r.style.setProperty('--primary', '#1a365d');
+                body.style.background = '#f7fafc';
+            }
+            localStorage.setItem('reportTheme', theme);
+            
+            // Update button active state
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.theme-${theme}`)?.classList.add('active');
+        }
+        
+        // 初始化
+        const savedTheme = localStorage.getItem('reportTheme') || 'dark';
+        setTheme(savedTheme);
+        loadReports();
+        
+        document.getElementById('reportModal').addEventListener('click', e => {
+            if (e.target.id === 'reportModal') closeModal();
+        });
+    </script>
+</body>
+</html>
