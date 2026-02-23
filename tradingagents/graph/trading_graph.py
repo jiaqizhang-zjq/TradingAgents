@@ -11,6 +11,7 @@ from langgraph.prebuilt import ToolNode
 from tradingagents.llm_clients import create_llm_client
 
 from tradingagents.agents import *
+from tradingagents.agents.backtest import run_backtest
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.agents.utils.memory import FinancialSituationMemory
 from tradingagents.agents.utils.agent_states import (
@@ -234,6 +235,17 @@ class TradingAgentsGraph:
 
         self.ticker = company_name
 
+        # 回测配置
+        backtest_enabled = self.config.get("backtest", {}).get("enabled", True)
+        if backtest_enabled:
+            if self.debug:
+                print("\n" + "="*50)
+                print("🔄 执行回测...")
+                print("="*50)
+            run_backtest(symbol=company_name, target_date=trade_date, debug=self.debug)
+            if self.debug:
+                print()
+
         # 初始化状态
         # 创建代理的初始状态，包含公司信息和交易日期
         init_agent_state = self.propagator.create_initial_state(
@@ -351,11 +363,19 @@ class TradingAgentsGraph:
     
     def _save_to_database(self, final_state):
         """Save the analysis results to database and files."""
+        from tradingagents.agents.utils.agent_utils import is_market_open
+        
+        symbol = final_state["company_of_interest"]
+        trade_date = final_state["trade_date"]
+        
+        # 检查指定日期是否开盘
+        if not is_market_open(symbol, trade_date):
+            if self.debug:
+                print(f"⏰ {trade_date} 非开盘时间，跳过保存数据库")
+            return
+        
         try:
             db = get_db()
-            
-            symbol = final_state["company_of_interest"]
-            trade_date = final_state["trade_date"]
             
             # Create report object
             report = AnalysisReport(
@@ -424,11 +444,19 @@ class TradingAgentsGraph:
     
     def _record_research_predictions(self, final_state):
         """Record bull and bear researcher predictions for win rate tracking."""
+        from tradingagents.agents.utils.agent_utils import is_market_open
+        
+        symbol = final_state["company_of_interest"]
+        trade_date = final_state["trade_date"]
+        
+        # 检查指定日期是否开盘
+        if not is_market_open(symbol, trade_date):
+            if self.debug:
+                print(f"⏰ {trade_date} 非开盘时间，跳过记录预测")
+            return
+        
         try:
             tracker = get_research_tracker()
-            
-            symbol = final_state["company_of_interest"]
-            trade_date = final_state["trade_date"]
             
             # Extract investment debate state
             invest_debate = final_state.get("investment_debate_state", {})

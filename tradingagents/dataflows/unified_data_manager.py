@@ -325,7 +325,16 @@ class UnifiedDataManager:
         if cached_result is not None:
             print(f"[UnifiedDataManager] 使用缓存数据")
             self.global_stats.successful_calls += 1
-            print(f"[UnifiedDataManager] 缓存数据输出 (前500字符):\n{str(cached_result)[:500]}")
+            # 按日期逆序排列输出
+            cached_lines = str(cached_result).split('\n')
+            if len(cached_lines) > 2:
+                header = cached_lines[0]
+                data_lines = cached_lines[1:]
+                data_lines.reverse()
+                sorted_data = header + '\n' + '\n'.join(data_lines[:20])
+                print(f"[UnifiedDataManager] 缓存数据输出 (最新20条):\n{sorted_data}")
+            else:
+                print(f"[UnifiedDataManager] 缓存数据输出:\n{str(cached_result)[:500]}")
             if len(str(cached_result)) > 500:
                 print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(cached_result))})")
             return cached_result
@@ -367,7 +376,18 @@ class UnifiedDataManager:
                 self.global_stats.successful_calls += 1
                 self.last_vendor_used = vendor
                 self.cache.set(method_name, result, *processed_args, **kwargs)
-                print(f"[UnifiedDataManager] 数据输出 (前500字符):\n{str(result)[:500]}")
+                
+                # 按日期倒序输出
+                result_lines = str(result).split('\n')
+                if len(result_lines) > 2:
+                    header = result_lines[0]
+                    data_lines = result_lines[1:]
+                    data_lines.reverse()
+                    sorted_result = header + '\n' + '\n'.join(data_lines[:20])
+                    print(f"[UnifiedDataManager] 数据输出 (最新20条):\n{sorted_result}")
+                else:
+                    print(f"[UnifiedDataManager] 数据输出 (前500字符):\n{str(result)[:500]}")
+                
                 if len(str(result)) > 500:
                     print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(result))})")
                 return result

@@ -8,6 +8,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
+
 from contextlib import contextmanager
 from enum import Enum
 
@@ -86,7 +87,7 @@ class ResearchTracker:
     5. 预留扩展接口，方便添加新的研究员类型
     """
     
-    def __init__(self, db_path: str = "research_tracker.db"):
+    def __init__(self, db_path: str = "tradingagents/db/research_tracker.db"):
         self.db_path = db_path
         self._init_database()
     
@@ -130,6 +131,8 @@ class ResearchTracker:
                     initial_capital REAL DEFAULT 10000,  -- 初始资金，默认1万美元
                     shares REAL,  -- 头寸数量
                     total_return REAL,  -- 总收益（金额）
+                    backtest_date TEXT,  -- 回测日期
+                    backtest_price REAL,  -- 回测价格
                     
                     -- 复合索引
                     UNIQUE(researcher_name, symbol, trade_date)
@@ -715,7 +718,7 @@ class ResearchTracker:
                     total = row['total'] or 0
                     correct = row['correct'] or 0
                     
-                    if total >= 3:  # 至少有3次预测才认为数据可靠
+                    if total >= 1:  # 至少有1次预测就返回数据
                         return {
                             'win_rate': correct / total if total > 0 else default_win_rate,
                             'total_predictions': total,
@@ -738,7 +741,7 @@ class ResearchTracker:
                 total = row['total'] or 0
                 correct = row['correct'] or 0
                 
-                if total >= 5:  # 至少有5次预测才认为数据可靠
+                if total >= 1:  # 至少有1次预测就返回数据
                     return {
                         'win_rate': correct / total if total > 0 else default_win_rate,
                         'total_predictions': total,
@@ -762,7 +765,7 @@ class ResearchTracker:
                 total = row['total'] or 0
                 correct = row['correct'] or 0
                 
-                if total >= 10:  # 同类型至少有10次预测
+                if total >= 1:  # 至少有1次预测就返回数据
                     return {
                         'win_rate': correct / total if total > 0 else default_win_rate,
                         'total_predictions': total,
@@ -795,7 +798,7 @@ class ResearchTracker:
 _tracker = None
 
 
-def get_research_tracker(db_path: str = "research_tracker.db") -> ResearchTracker:
+def get_research_tracker(db_path: str = "tradingagents/db/research_tracker.db") -> ResearchTracker:
     """获取全局 ResearchTracker 实例"""
     global _tracker
     if _tracker is None:

@@ -41,7 +41,7 @@ class AnalysisReport:
 class TradingDatabase:
     """交易分析数据库管理器"""
     
-    def __init__(self, db_path: str = "trading_analysis.db"):
+    def __init__(self, db_path: str = "tradingagents/db/trading_analysis.db"):
         self.db_path = db_path
         self._init_database()
     

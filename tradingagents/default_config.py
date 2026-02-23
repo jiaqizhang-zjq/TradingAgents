@@ -42,4 +42,8 @@ DEFAULT_CONFIG = {
         "show_prompts": True,  # 显示完整prompt
         "log_level": "INFO",  # 日志级别: DEBUG, INFO, WARNING, ERROR
     },
+    # Backtest settings
+    "backtest": {
+        "enabled": True,  # 是否开启回测功能
+    },
 }

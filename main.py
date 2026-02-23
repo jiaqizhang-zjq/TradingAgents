@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# 使用2026-02-20的日期
-trade_date = "2026-02-20"
+# 使用2026-02-23的日期
+trade_date = "2026-02-23"
 
 # Initialize with default config (已配置 Opencode minimax-m2.5-free 和 longbridge)
 ta = TradingAgentsGraph(
