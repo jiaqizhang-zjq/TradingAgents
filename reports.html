@@ -165,19 +165,19 @@
         .rating-hold { background: var(--hold-bg); color: var(--hold); }
         .rating-sell { background: var(--sell-bg); color: var(--sell); }
         
-        /* Modal */
+        /* Modal - Premium Style */
         .modal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             z-index: 1000;
             overflow-y: auto;
-            padding: 40px 20px;
+            padding: 40px 16px;
             opacity: 0;
-            transition: opacity 0.25s ease;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .modal.show {
@@ -187,15 +187,18 @@
         }
         
         .modal-content {
-            background: var(--card);
+            background: rgba(255, 255, 255, 0.98);
             width: 100%;
-            max-width: 900px;
-            border-radius: 12px;
-            box-shadow: 0 24px 80px rgba(0,0,0,0.3);
-            transform: translateY(20px) scale(0.98);
-            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-width: 980px;
+            border-radius: 16px;
+            box-shadow: 
+                0 0 0 1px rgba(0,0,0,0.08),
+                0 8px 32px rgba(0,0,0,0.12),
+                0 24px 80px rgba(0,0,0,0.16);
+            transform: translateY(30px) scale(0.98);
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
             overflow: hidden;
-            max-height: 90vh;
+            max-height: 92vh;
             display: flex;
             flex-direction: column;
         }
@@ -205,52 +208,125 @@
         }
         
         .modal-header {
-            padding: 20px 28px;
-            border-bottom: 1px solid var(--border);
+            padding: 20px 32px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: var(--bg);
+            background: linear-gradient(180deg, rgba(250,250,250,1) 0%, rgba(245,245,245,1) 100%);
             position: sticky;
             top: 0;
             z-index: 10;
         }
         
+        .modal-header .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+            min-width: 0;
+        }
+        
         .modal-header h2 {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 600;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', 'PingFang SC', -apple-system, sans-serif;
+            color: #1a1a1a;
+            letter-spacing: -0.02em;
+            flex-shrink: 0;
+        }
+        
+        .report-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+        
+        .tab-btn {
+            padding: 6px 14px;
+            font-family: 'Inter', 'PingFang SC', -apple-system, sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 6px;
+            border: 1px solid rgba(0,0,0,0.12);
+            background: rgba(255,255,255,0.8);
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn:hover {
+            background: #f0f0f0;
+            border-color: rgba(0,0,0,0.2);
+        }
+        
+        .tab-btn.active {
+            background: #0066cc;
+            color: white;
+            border-color: #0066cc;
+        }
+        
+        .theme-dark .tab-btn {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            color: #ccc;
+        }
+        
+        .theme-dark .tab-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.25);
+        }
+        
+        .theme-blue .tab-btn {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(59,130,246,0.4);
+            color: #94a3b8;
+        }
+        
+        .theme-blue .tab-btn:hover {
+            background: rgba(59,130,246,0.2);
+            border-color: rgba(59,130,246,0.6);
+        }
+        
+        .theme-blue .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
         }
         
         .modal-close {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--card);
-            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.9);
+            font-size: 26px;
             line-height: 1;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--text-secondary);
+            color: #666;
+            font-weight: 300;
+            flex-shrink: 0;
         }
         
         .modal-close:hover {
-            background: var(--accent);
+            background: #1a1a1a;
             color: white;
-            border-color: var(--accent);
+            border-color: #1a1a1a;
             transform: rotate(90deg);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         
         .modal-body {
-            padding: 32px;
+            padding: 40px 48px;
             overflow-y: auto;
             flex: 1;
-            font-size: 15px;
-            line-height: 1.8;
+            font-size: 16px;
+            line-height: 1.75;
             scroll-behavior: smooth;
         }
         
@@ -258,173 +334,312 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 60px;
-            color: var(--text-muted);
+            padding: 80px;
+            color: #888;
             font-family: 'Inter', sans-serif;
             font-size: 14px;
+            letter-spacing: 0.02em;
         }
         
         .modal-loading::after {
             content: '';
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--border);
-            border-top-color: var(--accent);
+            width: 24px;
+            height: 24px;
+            border: 2.5px solid #e5e5e5;
+            border-top-color: #0066cc;
             border-radius: 50%;
-            margin-left: 12px;
-            animation: spin 0.8s linear infinite;
+            margin-left: 16px;
+            animation: spin 0.9s linear infinite;
         }
         
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
         
-        /* Report Content */
+        /* Scrollbar Styling */
+        .modal-body::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        .modal-body::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.18);
+            border-radius: 8px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,0,0,0.28);
+        }
+        
+        /* Report Content - Premium Typography */
         .report-content {
             font-family: 'Source Serif 4', 'Noto Serif SC', Georgia, serif;
             font-size: 16px;
             line-height: 1.8;
-            color: var(--text);
+            color: #1a1a1a;
+            max-width: 840px;
         }
         
         .report-content h1,
         .report-content h2,
         .report-content h3,
         .report-content h4 {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', 'PingFang SC', -apple-system, sans-serif;
             font-weight: 600;
-            line-height: 1.4;
-            margin: 32px 0 16px;
-            color: var(--text);
+            line-height: 1.35;
+            margin: 36px 0 18px;
+            color: #111;
+            letter-spacing: -0.01em;
         }
         
-        .report-content h1 { font-size: 26px; border-bottom: 2px solid var(--border); padding-bottom: 12px; }
-        .report-content h2 { font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-        .report-content h3 { font-size: 17px; margin: 24px 0 12px; }
-        .report-content h4 { font-size: 15px; margin: 20px 0 10px; }
+        .report-content h1 {
+            font-size: 26px;
+            border-bottom: 2px solid rgba(0,0,0,0.08);
+            padding-bottom: 14px;
+            margin-top: 0;
+        }
         
-        .report-content p { margin-bottom: 16px; text-align: justify; }
+        .report-content h2 {
+            font-size: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            padding-bottom: 10px;
+        }
+        
+        .report-content h3 {
+            font-size: 17px;
+            margin: 30px 0 14px;
+            font-weight: 600;
+        }
+        
+        .report-content h4 {
+            font-size: 15px;
+            margin: 24px 0 12px;
+            font-weight: 600;
+        }
+        
+        .report-content p {
+            margin-bottom: 18px;
+            text-align: justify;
+            word-break: break-word;
+        }
         
         .report-content ul,
         .report-content ol {
-            margin: 12px 0;
-            padding-left: 28px;
+            margin: 14px 0;
+            padding-left: 32px;
         }
         
         .report-content li {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             padding-left: 4px;
+            line-height: 1.7;
         }
         
         .report-content code {
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
             font-size: 13px;
-            background: var(--bg);
-            padding: 3px 6px;
-            border-radius: 4px;
-            color: var(--accent);
+            background: rgba(0,0,0,0.05);
+            padding: 4px 8px;
+            border-radius: 6px;
+            color: #d63384;
+            border: 1px solid rgba(0,0,0,0.06);
         }
         
         .report-content pre {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 16px;
+            background: #f8f9fa;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 20px;
             overflow-x: auto;
-            margin: 20px 0;
+            margin: 24px 0;
             font-size: 13px;
-            line-height: 1.6;
+            line-height: 1.65;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
         
         .report-content pre code {
             background: none;
             padding: 0;
+            border: none;
             color: inherit;
         }
         
         .report-content table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
+            margin: 24px 0;
             font-size: 14px;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', 'PingFang SC', -apple-system, sans-serif;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .report-content th,
         .report-content td {
-            border: 1px solid var(--border);
-            padding: 12px 14px;
+            border: 1px solid rgba(0,0,0,0.08);
+            padding: 14px 16px;
             text-align: left;
             vertical-align: top;
+            background: white;
         }
         
         .report-content th {
-            background: var(--bg);
+            background: rgba(0,0,0,0.15);
             font-weight: 600;
             color: var(--text);
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 13px;
+            text-transform: uppercase;
+            opacity: 0.9;
         }
         
         .report-content tr:nth-child(even) td {
-            background: rgba(0,0,0,0.02);
+            background: rgba(255,255,255,0.03);
+        }
+        
+        .report-content tr:hover td {
+            background: rgba(0,102,204,0.04);
         }
         
         .report-content blockquote {
-            border-left: 4px solid var(--accent);
-            margin: 20px 0;
-            padding: 12px 20px;
-            background: var(--bg);
-            border-radius: 0 6px 6px 0;
-            color: var(--text-secondary);
+            border-left: 4px solid #0066cc;
+            margin: 28px 0;
+            padding: 16px 24px;
+            background: linear-gradient(90deg, rgba(0,102,204,0.06) 0%, rgba(0,102,204,0) 100%);
+            border-radius: 0 8px 8px 0;
+            color: #444;
             font-style: italic;
+            font-size: 15px;
+            line-height: 1.7;
         }
         
         .report-content a {
-            color: var(--accent);
+            color: #0066cc;
             text-decoration: none;
+            border-bottom: 1px dotted #0066cc;
+            transition: all 0.2s;
         }
         
         .report-content a:hover {
-            text-decoration: underline;
+            color: #0052a3;
+            border-bottom-style: solid;
         }
         
         .report-content hr {
             border: none;
-            border-top: 1px solid var(--border);
-            margin: 32px 0;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            margin: 48px 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent);
         }
         
         .report-content img {
             max-width: 100%;
             height: auto;
-            border-radius: 6px;
-            margin: 16px 0;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
+        
+        .report-content .metadata {
+            background: #f8f9fa;
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        /* Theme: Dark */
+        .theme-dark {
+            --bg: #0f0f0f;
+            --card: #1a1a1a;
+            --text: #f0f0f0;
+            --text-secondary: #cccccc;
+            --text-muted: #888888;
+            --border: #333333;
+            --accent: #3b82f6;
+        }
+        
+        .theme-dark .container { background: var(--bg); color: var(--text); }
+        .theme-dark header { border-bottom-color: var(--text); }
+        .theme-dark .filters, 
+        .theme-dark .report-item,
+        .theme-dark .modal-content { background: var(--card); border-color: var(--border); }
+        .theme-dark .brand { color: var(--accent); }
+        .theme-dark .report-item .symbol,
+        .theme-dark .modal-header h2,
+        .theme-dark h1 { color: var(--text); }
+        .theme-dark .report-item .date { color: var(--text-muted); }
+        .theme-dark .modal-header { background: linear-gradient(180deg, rgba(30,30,30,1) 0%, rgba(26,26,26,1) 100%); border-bottom-color: var(--border); }
+        .theme-dark .modal-close { border-color: var(--border); color: var(--text-secondary); background: rgba(255,255,255,0.05); }
+        .theme-dark .modal-close:hover { background: var(--text); color: var(--bg); border-color: var(--text); }
+        .theme-dark .report-content { color: var(--text); }
+        .theme-dark .report-content th { background: rgba(0,0,0,0.2); color: var(--text); }
+        .theme-dark .report-content td { background: var(--card); border-color: var(--border); color: var(--text); }
+        .theme-dark .report-content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+        .theme-dark .report-content tr:hover td { background: rgba(59,130,246,0.08); }
+        .theme-dark .report-content blockquote { background: linear-gradient(90deg, rgba(59,130,246,0.1) 0%, transparent 100%); color: var(--text-secondary); }
+        .theme-dark .report-content pre { background: rgba(0,0,0,0.3); border-color: var(--border); }
+        .theme-dark .report-content h1, .theme-dark .report-content h2 { border-bottom-color: var(--border); }
+        .theme-dark .report-content a { color: var(--accent); border-color: transparent; }
+        .theme-dark .report-content a:hover { border-bottom-style: dotted; }
+        .theme-dark .tab-btn { border-color: rgba(255,255,255,0.15); }
+        .theme-dark .tab-btn:hover { border-color: rgba(255,255,255,0.25); }
+        
+        /* Theme: Blue */
+        .theme-blue {
+            --bg: #0b1220;
+            --card: #112240;
+            --text: #e6f1ff;
+            --text-secondary: #bbdefb;
+            --text-muted: #90caf9;
+            --border: #1e3a5f;
+            --accent: #3b82f6;
+        }
+        
+        .theme-blue .container { background: var(--bg); color: var(--text); }
+        .theme-blue header { border-bottom-color: var(--text); }
+        .theme-blue .filters, 
+        .theme-blue .report-item,
+        .theme-blue .modal-content { background: var(--card); border-color: var(--border); }
+        .theme-blue .brand { color: var(--accent); }
+        .theme-blue .report-item .symbol,
+        .theme-blue .modal-header h2,
+        .theme-blue h1 { color: var(--text); }
+        .theme-blue .report-item .date { color: var(--text-muted); }
+        .theme-blue .modal-header { background: linear-gradient(180deg, rgba(17,34,64,1) 0%, rgba(16,26,45,1) 100%); border-bottom-color: var(--border); }
+        .theme-blue .modal-close { border-color: var(--border); color: var(--text-secondary); background: rgba(255,255,255,0.05); }
+        .theme-blue .modal-close:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        .theme-blue .report-content { color: var(--text); }
+        .theme-blue .report-content th { background: rgba(0,0,0,0.2); color: var(--text); }
+        .theme-blue .report-content td { background: var(--card); border-color: var(--border); color: var(--text); }
+        .theme-blue .report-content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+        .theme-blue .report-content tr:hover td { background: rgba(59,130,246,0.1); }
+        .theme-blue .report-content blockquote { background: linear-gradient(90deg, rgba(59,130,246,0.12) 0%, transparent 100%); color: var(--text-secondary); }
+        .theme-blue .report-content pre { background: rgba(0,0,0,0.3); border-color: var(--border); }
+        .theme-blue .report-content h1, .theme-blue .report-content h2 { border-bottom-color: var(--border); }
+        .theme-blue .report-content a { color: var(--accent); border-color: transparent; }
+        .theme-blue .report-content a:hover { border-bottom-style: dotted; }
+        .theme-blue .tab-btn { border-color: rgba(59,130,246,0.4); }
+        .theme-blue .tab-btn:hover { border-color: rgba(59,130,246,0.6); }
         
         .empty {
             text-align: center;
             padding: 80px 20px;
             color: var(--text-muted);
             font-family: 'Inter', sans-serif;
-        }
-        
-        /* Theme */
-        .theme-dark {
-            --bg: #111111;
-            --card: #1a1a1a;
-            --text: #e5e5e5;
-            --text-secondary: #a0a0a0;
-            --text-muted: #666666;
-            --border: #333333;
-        }
-        
-        .theme-blue {
-            --bg: #0a1628;
-            --card: #0f2744;
-            --text: #e8f4fd;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --border: #1e3a5f;
-            --accent: #3b82f6;
         }
     </style>
 </head>
@@ -459,7 +674,10 @@
     <div class="modal" id="reportModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">报告详情</h2>
+                <div class="header-left">
+                    <h2 id="modalTitle">报告详情</h2>
+                    <div class="report-tabs" id="reportTabs" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+                </div>
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
@@ -470,27 +688,55 @@
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
+        // 确保 marked 加载完成后再定义函数
+        function renderMarkdown(text) {
+            if (!text) return '';
+            if (typeof marked !== 'undefined') {
+                try {
+                    return marked.parse(text);
+                } catch (e) {
+                    console.error('Markdown parse error:', e);
+                    return '<pre>' + text.replace(/</g, '&lt;') + '</pre>';
+                }
+            } else {
+                // marked 未加载，返回纯文本
+                return '<pre>' + text.replace(/</g, '&lt;') + '</pre>';
+            }
+        }
+
         // 配置 marked 选项
-        marked.setOptions({
-            breaks: true,
-            gfm: true,
-            headerIds: false,
-            mangle: false
-        });
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                headerIds: false,
+                mangle: false
+            });
+        }
 
         const REPORTS_DIR = './reports/';
         let allReports = [];
         let stockDates = {};
+        let currentReport = null;
 
-        function renderMarkdown(text) {
-            if (!text) return '';
-            try {
-                return marked.parse(text);
-            } catch (e) {
-                console.error('Markdown parse error:', e);
-                return '<pre>' + text.replace(/</g, '&lt;') + '</pre>';
-            }
-        }
+        // 报告章节配置（根据实际文件结构调整）
+        const REPORT_SECTIONS = [
+            { id: 'final', name: '最终决策', file: '11_final_decision.md', default: true },
+            { id: 'index', name: '索引', file: '00_index.md' },
+            { id: 'market', name: '市场分析', file: '01_market_analysis.md' },
+            { id: 'sentiment', name: '情绪分析', file: '02_sentiment_analysis.md' },
+            { id: 'news', name: '新闻分析', file: '03_news_analysis.md' },
+            { id: 'fundamentals', name: '基本面', file: '04_fundamentals_analysis.md' },
+            { id: 'candlestick', name: '蜡烛图', file: '05_candlestick_analysis.md' },
+            { id: 'bull', name: '多头观点', file: '06_research_debate.md' },  // 辩论报告包含多头空头
+            { id: 'bear', name: '空头观点', file: '06_research_debate.md' },
+            { id: 'manager', name: '研究评审', file: '07_research_manager_decision.md' },
+            { id: 'trader', name: '交易员', file: '10_trader_report.md' },
+            { id: 'aggressive', name: '激进风控', file: '08_risk_debate.md' },  // 辩论报告包含风控
+            { id: 'conservative', name: '保守风控', file: '09_risk_manager_decision.md' },
+            { id: 'neutral', name: '中性风控', file: '09_risk_manager_decision.md' },
+            { id: 'portfolio', name: '组合决策', file: '05_candlestick_analysis.md' } // placeholder，实际可能没有
+        ];
         
         async function loadReports() {
             try {
@@ -534,11 +780,14 @@
                 
                 updateDateFilter();
                 
+                // 默认选中最新日期（如果存在报告）
                 if (allReports.length > 0) {
                     const latest = allReports.sort((a,b) => b.date.localeCompare(a.date))[0];
-                    document.getElementById('stockFilter').value = latest.stock;
-                    updateDateFilter();
-                    document.getElementById('dateFilter').value = latest.date;
+                    // 不自动选择股票（保持全部）
+                    // 自动选择最新日期
+                    if (latest.date) {
+                        document.getElementById('dateFilter').value = latest.date;
+                    }
                 }
                 
                 renderReports();
@@ -587,9 +836,9 @@
         }
         
         async function openReport(stock, date) {
+            currentReport = { stock, date };
             const modal = document.getElementById('reportModal');
             const modalContent = document.querySelector('.modal-content');
-            const modalBody = document.getElementById('modalBody');
             
             // 显示加载状态
             document.getElementById('modalTitle').innerHTML = `${stock} <span style="font-weight:400;color:#999;">${date}</span>`;
@@ -597,19 +846,87 @@
             modal.classList.add('show');
             modalContent.style.transform = 'translateY(0) scale(1)';
             
-            try {
-                const res = await fetch(REPORTS_DIR + stock + '/' + date + '/11_final_decision.md');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const content = await res.text();
-                document.getElementById('modalContent').innerHTML = renderMarkdown(content);
+            // 生成 Tabs（异步检查文件存在性）
+            await generateTabs(stock, date);
+            
+            // 默认加载第一个可用章节
+            const firstTab = document.querySelector('.tab-btn:not(.hidden)');
+            if (firstTab) firstTab.click();
+        }
+        
+        async function generateTabs(stock, date) {
+            const tabsContainer = document.getElementById('reportTabs');
+            tabsContainer.innerHTML = '';
+            
+            const basePath = REPORTS_DIR + stock + '/' + date + '/';
+            
+            for (const section of REPORT_SECTIONS) {
+                const filePath = basePath + section.file;
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn' + (section.default ? ' active' : '');
+                btn.textContent = section.name;
                 
-                // 修复可能存在的表格样式
-                document.querySelectorAll('.report-content table').forEach(table => {
+                // 检查文件是否存在
+                try {
+                    const res = await fetch(filePath, { method: 'HEAD' });
+                    if (res.ok) {
+                        btn.onclick = () => {
+                            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            loadSection(section.id);
+                        };
+                        tabsContainer.appendChild(btn);
+                    } else {
+                        // 文件不存在，不显示此 Tab
+                        console.log(`文件不存在: ${filePath}`);
+                    }
+                } catch (e) {
+                    console.error(`检查文件 ${filePath} 失败:`, e);
+                }
+            }
+            
+            // 如果没有可用 Tab，显示提示
+            if (tabsContainer.children.length === 0) {
+                tabsContainer.innerHTML = '<span style="color:#999;font-size:13px;padding:6px 14px;">无可用章节</span>';
+            }
+        }
+        
+        async function loadSection(sectionId) {
+            const section = REPORT_SECTIONS.find(s => s.id === sectionId);
+            if (!section) return;
+            
+            const basePath = REPORTS_DIR + currentReport.stock + '/' + currentReport.date + '/';
+            const filePath = basePath + section.file;
+            
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = '<div class="modal-loading">正在加载...</div>';
+            
+            try {
+                const res = await fetch(filePath);
+                if (!res.ok) {
+                    // 如果文件不存在，显示提示
+                    if (res.status === 404) {
+                        modalContent.innerHTML = `<div class="empty">该章节文件不存在: ${section.file}</div>`;
+                        return;
+                    }
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                const text = await res.text();
+                
+                // 判断文件类型渲染
+                if (section.file.endsWith('.md')) {
+                    modalContent.innerHTML = renderMarkdown(text);
+                } else {
+                    modalContent.innerHTML = '<pre>' + text.replace(/</g, '&lt;') + '</pre>';
+                }
+                
+                // 表格样式修复
+                modalContent.querySelectorAll('table').forEach(table => {
                     table.style.width = '100%';
                     table.style.borderCollapse = 'collapse';
                 });
             } catch (e) {
-                document.getElementById('modalContent').innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
+                modalContent.innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
             }
         }
         
@@ -625,7 +942,11 @@
         }
         
         function setTheme(theme) {
-            document.body.className = theme;
+            if (theme === 'light') {
+                document.body.className = '';
+            } else {
+                document.body.className = 'theme-' + theme;
+            }
             localStorage.setItem('reportTheme', theme);
         }
         
