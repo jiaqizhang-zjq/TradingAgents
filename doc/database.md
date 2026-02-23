@@ -31,10 +31,28 @@
 | reasoning | TEXT | 推理过程/报告内容 |
 | outcome | TEXT | 结果状态 (pending/correct/incorrect/partial) |
 | verified_date | TEXT | 验证日期 |
-| actual_return | REAL | 实际收益率 |
+| actual_return | REAL | 实际收益率 (百分比，如 0.05 表示 5%) |
+| total_return | REAL | 总收益金额 (如 $500 表示盈利 500 美元) |
 | holding_days | INTEGER | 持有天数 (默认5天) |
 | created_at | TEXT | 创建时间 |
-| metadata | TEXT | 额外元数据 (JSON格式) |
+| metadata | TEXT | 额外元数据 (JSON格式，包含头寸变化详情) |
+| buy_price | REAL | 买入价格 (交易当天收盘价) |
+| initial_capital | REAL | 初始资金 (默认 10000 美元) |
+| shares | REAL | 头寸数量 (股数) |
+
+**metadata JSON 结构示例**:
+```json
+{
+  "position_change": {
+    "action": "BUY",
+    "shares": 100.5,
+    "buy_price": 99.5,
+    "current_price": 105.2,
+    "total_return": 573.85,
+    "verified_date": "2026-02-25"
+  }
+}
+```
 
 **索引**:
 - `idx_research_records_symbol_date`: (symbol, trade_date)

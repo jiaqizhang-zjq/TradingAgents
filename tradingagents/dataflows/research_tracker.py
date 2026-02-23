@@ -129,6 +129,7 @@ class ResearchTracker:
                     buy_price REAL,  -- 买入价格（交易当天收盘价）
                     initial_capital REAL DEFAULT 10000,  -- 初始资金，默认1万美元
                     shares REAL,  -- 头寸数量
+                    total_return REAL,  -- 总收益（金额）
                     
                     -- 复合索引
                     UNIQUE(researcher_name, symbol, trade_date)
