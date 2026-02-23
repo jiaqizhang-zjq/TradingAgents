@@ -167,7 +167,7 @@ Use this information to deliver a compelling bear argument, refute the bull's cl
             
             # 记录到数据库
             tracker.record_research(
-                researcher_name=f"bear_{state.get('debate_round', 0)}",
+                researcher_name="bear_researcher",
                 researcher_type="bear",
                 symbol=symbol,
                 trade_date=trade_date,
