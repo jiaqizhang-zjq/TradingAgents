@@ -461,104 +461,104 @@ class TradingAgentsGraph:
             # Extract investment debate state
             invest_debate = final_state.get("investment_debate_state", {})
             
-            # Record bull researcher - bull_history is a string
-            bull_history = invest_debate.get("bull_history", "")
-            if bull_history:
-                bull_prediction = self._extract_prediction_from_content(bull_history)
+            # Record bull researcher - use prediction from state
+            bull_prediction = invest_debate.get("bull_prediction", "HOLD")
+            bull_confidence = invest_debate.get("bull_confidence", 0.8)
+            if bull_prediction:
                 tracker.record_research(
                     researcher_name="bull_researcher",
                     researcher_type="bull",
                     symbol=symbol,
                     trade_date=trade_date,
                     prediction=bull_prediction,
-                    confidence=0.8,
-                    reasoning=bull_history if bull_history else ""
+                    confidence=bull_confidence,
+                    reasoning=invest_debate.get("bull_history", "")
                 )
             
-            # Record bear researcher - bear_history is a string
-            bear_history = invest_debate.get("bear_history", "")
-            if bear_history:
-                bear_prediction = self._extract_prediction_from_content(bear_history)
+            # Record bear researcher - use prediction from state
+            bear_prediction = invest_debate.get("bear_prediction", "HOLD")
+            bear_confidence = invest_debate.get("bear_confidence", 0.8)
+            if bear_prediction:
                 tracker.record_research(
                     researcher_name="bear_researcher",
                     researcher_type="bear",
                     symbol=symbol,
                     trade_date=trade_date,
                     prediction=bear_prediction,
-                    confidence=0.8,
-                    reasoning=bear_history if bear_history else ""
+                    confidence=bear_confidence,
+                    reasoning=invest_debate.get("bear_history", "")
                 )
             
             # Record research manager
-            judge_decision = invest_debate.get("judge_decision", "")
-            if judge_decision:
-                manager_prediction = self._extract_prediction_from_content(judge_decision)
+            manager_prediction = invest_debate.get("manager_prediction", "HOLD")
+            manager_confidence = invest_debate.get("manager_confidence", 0.85)
+            if manager_prediction:
                 tracker.record_research(
                     researcher_name="research_manager",
                     researcher_type="manager",
                     symbol=symbol,
                     trade_date=trade_date,
                     prediction=manager_prediction,
-                    confidence=0.85,
-                    reasoning=judge_decision if judge_decision else ""
+                    confidence=manager_confidence,
+                    reasoning=invest_debate.get("judge_decision", "")
                 )
             
             # Record risk debate participants
             risk_debate = final_state.get("risk_debate_state", {})
             
             # Aggressive risk analyst
-            aggressive_history = risk_debate.get("aggressive_history", "")
-            if aggressive_history:
-                aggressive_prediction = self._extract_prediction_from_content(aggressive_history)
+            aggressive_prediction = risk_debate.get("aggressive_prediction", "HOLD")
+            aggressive_confidence = risk_debate.get("aggressive_confidence", 0.7)
+            if aggressive_prediction:
                 tracker.record_research(
                     researcher_name="aggressive_risk",
                     researcher_type="aggressive",
                     symbol=symbol,
                     trade_date=trade_date,
                     prediction=aggressive_prediction,
-                    confidence=0.7,
-                    reasoning=aggressive_history if aggressive_history else ""
+                    confidence=aggressive_confidence,
+                    reasoning=risk_debate.get("aggressive_history", "")
                 )
             
             # Conservative risk analyst
-            conservative_history = risk_debate.get("conservative_history", "")
-            if conservative_history:
-                conservative_prediction = self._extract_prediction_from_content(conservative_history)
+            conservative_prediction = risk_debate.get("conservative_prediction", "HOLD")
+            conservative_confidence = risk_debate.get("conservative_confidence", 0.7)
+            if conservative_prediction:
                 tracker.record_research(
                     researcher_name="conservative_risk",
                     researcher_type="conservative",
                     symbol=symbol,
                     trade_date=trade_date,
                     prediction=conservative_prediction,
-                    confidence=0.7,
-                    reasoning=conservative_history if conservative_history else ""
+                    confidence=conservative_confidence,
+                    reasoning=risk_debate.get("conservative_history", "")
                 )
             
             # Neutral risk analyst
-            neutral_history = risk_debate.get("neutral_history", "")
-            if neutral_history:
-                neutral_prediction = self._extract_prediction_from_content(neutral_history)
+            neutral_prediction = risk_debate.get("neutral_prediction", "HOLD")
+            neutral_confidence = risk_debate.get("neutral_confidence", 0.75)
+            if neutral_prediction:
                 tracker.record_research(
                     researcher_name="neutral_risk",
                     researcher_type="neutral",
                     symbol=symbol,
                     trade_date=trade_date,
                     prediction=neutral_prediction,
-                    confidence=0.75,
-                    reasoning=neutral_history if neutral_history else ""
+                    confidence=neutral_confidence,
+                    reasoning=risk_debate.get("neutral_history", "")
                 )
             
             # Record final trader decision
-            final_decision = final_state.get("final_trade_decision", "")
-            trader_prediction = self._extract_prediction_from_content(final_decision)
+            trader_prediction = final_state.get("trader_prediction", "HOLD")
+            trader_confidence = final_state.get("trader_confidence", 0.9)
             tracker.record_research(
                 researcher_name="trader",
                 researcher_type="trader",
                 symbol=symbol,
                 trade_date=trade_date,
                 prediction=trader_prediction,
-                confidence=0.9,
-                reasoning=final_decision
+                confidence=trader_confidence,
+                reasoning=final_state.get("final_trade_decision", "")
             )
             
             print(f"✅ 研究员预测已记录到胜率追踪器")

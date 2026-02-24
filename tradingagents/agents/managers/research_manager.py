@@ -127,6 +127,8 @@ Debate History:
             "bull_history": investment_debate_state.get("bull_history", ""),
             "current_response": response_content,
             "count": investment_debate_state["count"],
+            "manager_prediction": prediction,
+            "manager_confidence": confidence,
         }
         
         # 解析最终决策并记录到数据库
