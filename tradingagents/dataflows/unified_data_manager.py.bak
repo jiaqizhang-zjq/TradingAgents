@@ -279,7 +279,6 @@ class UnifiedDataManager:
         self,
         method_name: str,
         *args,
-        no_cache: bool = False,
         **kwargs
     ) -> Any:
         """
@@ -298,10 +297,18 @@ class UnifiedDataManager:
         """
         from datetime import datetime, timedelta
         
+        # 防止递归调用打印重复日志
+        if getattr(self, '_in_fetch', False):
+            impl = self.method_implementations.get(method_name, {}).get('longbridge')
+            if impl:
+                return impl(*args, **kwargs)
+            return None
+            
+        self._in_fetch = True
         try:
             print(f"[UnifiedDataManager] 调用方法: {method_name}")
             print(f"[UnifiedDataManager] 参数: args={args}, kwargs={kwargs}")
-
+        
         self.global_stats.total_calls += 1
         
         processed_args = args
@@ -377,16 +384,15 @@ class UnifiedDataManager:
                 self.global_stats.successful_calls += 1
                 self.last_vendor_used = vendor
                 
-                # 检查是否写入缓存
-                should_cache = not no_cache
-                if should_cache and method_name == "get_stock_data" and len(args) >= 3:
+                # 检查是否写入缓存：只有当是交易日时才缓存
+                should_cache = True
+                if method_name == "get_stock_data" and len(args) >= 3:
                     try:
-                        from datetime import datetime
+                        from tradingagents.agents.utils.agent_utils import is_market_open
+                        symbol = args[0]
                         end_date = args[2]
-                        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-                        # 简单判断：周末不缓存 (5=周六, 6=周日)
-                        if end_dt.weekday() >= 5:
-                            print(f"[UnifiedDataManager] 结束日期 {end_date} 是周末，不写入缓存")
+                        if not is_market_open(symbol, end_date):
+                            print(f"[UnifiedDataManager] 结束日期 {end_date} 非交易日，不写入缓存")
                             should_cache = False
                     except Exception:
                         pass
@@ -417,6 +423,8 @@ class UnifiedDataManager:
         print(f"[UnifiedDataManager] ❌ 所有数据源都失败")
         raise DataFetchError(
             f"All vendors failed for method '{method_name}'. Last error: {last_error}")
+        finally:
+            self._in_fetch = False
     
     def _try_vendor(
         self,

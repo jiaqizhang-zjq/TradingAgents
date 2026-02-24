@@ -36,6 +36,7 @@ def create_social_media_analyst(llm):
                 "- 寻找社交媒体和传统新闻之间的模式、趋势和差异\n"
                 "- 关注可能影响市场的高影响力帖子或文章\n"
                 "- 不要简单地说明趋势混合，要提供详细且精细的分析和见解，帮助交易员做出决策。\n\n"
+                "- 不要简单地说明趋势混合，要提供详细且精细的分析和见解，帮助交易员做出决策。\n\n"
                 "确保在报告末尾添加一个Markdown表格，整理报告中的关键点，使其有条理且易于阅读。"
             )
         else:
@@ -51,6 +52,7 @@ def create_social_media_analyst(llm):
                 "- Analyze the sentiment and themes from both sources\n"
                 "- Look for patterns, trends, and divergences between social media and traditional news\n"
                 "- Pay attention to high-impact posts or articles that could move the market\n"
+                "- Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions.\n\n"
                 "- Do not simply state the trends are mixed, provide detailed and finegrained analysis and insights that may help traders make decisions.\n\n"
                 "Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."
             )
