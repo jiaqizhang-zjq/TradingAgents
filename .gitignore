@@ -222,3 +222,10 @@ __marimo__/
 *.log
 trading_log.txt
 logs/
+
+# Reports
+reports/
+eval_results/
+
+# Databases
+tradingagents/db/
