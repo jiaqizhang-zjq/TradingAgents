@@ -561,6 +561,19 @@ class TradingAgentsGraph:
                 reasoning=final_state.get("final_trade_decision", "")
             )
             
+            # Record risk manager decision
+            risk_prediction = risk_debate.get("risk_manager_prediction", "HOLD")
+            risk_confidence = risk_debate.get("risk_manager_confidence", 0.8)
+            tracker.record_research(
+                researcher_name="risk_manager",
+                researcher_type="risk_manager",
+                symbol=symbol,
+                trade_date=trade_date,
+                prediction=risk_prediction,
+                confidence=risk_confidence,
+                reasoning=risk_debate.get("judge_decision", "")
+            )
+            
             print(f"✅ 研究员预测已记录到胜率追踪器")
             
         except Exception as e:
