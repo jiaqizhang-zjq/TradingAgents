@@ -186,7 +186,7 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
                metadata, buy_price, initial_capital, shares, total_return, backtest_date, backtest_price
         FROM research_records 
         WHERE trade_date <= '{target_date}' 
-        AND prediction IN ('BUY', 'SELL') {symbol_filter}
+        AND prediction IN ('BUY', 'SELL', 'HOLD') {symbol_filter}
         ORDER BY symbol, trade_date, researcher_name
     """)
     all_records = cursor.fetchall()
@@ -194,11 +194,11 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
         print(f"ID:{r[0]} | {r[3]} | {r[4]} | {r[1]} | {r[5]} | conf:{r[6]} | outcome:{r[8]} | buy_price:{r[14]} | shares:{r[16]} | total_return:{r[17]} | backtest_date:{r[18]} | backtest_price:{r[19]}")
     print("-" * 130)
     
-    # 找出目标日期的前一个有 BUY/SELL 记录的 trade_date（且未回测过的）
+    # 找出目标日期的前一个有记录的 trade_date（且未回测过的）
     cursor.execute(f"""
         SELECT DISTINCT trade_date FROM research_records 
         WHERE trade_date < '{target_date}' 
-        AND prediction IN ('BUY', 'SELL') {symbol_filter}
+        AND prediction IN ('BUY', 'SELL', 'HOLD') {symbol_filter}
         ORDER BY trade_date DESC
         LIMIT 1
     """)
@@ -210,73 +210,102 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
     
     print(f"回测日期: {last_date}")
     print("-" * 130)
-    
-    # 只获取前一个日期的 BUY/SELL 记录
+
+    # 只获取前一个日期的记录
     cursor.execute(f"""
         SELECT id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital, shares, metadata
-        FROM research_records 
-        WHERE trade_date = '{last_date}' AND prediction IN ('BUY', 'SELL') {symbol_filter}
+        FROM research_records
+        WHERE trade_date = '{last_date}' AND prediction IN ('BUY', 'SELL', 'HOLD') {symbol_filter}
         ORDER BY researcher_name
     """)
     pending_records = cursor.fetchall()
-    
-    print(f"找到 {len(pending_records)} 条待回测记录 (BUY/SELL)")
-    print("-" * 130)
-    
+
+    print(f"找到 {len(pending_records)} 条待回测记录 (BUY/SELL/HOLD)")
+
+    # 优化：先获取所有唯一的 (symbol, trade_date) 组合，避免重复请求 API
+    unique_symbols = set()
     for record in pending_records:
         record_id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital, shares, metadata = record
-        
+        if buy_price is None or buy_price == 0:
+            unique_symbols.add((symbol, trade_date))
+
+    # 批量获取价格
+    price_cache = {}
+    for symbol, trade_date in unique_symbols:
+        price = get_price_on_date(symbol, trade_date)
+        if price and price > 0:
+            price_cache[(symbol, trade_date)] = price
+            print(f"获取价格 {symbol} @ {trade_date}: ${price:.2f}")
+        else:
+            print(f"⚠️ {symbol} {trade_date}: 无法获取买入价格")
+
+    print("-" * 130)
+
+    # 更新记录
+    for record in pending_records:
+        record_id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital, shares, metadata = record
+
         # 只回填空的买入价格
         if buy_price is None or buy_price == 0:
-            buy_price = get_price_on_date(symbol, trade_date)
-            
+            buy_price = price_cache.get((symbol, trade_date))
+
             if buy_price is None or buy_price == 0:
                 print(f"⚠️ {symbol} {trade_date}: 无法获取买入价格，跳过")
                 continue
-            
+
             # 设置默认初始资金和股数
             if initial_capital is None:
                 initial_capital = 10000
             if shares is None or shares == 0:
                 shares = calculate_shares(buy_price, initial_capital)
-            
+
             # 更新买入价格和股数
             cursor.execute("""
                 UPDATE research_records
                 SET buy_price = ?, initial_capital = ?, shares = ?
                 WHERE id = ?
             """, (buy_price, initial_capital, shares, record_id))
-            
+
             print(f"回填 {symbol} {trade_date}: 买入价格 ${buy_price:.2f}, 股数 {shares:.2f}")
-    
+
     conn.commit()
     updated_count = 0
     
     # 第二步：计算收益和更新 outcome
     print("\n开始计算收益...")
     print("-" * 130)
-    
+
     # 获取 target_date 作为验证日期
     verify_date = target_date
-    
-    # 只获取前一个日期的 BUY/SELL 记录
+
+    # 只获取前一个日期的记录
     cursor.execute(f"""
         SELECT id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital, shares, metadata
-        FROM research_records 
-        WHERE trade_date = '{last_date}' AND prediction IN ('BUY', 'SELL') {symbol_filter}
+        FROM research_records
+        WHERE trade_date = '{last_date}' AND prediction IN ('BUY', 'SELL', 'HOLD') {symbol_filter}
         ORDER BY researcher_name
     """)
-    
+
     records = cursor.fetchall()
-    
+
+    # 优化：先批量获取所有验证日期的价格，避免重复请求 API
+    verify_prices = {}
     for record in records:
         record_id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital, shares, metadata = record
-        
+        price = get_price_on_date(symbol, verify_date)
+        if price:
+            verify_prices[(symbol, verify_date)] = price
+
+    # 计算收益
+    for record in records:
+        record_id, researcher_name, researcher_type, symbol, trade_date, prediction, confidence, holding_days, buy_price, initial_capital, shares, metadata = record
+
         # 获取验证日期的价格
-        current_price = get_price_on_date(symbol, verify_date)
+        current_price = verify_prices.get((symbol, verify_date))
         if current_price is None:
-            current_price = buy_price
-        
+            print(f"⚠️ {symbol} {verify_date}: 无法获取验证价格，跳过")
+            continue
+
         # 计算收益率和总收益
         actual_return = calculate_return(buy_price, current_price)
         
@@ -289,10 +318,10 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
         
         # 判断预测是否正确
         if prediction == "HOLD":
-            # HOLD 不计算收益
-            total_return = 0
-            actual_return = 0
-            outcome = "partial"
+            # HOLD 计算实际收益，share 不发生变化
+            total_return = calculate_profit(buy_price, current_price, initial_capital)
+            # HOLD 预测的正确性判断：如果收益在 -2% 到 2% 之间，认为是正确的
+            outcome = "correct" if -0.02 <= actual_return <= 0.02 else ("incorrect" if abs(actual_return) > 0.05 else "partial")
         elif prediction == "BUY":
             outcome = "correct" if actual_return > 0 else ("incorrect" if actual_return < 0 else "partial")
         elif prediction == "SELL":
@@ -357,7 +386,7 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
                metadata, buy_price, initial_capital, shares, total_return, backtest_date, backtest_price
         FROM research_records 
         WHERE trade_date <= '{target_date}' 
-        AND prediction IN ('BUY', 'SELL') {symbol_filter}
+        AND prediction IN ('BUY', 'SELL', 'HOLD') {symbol_filter}
         ORDER BY symbol, trade_date, researcher_name
     """)
     all_records = cursor.fetchall()
@@ -367,6 +396,25 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
     
     print("-" * 130)
     print(f"回测完成！更新了 {updated_count} 条记录")
+    
+    # 更新内存系统
+    print("\n" + "="*50)
+    print("🧠 更新内存系统...")
+    print("="*50)
+    
+    try:
+        from tradingagents.agents.utils.memory import FinancialSituationMemory
+        
+        # 更新各个内存系统
+        memory_names = ["bull_researcher", "bear_researcher", "trader", "research_manager", "risk_manager"]
+        for name in memory_names:
+            memory = FinancialSituationMemory(name, {"db_path": db_path})
+            memory.learn_from_research_records()
+            print(f"✅ {name} 内存已更新")
+    except Exception as e:
+        print(f"❌ 更新内存系统失败: {e}")
+        import traceback
+        print(f"   错误详情: {traceback.format_exc()}")
     
     # 打印统计
     print("\n=== 回测统计 ===")

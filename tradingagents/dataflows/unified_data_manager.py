@@ -338,6 +338,30 @@ class UnifiedDataManager:
                 print(f"[UnifiedDataManager] 缓存数据输出:\n{str(cached_result)[:500]}")
             if len(str(cached_result)) > 500:
                 print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(cached_result))})")
+            
+            # 记录工具调用信息（缓存数据）
+            try:
+                from tradingagents.dataflows.database import get_db
+                db = get_db()
+                # 提取股票代码和日期信息
+                symbol = args[0] if args else "unknown"
+                trade_date = args[2] if len(args) >= 3 else datetime.now().strftime("%Y-%m-%d")
+                input_params = {
+                    "args": args,
+                    "kwargs": kwargs
+                }
+                db.save_tool_call(
+                    symbol=symbol,
+                    trade_date=trade_date,
+                    tool_name=method_name,
+                    vendor_used="cache",
+                    input_params=input_params,
+                    result=str(cached_result)
+                )
+                print(f"[UnifiedDataManager] 缓存工具调用已记录到数据库")
+            except Exception as e:
+                print(f"[UnifiedDataManager] 记录缓存工具调用失败: {e}")
+            
             return cached_result
         
         vendors = self._get_sorted_vendors(method_name)
@@ -406,6 +430,30 @@ class UnifiedDataManager:
                 
                 if len(str(result)) > 500:
                     print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(result))})")
+                
+                # 记录工具调用信息
+                try:
+                    from tradingagents.dataflows.database import get_db
+                    db = get_db()
+                    # 提取股票代码和日期信息
+                    symbol = args[0] if args else "unknown"
+                    trade_date = args[2] if len(args) >= 3 else datetime.now().strftime("%Y-%m-%d")
+                    input_params = {
+                        "args": args,
+                        "kwargs": kwargs
+                    }
+                    db.save_tool_call(
+                        symbol=symbol,
+                        trade_date=trade_date,
+                        tool_name=method_name,
+                        vendor_used=vendor,
+                        input_params=input_params,
+                        result=str(result)
+                    )
+                    print(f"[UnifiedDataManager] 工具调用已记录到数据库")
+                except Exception as e:
+                    print(f"[UnifiedDataManager] 记录工具调用失败: {e}")
+                
                 return result
             else:
                 print(f"[UnifiedDataManager] ❌ 数据源 {vendor} 失败")
