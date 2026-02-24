@@ -490,8 +490,8 @@ class TradingAgentsGraph:
                 )
             
             # Record research manager
-            manager_prediction = invest_debate.get("manager_prediction", "HOLD")
-            manager_confidence = invest_debate.get("manager_confidence", 0.85)
+            manager_prediction = invest_debate.get("research_manager_prediction", "HOLD")
+            manager_confidence = invest_debate.get("research_manager_confidence", 0.85)
             if manager_prediction:
                 tracker.record_research(
                     researcher_name="research_manager",
