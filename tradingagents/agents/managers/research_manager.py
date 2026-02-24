@@ -120,6 +120,10 @@ Debate History:
         response = llm.invoke(prompt)
         response_content = response.content
 
+        # 默认值
+        prediction = "HOLD"
+        confidence = 0.85
+
         new_investment_debate_state = {
             "judge_decision": response_content,
             "history": investment_debate_state.get("history", ""),
