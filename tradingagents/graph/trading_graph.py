@@ -345,15 +345,15 @@ class TradingAgentsGraph:
             "final_trade_decision": final_state["final_trade_decision"],
         }
 
-        # Save to file
-        directory = Path(f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/")
-        directory.mkdir(parents=True, exist_ok=True)
-
-        with open(
-            f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/full_states_log_{trade_date}.json",
-            "w",
-        ) as f:
-            json.dump(self.log_states_dict, f, indent=4)
+        # Save to file - disabled
+        # directory = Path(f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/")
+        # directory.mkdir(parents=True, exist_ok=True)
+        
+        # with open(
+        #     f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/full_states_log_{trade_date}.json",
+        #     "w",
+        # ) as f:
+        #     json.dump(self.log_states_dict, f, indent=4)
         
         # Save to database
         self._save_to_database(final_state)
