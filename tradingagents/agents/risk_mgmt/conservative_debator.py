@@ -1,6 +1,7 @@
 from langchain_core.messages import AIMessage
 import time
 import json
+import re
 from tradingagents.dataflows.config import get_config
 
 
@@ -69,8 +70,23 @@ Engage by questioning their optimism and emphasizing the potential downsides the
             print("=" * 80)
         
         response = llm.invoke(prompt)
+        response_content = response.content
 
-        argument = f"Conservative Analyst: {response.content}"
+        # 提取预测结果
+        prediction = "HOLD"
+        confidence = 0.7
+        if language == "zh":
+            pred_match = re.search(r'预测[:：]\s*(买入|卖出|持有|BUY|SELL|HOLD).*?置信度[:：]\s*(\d+)%?', response_content, re.IGNORECASE)
+        else:
+            pred_match = re.search(r'PREDICTION:\s*(BUY|SELL|HOLD).*?Confidence:\s*(\d+)%?', response_content, re.IGNORECASE)
+        
+        if pred_match:
+            prediction = pred_match.group(1).upper()
+            pred_map = {"买入": "BUY", "卖出": "SELL", "持有": "HOLD"}
+            prediction = pred_map.get(prediction, prediction)
+            confidence = int(pred_match.group(2)) / 100.0
+
+        argument = f"Conservative Analyst: {response_content}"
 
         new_risk_debate_state = {
             "history": history + "\n" + argument,
@@ -86,6 +102,8 @@ Engage by questioning their optimism and emphasizing the potential downsides the
                 "current_neutral_response", ""
             ),
             "count": risk_debate_state["count"] + 1,
+            "conservative_prediction": prediction,
+            "conservative_confidence": confidence,
         }
 
         return {"risk_debate_state": new_risk_debate_state}

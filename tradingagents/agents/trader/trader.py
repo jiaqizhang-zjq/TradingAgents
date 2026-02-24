@@ -1,6 +1,7 @@
 import functools
 import time
 import json
+import re
 from tradingagents.dataflows.config import get_config
 
 
@@ -101,10 +102,27 @@ Do not forget to utilize lessons from past decisions to learn from your mistakes
             print("=" * 80)
 
         result = llm.invoke(messages)
+        response_content = result.content
+
+        # 提取预测结果
+        prediction = "HOLD"
+        confidence = 0.9
+        if language == "zh":
+            pred_match = re.search(r'预测[:：]\s*(买入|卖出|持有|BUY|SELL|HOLD).*?置信度[:：]\s*(\d+)%?', response_content, re.IGNORECASE)
+        else:
+            pred_match = re.search(r'PREDICTION:\s*(BUY|SELL|HOLD).*?Confidence:\s*(\d+)%?', response_content, re.IGNORECASE)
+        
+        if pred_match:
+            prediction = pred_match.group(1).upper()
+            pred_map = {"买入": "BUY", "卖出": "SELL", "持有": "HOLD"}
+            prediction = pred_map.get(prediction, prediction)
+            confidence = int(pred_match.group(2)) / 100.0
 
         return {
             "messages": [result],
             "trader_investment_plan": result.content,
+            "trader_prediction": prediction,
+            "trader_confidence": confidence,
             "sender": name,
         }
 
