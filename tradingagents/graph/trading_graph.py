@@ -572,10 +572,13 @@ class TradingAgentsGraph:
         """Extract BUY/SELL/HOLD prediction from text content."""
         content_upper = content.upper()
         
-        if "BUY" in content_upper:
+        # 支持中英文关键词
+        if "买入" in content or "BUY" in content_upper:
             return "BUY"
-        elif "SELL" in content_upper:
+        elif "卖出" in content or "SELL" in content_upper:
             return "SELL"
+        elif "持有" in content or "HOLD" in content_upper:
+            return "HOLD"
         else:
             return "HOLD"
 
