@@ -9,16 +9,16 @@ PID_FILE="$DIR/reports-server.pid"
 start() {
     local port="${1:-$DEFAULT_PORT}"
 
-    # 检查是否已在运行
+    # 检查是否已在运行（通过 PID 文件）
     if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
         echo "❌ 服务已在运行 (PID $(cat "$PID_FILE"), 端口 $port)"
         return 1
     fi
 
-    # 停止可能存在的旧进程（端口可能被占用）
-    if lsof -i :"$port" >/dev/null 2>&1; then
-        echo "⚠️  端口 $port 被占用，尝试释放..."
-        pkill -f "python -m http.server $port" 2>/dev/null
+    # 检查端口占用（用 pgrep，不用 lsof）
+    if pgrep -f "python -m http.server $port" >/dev/null 2>&1; then
+        echo "⚠️  端口 $port 被占用，释放旧进程..."
+        pkill -9 -f "python -m http.server $port" 2>/dev/null
         sleep 1
     fi
 
@@ -37,31 +37,35 @@ start() {
 }
 
 stop() {
-    if [ ! -f "$PID_FILE" ]; then
-        echo "⚠️  PID 文件不存在，服务可能未运行"
-        # 尝试根据端口查找
-        local pids=$(pgrep -f "python -m http.server $DEFAULT_PORT" 2>/dev/null)
-        if [ -n "$pids" ]; then
-            echo "发现运行中的进程: $pids"
-            kill $pids 2>/dev/null
-            sleep 1
+    local killed=0
+
+    # 1. 尝试通过 PID 文件
+    if [ -f "$PID_FILE" ]; then
+        local pid=$(cat "$PID_FILE" 2>/dev/null)
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null
+            sleep 0.5
+            if kill -0 "$pid" 2>/dev/null; then
+                echo "⚠️  进程 $pid 未停止，强制杀死..."
+                kill -9 "$pid" 2>/dev/null
+            fi
+            echo "✅ 服务已停止 (PID $pid)"
+            killed=1
         fi
-        return 0
+        rm -f "$PID_FILE"
     fi
 
-    local pid=$(cat "$PID_FILE")
-    if kill -0 "$pid" 2>/dev/null; then
-        kill "$pid"
-        sleep 1
-        if kill -0 "$pid" 2>/dev/null; then
-            echo "⚠️  进程 $pid 未停止，强制杀死..."
-            kill -9 "$pid"
-        fi
-        echo "✅ 服务已停止 (PID $pid)"
-    else
-        echo "⚠️  进程 $pid 不存在"
+    # 2. 强杀所有匹配的 http.server 进程（防止 PID 文件丢失）
+    local pids=$(pgrep -f "python -m http.server" 2>/dev/null)
+    if [ -n "$pids" ]; then
+        echo "⚠️  清理残留进程: $pids"
+        kill -9 $pids 2>/dev/null
+        killed=1
     fi
-    rm -f "$PID_FILE"
+
+    if [ $killed -eq 0 ]; then
+        echo "🔴 服务未运行"
+    fi
 }
 
 restart() {
@@ -74,11 +78,17 @@ restart() {
 status() {
     if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
         local pid=$(cat "$PID_FILE")
-        local port=$(lsof -i -n -P | grep "$pid" | grep LISTEN | awk '{print $9}' | sed 's/.*://')
+        # 尝试获取端口（多种方式）
+        local port=""
+        if command -v ss >/dev/null 2>&1; then
+            port=$(ss -ltn 2>/dev/null | awk -v pid="$pid" '$6 ~ /^pid=/ {print $4}' | sed 's/.*://' | head -1)
+        elif command -v netstat >/dev/null 2>&1; then
+            port=$(netstat -an 2>/dev/null | grep "$pid" | grep LISTEN | awk '{print $4}' | sed 's/.*://' | head -1)
+        fi
         echo "🟢 服务运行中 (PID $pid, 端口 ${port:-unknown})"
     else
-        # 尝试查找
-        local pids=$(pgrep -f "python -m http.server $DEFAULT_PORT" 2>/dev/null)
+        # 查找运行中的 http.server 进程
+        local pids=$(pgrep -f "python -m http.server" 2>/dev/null)
         if [ -n "$pids" ]; then
             echo "🟡 服务运行中但 PID 文件丢失 (PID $pids)"
         else
