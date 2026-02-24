@@ -85,7 +85,9 @@ Engage actively by analyzing both sides critically, addressing weaknesses in the
             prediction = pred_map.get(prediction, prediction)
             confidence = int(pred_match.group(2)) / 100.0
 
-        argument = f"Neutral Analyst: {response_content}"
+        # 添加轮次标记
+        current_round = risk_debate_state["count"] + 1
+        argument = f"## 第 {current_round} 轮 - 中性风险观点\nNeutral Analyst: {response_content}"
 
         new_risk_debate_state = {
             "history": history + "\n" + argument,
@@ -98,7 +100,7 @@ Engage actively by analyzing both sides critically, addressing weaknesses in the
             ),
             "current_conservative_response": risk_debate_state.get("current_conservative_response", ""),
             "current_neutral_response": argument,
-            "count": risk_debate_state["count"] + 1,
+            "count": current_round,
             "neutral_prediction": prediction,
             "neutral_confidence": confidence,
         }

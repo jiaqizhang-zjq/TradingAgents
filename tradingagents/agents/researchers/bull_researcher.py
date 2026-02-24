@@ -45,27 +45,29 @@ def create_bull_researcher(llm, memory):
 
         # 获取历史胜率
         tracker = get_research_tracker()
-        win_rate_info = tracker.get_researcher_win_rate("bull_researcher", symbol, default_win_rate=0.52)
+        
+        # 获取特定股票的胜率
+        symbol_win_rate = tracker.get_researcher_win_rate("bull_researcher", symbol, default_win_rate=0.52)
+        # 获取研究员平均胜率
+        avg_win_rate = tracker.get_researcher_win_rate("bull_researcher", None, default_win_rate=0.52)
         
         # 构建胜率信息字符串
         if language == "zh":
-            if win_rate_info['source'] == 'symbol_specific':
-                win_rate_str = f"你在该股票上的历史胜率：{win_rate_info['win_rate']:.1%}（基于{win_rate_info['total_predictions']}次预测）"
-            elif win_rate_info['source'] == 'researcher_average':
-                win_rate_str = f"你的平均胜率：{win_rate_info['win_rate']:.1%}（基于{win_rate_info['total_predictions']}次预测）"
-            elif win_rate_info['source'] == 'type_average':
-                win_rate_str = f"看涨分析师类型平均胜率：{win_rate_info['win_rate']:.1%}（行业参考）"
+            if symbol_win_rate['total_predictions'] >= 1:
+                symbol_part = f"该股票胜率：{symbol_win_rate['win_rate']:.1%}（{symbol_win_rate['total_predictions']}次）"
             else:
-                win_rate_str = f"使用行业默认胜率：{win_rate_info['win_rate']:.1%}（看涨分析师行业均值）"
+                symbol_part = "该股票暂无历史数据"
+            
+            avg_part = f"平均胜率：{avg_win_rate['win_rate']:.1%}（{avg_win_rate['total_predictions']}次）"
+            win_rate_str = f"{symbol_part} | {avg_part}"
         else:
-            if win_rate_info['source'] == 'symbol_specific':
-                win_rate_str = f"Your win rate on this stock: {win_rate_info['win_rate']:.1%} (based on {win_rate_info['total_predictions']} predictions)"
-            elif win_rate_info['source'] == 'researcher_average':
-                win_rate_str = f"Your average win rate: {win_rate_info['win_rate']:.1%} (based on {win_rate_info['total_predictions']} predictions)"
-            elif win_rate_info['source'] == 'type_average':
-                win_rate_str = f"Bull analyst type average win rate: {win_rate_info['win_rate']:.1%} (industry reference)"
+            if symbol_win_rate['total_predictions'] >= 1:
+                symbol_part = f"This stock: {symbol_win_rate['win_rate']:.1%} ({symbol_win_rate['total_predictions']} trades)"
             else:
-                win_rate_str = f"Using industry default win rate: {win_rate_info['win_rate']:.1%} (bull analyst industry average)"
+                symbol_part = "No history for this stock"
+            
+            avg_part = f"Average: {avg_win_rate['win_rate']:.1%} ({avg_win_rate['total_predictions']} trades)"
+            win_rate_str = f"{symbol_part} | {avg_part}"
         
         # 根据语言选择系统提示词
         system_prompt = SYSTEM_PROMPTS.get(language, SYSTEM_PROMPTS["zh"])
@@ -120,16 +122,23 @@ Use this information to deliver a compelling bull argument, refute the bear's co
         response_content = response.content
 
         # 获取胜率信息添加到输出中
-        win_rate_percent = win_rate_info['win_rate'] * 100
+        symbol_win_rate_percent = symbol_win_rate['win_rate'] * 100
+        avg_win_rate_percent = avg_win_rate['win_rate'] * 100
         
         # 根据语言设置分析师名称和胜率
         if language == "zh":
-            analyst_name = "Bull Analyst"
-            win_rate_display = f"[胜率: {win_rate_percent:.1f}%]"
+            analyst_name = "多头分析师"
+            if symbol_win_rate['total_predictions'] >= 1:
+                win_rate_display = f"[胜率: 该股票{symbol_win_rate_percent:.1f}% | 平均{avg_win_rate_percent:.1f}%]"
+            else:
+                win_rate_display = f"[胜率: 平均{avg_win_rate_percent:.1f}%]"
             argument = f"{analyst_name} {win_rate_display}: {response_content}"
         else:
             analyst_name = "Bull Analyst"
-            win_rate_display = f"[Win Rate: {win_rate_percent:.1f}%]"
+            if symbol_win_rate['total_predictions'] >= 1:
+                win_rate_display = f"[Win Rate: This {symbol_win_rate_percent:.1f}% | Avg {avg_win_rate_percent:.1f}%]"
+            else:
+                win_rate_display = f"[Win Rate: Avg {avg_win_rate_percent:.1f}%]"
             argument = f"{analyst_name} {win_rate_display}: {response_content}"
         
         # 解析预测结果并记录到数据库
@@ -181,12 +190,16 @@ Use this information to deliver a compelling bull argument, refute the bear's co
         except Exception as e:
             print(f"⚠️ 记录Bull Research失败: {e}")
 
+        # 添加轮次标记
+        current_round = investment_debate_state["count"] + 1
+        round_argument = f"## 第 {current_round} 轮 - 多头观点\n{argument}"
+        
         new_investment_debate_state = {
-            "history": history + "\n" + argument,
-            "bull_history": bull_history + "\n" + argument,
+            "history": history + "\n" + round_argument,
+            "bull_history": bull_history + "\n" + round_argument,
             "bear_history": investment_debate_state.get("bear_history", ""),
             "current_response": argument,
-            "count": investment_debate_state["count"] + 1,
+            "count": current_round,
             "bull_prediction": prediction,
             "bull_confidence": confidence,
         }

@@ -105,7 +105,9 @@ Engage actively by addressing any specific concerns raised, refuting the weaknes
             prediction = pred_map.get(prediction, prediction)
             confidence = int(pred_match.group(2)) / 100.0
 
-        argument = f"Aggressive Analyst: {response_content}"
+        # 添加轮次标记
+        current_round = risk_debate_state["count"] + 1
+        argument = f"## 第 {current_round} 轮 - 激进风险观点\nAggressive Analyst: {response_content}"
 
         new_risk_debate_state = {
             "history": history + "\n" + argument,
@@ -118,7 +120,7 @@ Engage actively by addressing any specific concerns raised, refuting the weaknes
             "current_neutral_response": risk_debate_state.get(
                 "current_neutral_response", ""
             ),
-            "count": risk_debate_state["count"] + 1,
+            "count": current_round,
             "aggressive_prediction": prediction,
             "aggressive_confidence": confidence,
         }

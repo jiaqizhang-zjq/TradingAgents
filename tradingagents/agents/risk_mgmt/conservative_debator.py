@@ -86,7 +86,9 @@ Engage by questioning their optimism and emphasizing the potential downsides the
             prediction = pred_map.get(prediction, prediction)
             confidence = int(pred_match.group(2)) / 100.0
 
-        argument = f"Conservative Analyst: {response_content}"
+        # 添加轮次标记
+        current_round = risk_debate_state["count"] + 1
+        argument = f"## 第 {current_round} 轮 - 保守风险观点\nConservative Analyst: {response_content}"
 
         new_risk_debate_state = {
             "history": history + "\n" + argument,
@@ -101,7 +103,7 @@ Engage by questioning their optimism and emphasizing the potential downsides the
             "current_neutral_response": risk_debate_state.get(
                 "current_neutral_response", ""
             ),
-            "count": risk_debate_state["count"] + 1,
+            "count": current_round,
             "conservative_prediction": prediction,
             "conservative_confidence": confidence,
         }
