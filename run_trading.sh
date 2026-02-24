@@ -12,7 +12,7 @@ mkdir -p logs
 
 # 默认参数
 SYMBOL="${1:-LMND}"
-DATE="${2:-$(date +%Y-%m-%d)}"
+DATE="${2:-$(date -v-1d +%Y-%m-%d)}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="logs/${SYMBOL}-${DATE}-${TIMESTAMP}.log"
 

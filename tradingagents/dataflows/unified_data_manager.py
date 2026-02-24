@@ -375,7 +375,22 @@ class UnifiedDataManager:
                 print(f"[UnifiedDataManager] ✅ 成功使用数据源: {vendor}")
                 self.global_stats.successful_calls += 1
                 self.last_vendor_used = vendor
-                self.cache.set(method_name, result, *processed_args, **kwargs)
+                
+                # 检查是否写入缓存：只有当结束日期是交易日时才缓存
+                should_cache = True
+                if method_name == "get_stock_data" and len(args) >= 3:
+                    try:
+                        end_date = args[2]
+                        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                        # 周末不缓存 (5=周六, 6=周日)
+                        if end_dt.weekday() >= 5:
+                            print(f"[UnifiedDataManager] 结束日期 {end_date} 是周末，不写入缓存")
+                            should_cache = False
+                    except Exception:
+                        pass
+                
+                if should_cache:
+                    self.cache.set(method_name, result, *processed_args, **kwargs)
                 
                 # 按日期倒序输出
                 result_lines = str(result).split('\n')
