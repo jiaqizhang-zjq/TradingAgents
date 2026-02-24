@@ -376,15 +376,15 @@ class UnifiedDataManager:
                 self.global_stats.successful_calls += 1
                 self.last_vendor_used = vendor
                 
-                # 检查是否写入缓存：只有当结束日期是交易日时才缓存
+                # 检查是否写入缓存：只有当是交易日时才缓存
                 should_cache = True
                 if method_name == "get_stock_data" and len(args) >= 3:
                     try:
+                        from tradingagents.agents.utils.agent_utils import is_market_open
+                        symbol = args[0]
                         end_date = args[2]
-                        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-                        # 周末不缓存 (5=周六, 6=周日)
-                        if end_dt.weekday() >= 5:
-                            print(f"[UnifiedDataManager] 结束日期 {end_date} 是周末，不写入缓存")
+                        if not is_market_open(symbol, end_date):
+                            print(f"[UnifiedDataManager] 结束日期 {end_date} 非交易日，不写入缓存")
                             should_cache = False
                     except Exception:
                         pass
