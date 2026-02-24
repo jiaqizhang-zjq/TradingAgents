@@ -13,10 +13,7 @@ def is_market_open(symbol: str = "AAPL", target_date: str = None) -> bool:
     end_date = target.strftime("%Y-%m-%d")
     
     try:
-        if isinstance(data_manager, UnifiedDataManager):
-            result = data_manager.fetch("get_stock_data", symbol, start_date, end_date, no_cache=True)
-        else:
-            result = data_manager.get_stock_data(symbol, start_date=start_date, end_date=end_date)
+        result = data_manager.fetch("get_stock_data", symbol, start_date, end_date, no_cache=True)
         
         if result is None:
             return False

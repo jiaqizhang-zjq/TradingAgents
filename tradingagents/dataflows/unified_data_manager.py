@@ -298,9 +298,8 @@ class UnifiedDataManager:
         """
         from datetime import datetime, timedelta
         
-        try:
-            print(f"[UnifiedDataManager] 调用方法: {method_name}")
-            print(f"[UnifiedDataManager] 参数: args={args}, kwargs={kwargs}")
+        print(f"[UnifiedDataManager] 调用方法: {method_name}")
+        print(f"[UnifiedDataManager] 参数: args={args}, kwargs={kwargs}")
 
         self.global_stats.total_calls += 1
         
