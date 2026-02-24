@@ -372,7 +372,6 @@ class UnifiedDataManager:
             )
             
             if result is not None:
-                print(f"[UnifiedDataManager] ✅ 成功使用数据源: {vendor}")
                 self.global_stats.successful_calls += 1
                 self.last_vendor_used = vendor
                 
