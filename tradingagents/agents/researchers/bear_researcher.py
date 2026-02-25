@@ -201,6 +201,7 @@ Use this information to deliver a compelling bear argument, refute the bull's cl
             "bear_history": bear_history + "\n" + round_argument,
             "bull_history": investment_debate_state.get("bull_history", ""),
             "current_response": argument,
+            "latest_speaker": "Bear",
             "count": current_round,
             "bear_prediction": prediction,
             "bear_confidence": confidence,
