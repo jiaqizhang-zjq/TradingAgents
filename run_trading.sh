@@ -34,10 +34,10 @@ LOG_FILE="logs/${SYMBOL}-${DATE}-${TIMESTAMP}.log"
 
 # 前台运行
 if [ -t 1 ]; then
-    .venv/bin/python run_trading.py "$SYMBOL" "$DATE" 2>&1 | tee "$LOG_FILE"
+    "$SCRIPT_DIR/.venv/bin/python" run_trading.py "$SYMBOL" "$DATE" 2>&1 | tee "$LOG_FILE"
 else
     # 后台运行（无终端）
-    .venv/bin/python run_trading.py "$SYMBOL" "$DATE" > "$LOG_FILE" 2>&1
+    "$SCRIPT_DIR/.venv/bin/python" run_trading.py "$SYMBOL" "$DATE" > "$LOG_FILE" 2>&1
 fi
 
 echo "日志: $LOG_FILE"

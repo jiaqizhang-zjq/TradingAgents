@@ -105,11 +105,23 @@ class TradingAgentsGraph:
         self.quick_thinking_llm = quick_client.get_llm()
         
         # Initialize memories
-        self.bull_memory = FinancialSituationMemory("bull_memory", self.config)
-        self.bear_memory = FinancialSituationMemory("bear_memory", self.config)
-        self.trader_memory = FinancialSituationMemory("trader_memory", self.config)
-        self.invest_judge_memory = FinancialSituationMemory("invest_judge_memory", self.config)
-        self.risk_manager_memory = FinancialSituationMemory("risk_manager_memory", self.config)
+        self.bull_memory = FinancialSituationMemory("bull_researcher", self.config)
+        self.bear_memory = FinancialSituationMemory("bear_researcher", self.config)
+        self.trader_memory = FinancialSituationMemory("trader", self.config)
+        self.invest_judge_memory = FinancialSituationMemory("research_manager", self.config)
+        self.risk_manager_memory = FinancialSituationMemory("risk_manager", self.config)
+        
+        # 从历史研究记录中学习
+        if self.debug:
+            print("\n" + "="*50)
+            print("📚 从历史研究记录中学习...")
+            print("="*50)
+        
+        self.bull_memory.learn_from_research_records()
+        self.bear_memory.learn_from_research_records()
+        self.trader_memory.learn_from_research_records()
+        self.invest_judge_memory.learn_from_research_records()
+        self.risk_manager_memory.learn_from_research_records()
 
         # Create tool nodes
         self.tool_nodes = self._create_tool_nodes()

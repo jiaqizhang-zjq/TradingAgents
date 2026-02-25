@@ -6,8 +6,15 @@
 
 ## 数据库文件
 
+### 1. research_tracker.db
 - **文件名**: `research_tracker.db`
 - **位置**: `/Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents/`
+- **用途**: 存储研究员预测、回测结果和内存记录
+
+### 2. trading_analysis.db
+- **文件名**: `trading_analysis.db`
+- **位置**: `/Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents/tradingagents/db/`
+- **用途**: 存储完整的分析报告和工具调用数据
 
 ---
 
@@ -102,6 +109,86 @@
 - `idx_stock_returns_symbol_date`: (symbol, trade_date)
 
 **当前状态**: 表为空
+
+---
+
+### 4. memory_records (内存记录表)
+
+**用途**: 存储各角色的历史经验和记忆，用于BM25相似性匹配
+
+**表结构**:
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| id | INTEGER | 主键，自增 |
+| memory_name | TEXT | 内存实例名称 (如 bull_researcher, bear_researcher, trader) |
+| situation | TEXT | 完整的市场情境描述 (包含5份专家报告) |
+| recommendation | TEXT | 建议内容 (包含角色、预测、推理和收益) |
+| actual_return | REAL | 实际收益率 |
+| symbol | TEXT | 股票代码 |
+| trade_date | TEXT | 交易日期 |
+| created_at | TEXT | 创建时间 |
+| updated_at | TEXT | 更新时间 |
+
+**索引**:
+- `idx_memory_records_memory_name`: (memory_name)
+
+**数据来源**:
+- 从 `research_records` 表获取已验证的预测记录
+- 从 `analysis_reports` 表获取完整的市场报告
+- 自动在回测后生成
+
+---
+
+## trading_analysis.db 表结构
+
+### 1. analysis_reports (分析报告表)
+
+**用途**: 存储完整的5份专家报告和交易决策
+
+**表结构**:
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| id | INTEGER | 主键，自增 |
+| symbol | TEXT | 股票代码 |
+| trade_date | TEXT | 交易日期 |
+| created_at | TEXT | 创建时间 |
+| market_report | TEXT | 市场分析师报告 (Markdown格式) |
+| fundamentals_report | TEXT | 基本面分析师报告 (Markdown格式) |
+| candlestick_report | TEXT | 蜡烛图分析师报告 (Markdown格式) |
+| sentiment_report | TEXT | 情绪分析师报告 (Markdown格式) |
+| news_report | TEXT | 新闻分析师报告 (Markdown格式) |
+| investment_plan | TEXT | 投资计划 |
+| trader_investment_plan | TEXT | 交易员投资计划 |
+| final_trade_decision | TEXT | 最终交易决策 |
+| tool_calls_jsonl | TEXT | 工具调用原始数据 (JSONL格式) |
+| metadata | TEXT | 元数据 (JSON格式) |
+
+**唯一约束**:
+- `UNIQUE(symbol, trade_date)`
+
+**数据来源**:
+- 股票分析完成时自动生成
+- 包含完整的5份专家报告
+
+### 2. tool_calls (工具调用表)
+
+**用途**: 存储详细的工具调用记录
+
+**表结构**:
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| id | INTEGER | 主键，自增 |
+| report_id | INTEGER | 关联 analysis_reports.id |
+| tool_name | TEXT | 工具名称 |
+| input_params | TEXT | 输入参数 (JSON格式) |
+| output_result | TEXT | 输出结果 (JSON格式) |
+| timestamp | TEXT | 调用时间戳 |
+| duration_ms | INTEGER | 执行时长 (毫秒) |
+
+**索引**:
+- 关联 analysis_reports 表
 
 ---
 
@@ -204,6 +291,7 @@ ORDER BY win_rate DESC;
 
 ## 更新日志
 
+- 2026-02-24: 添加 memory_records 表，用于存储各角色的历史经验和记忆
 - 2026-02-23: 初始化数据库，创建 research_records 表
 - 记录了多个股票 (LMND, RKLB, TSLA, NVDA, AAPL, APLD, INTC, IREN, KTOS) 的分析结果
 - 所有记录当前状态为 pending，等待未来验证
