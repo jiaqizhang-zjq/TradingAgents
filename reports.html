@@ -21,6 +21,7 @@
             --hold-bg: #fef9c3;
             --sell: #dc2626;
             --sell-bg: #fee2e2;
+            --sidebar-width: 260px;
         }
         
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -165,7 +166,7 @@
         .rating-hold { background: var(--hold-bg); color: var(--hold); }
         .rating-sell { background: var(--sell-bg); color: var(--sell); }
         
-        /* Modal - Premium Style */
+        /* Modal - Premium Style with Sidebar */
         .modal {
             display: none;
             position: fixed;
@@ -174,8 +175,7 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             z-index: 1000;
-            overflow-y: auto;
-            padding: 40px 16px;
+            overflow: hidden;
             opacity: 0;
             transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -189,7 +189,8 @@
         .modal-content {
             background: rgba(255, 255, 255, 0.98);
             width: 100%;
-            max-width: 980px;
+            max-width: 1400px;
+            height: 92vh;
             border-radius: 16px;
             box-shadow: 
                 0 0 0 1px rgba(0,0,0,0.08),
@@ -198,9 +199,9 @@
             transform: translateY(30px) scale(0.98);
             transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
             overflow: hidden;
-            max-height: 92vh;
             display: flex;
             flex-direction: column;
+            margin: 4vh auto;
         }
         
         .modal.show .modal-content {
@@ -217,6 +218,7 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            flex-shrink: 0;
         }
         
         .modal-header .header-left {
@@ -267,32 +269,30 @@
             border-color: #0066cc;
         }
         
-        .theme-dark .tab-btn {
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.15);
-            color: #ccc;
+        /* Compare Date Selector */
+        .compare-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: 16px;
+            padding-left: 16px;
+            border-left: 1px solid var(--border);
         }
         
-        .theme-dark .tab-btn:hover {
-            background: rgba(255,255,255,0.15);
-            border-color: rgba(255,255,255,0.25);
+        .compare-selector label {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: var(--text-secondary);
         }
         
-        .theme-blue .tab-btn {
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(59,130,246,0.4);
-            color: #94a3b8;
-        }
-        
-        .theme-blue .tab-btn:hover {
-            background: rgba(59,130,246,0.2);
-            border-color: rgba(59,130,246,0.6);
-        }
-        
-        .theme-blue .tab-btn.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
+        .compare-selector select {
+            font-family: 'Inter', sans-serif;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            background: var(--card);
+            min-width: 120px;
         }
         
         .modal-close {
@@ -321,13 +321,73 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         
-        .modal-body {
-            padding: 40px 48px;
-            overflow-y: auto;
+        /* Modal Body with Sidebar */
+        .modal-body-wrapper {
+            display: flex;
             flex: 1;
-            font-size: 16px;
-            line-height: 1.75;
-            scroll-behavior: smooth;
+            overflow: hidden;
+        }
+        
+        /* Sidebar - Table of Contents */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, rgba(250,250,250,1) 0%, rgba(248,248,248,1) 100%);
+            border-right: 1px solid rgba(0,0,0,0.06);
+            overflow-y: auto;
+            flex-shrink: 0;
+            padding: 20px 0;
+        }
+        
+        .sidebar-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            padding: 0 20px 12px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            margin-bottom: 12px;
+        }
+        
+        .toc-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .toc-item {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 8px 20px;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+            display: block;
+            text-decoration: none;
+        }
+        
+        .toc-item:hover {
+            background: rgba(0,102,204,0.06);
+            color: var(--accent);
+        }
+        
+        .toc-item.active {
+            background: rgba(0,102,204,0.1);
+            color: var(--accent);
+            border-left-color: var(--accent);
+            font-weight: 500;
+        }
+        
+        .toc-item.h2 { padding-left: 20px; }
+        .toc-item.h3 { padding-left: 32px; font-size: 12px; }
+        .toc-item.h4 { padding-left: 44px; font-size: 12px; }
+        
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px 48px;
         }
         
         .modal-loading {
@@ -357,24 +417,25 @@
         }
         
         /* Scrollbar Styling */
-        .modal-body::-webkit-scrollbar {
-            width: 10px;
+        .sidebar::-webkit-scrollbar,
+        .main-content::-webkit-scrollbar {
+            width: 8px;
         }
         
-        .modal-body::-webkit-scrollbar-track {
+        .sidebar::-webkit-scrollbar-track,
+        .main-content::-webkit-scrollbar-track {
             background: rgba(0,0,0,0.03);
             border-radius: 8px;
-            margin: 12px 0;
         }
         
-        .modal-body::-webkit-scrollbar-thumb {
+        .sidebar::-webkit-scrollbar-thumb,
+        .main-content::-webkit-scrollbar-thumb {
             background: rgba(0,0,0,0.18);
             border-radius: 8px;
-            border: 2px solid transparent;
-            background-clip: padding-box;
         }
         
-        .modal-body::-webkit-scrollbar-thumb:hover {
+        .sidebar::-webkit-scrollbar-thumb:hover,
+        .main-content::-webkit-scrollbar-thumb:hover {
             background: rgba(0,0,0,0.28);
         }
         
@@ -397,6 +458,7 @@
             margin: 36px 0 18px;
             color: #111;
             letter-spacing: -0.01em;
+            scroll-margin-top: 20px;
         }
         
         .report-content h1 {
@@ -561,6 +623,30 @@
             line-height: 1.6;
         }
         
+        /* Compare View */
+        .compare-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+        
+        .compare-panel {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            background: var(--card);
+        }
+        
+        .compare-panel-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
         /* Theme: Dark */
         .theme-dark {
             --bg: #0f0f0f;
@@ -576,7 +662,9 @@
         .theme-dark header { border-bottom-color: var(--text); }
         .theme-dark .filters, 
         .theme-dark .report-item,
-        .theme-dark .modal-content { background: var(--card); border-color: var(--border); }
+        .theme-dark .modal-content,
+        .theme-dark .sidebar,
+        .theme-dark .compare-panel { background: var(--card); border-color: var(--border); }
         .theme-dark .brand { color: var(--accent); }
         .theme-dark .report-item .symbol,
         .theme-dark .modal-header h2,
@@ -597,6 +685,7 @@
         .theme-dark .report-content a:hover { border-bottom-style: dotted; }
         .theme-dark .tab-btn { border-color: rgba(255,255,255,0.15); }
         .theme-dark .tab-btn:hover { border-color: rgba(255,255,255,0.25); }
+        .theme-dark .sidebar { border-right-color: var(--border); }
         
         /* Theme: Blue */
         .theme-blue {
@@ -613,7 +702,9 @@
         .theme-blue header { border-bottom-color: var(--text); }
         .theme-blue .filters, 
         .theme-blue .report-item,
-        .theme-blue .modal-content { background: var(--card); border-color: var(--border); }
+        .theme-blue .modal-content,
+        .theme-blue .sidebar,
+        .theme-blue .compare-panel { background: var(--card); border-color: var(--border); }
         .theme-blue .brand { color: var(--accent); }
         .theme-blue .report-item .symbol,
         .theme-blue .modal-header h2,
@@ -634,6 +725,7 @@
         .theme-blue .report-content a:hover { border-bottom-style: dotted; }
         .theme-blue .tab-btn { border-color: rgba(59,130,246,0.4); }
         .theme-blue .tab-btn:hover { border-color: rgba(59,130,246,0.6); }
+        .theme-blue .sidebar { border-right-color: var(--border); }
         
         .empty {
             text-align: center;
@@ -677,11 +769,23 @@
                 <div class="header-left">
                     <h2 id="modalTitle">报告详情</h2>
                     <div class="report-tabs" id="reportTabs" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+                    <div class="compare-selector" id="compareSelector" style="display:none;">
+                        <label>对比日期:</label>
+                        <select id="compareDateSelect">
+                            <option value="">不对比</option>
+                        </select>
+                    </div>
                 </div>
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
-            <div class="modal-body">
-                <div class="report-content" id="modalContent"></div>
+            <div class="modal-body-wrapper">
+                <nav class="sidebar" id="tocSidebar">
+                    <div class="sidebar-title">目录</div>
+                    <ul class="toc-list" id="tocList"></ul>
+                </nav>
+                <div class="main-content" id="mainContent">
+                    <div class="report-content" id="modalContent"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -709,7 +813,7 @@
             marked.setOptions({
                 breaks: true,
                 gfm: true,
-                headerIds: false,
+                headerIds: true,
                 mangle: false
             });
         }
@@ -718,6 +822,9 @@
         let allReports = [];
         let stockDates = {};
         let currentReport = null;
+        let compareReport = null;
+        let currentSection = null;
+        let observer = null;
 
         // 报告章节配置（根据实际文件结构调整）
         const REPORT_SECTIONS = [
@@ -728,14 +835,13 @@
             { id: 'news', name: '新闻分析', file: '03_news_analysis.md' },
             { id: 'fundamentals', name: '基本面', file: '04_fundamentals_analysis.md' },
             { id: 'candlestick', name: '蜡烛图', file: '05_candlestick_analysis.md' },
-            { id: 'bull', name: '多头观点', file: '06_research_debate.md' },  // 辩论报告包含多头空头
+            { id: 'bull', name: '多头观点', file: '06_research_debate.md' },
             { id: 'bear', name: '空头观点', file: '06_research_debate.md' },
             { id: 'manager', name: '研究评审', file: '07_research_manager_decision.md' },
             { id: 'trader', name: '交易员', file: '10_trader_report.md' },
-            { id: 'aggressive', name: '激进风控', file: '08_risk_debate.md' },  // 辩论报告包含风控
+            { id: 'aggressive', name: '激进风控', file: '08_risk_debate.md' },
             { id: 'conservative', name: '保守风控', file: '09_risk_manager_decision.md' },
-            { id: 'neutral', name: '中性风控', file: '09_risk_manager_decision.md' },
-            { id: 'portfolio', name: '组合决策', file: '05_candlestick_analysis.md' } // placeholder，实际可能没有
+            { id: 'neutral', name: '中性风控', file: '09_risk_manager_decision.md' }
         ];
         
         async function loadReports() {
@@ -780,11 +886,8 @@
                 
                 updateDateFilter();
                 
-                // 默认选中最新日期（如果存在报告）
                 if (allReports.length > 0) {
                     const latest = allReports.sort((a,b) => b.date.localeCompare(a.date))[0];
-                    // 不自动选择股票（保持全部）
-                    // 自动选择最新日期
                     if (latest.date) {
                         document.getElementById('dateFilter').value = latest.date;
                     }
@@ -837,21 +940,48 @@
         
         async function openReport(stock, date) {
             currentReport = { stock, date };
+            compareReport = null;
             const modal = document.getElementById('reportModal');
             const modalContent = document.querySelector('.modal-content');
             
-            // 显示加载状态
             document.getElementById('modalTitle').innerHTML = `${stock} <span style="font-weight:400;color:#999;">${date}</span>`;
             document.getElementById('modalContent').innerHTML = '<div class="modal-loading">正在加载报告</div>';
             modal.classList.add('show');
             modalContent.style.transform = 'translateY(0) scale(1)';
             
-            // 生成 Tabs（异步检查文件存在性）
+            updateCompareSelector(stock, date);
             await generateTabs(stock, date);
             
-            // 默认加载第一个可用章节
             const firstTab = document.querySelector('.tab-btn:not(.hidden)');
             if (firstTab) firstTab.click();
+        }
+        
+        function updateCompareSelector(stock, currentDate) {
+            const selector = document.getElementById('compareSelector');
+            const select = document.getElementById('compareDateSelect');
+            const datesDesc = (stockDates[stock] || []).filter(d => d !== currentDate).sort((a,b) => b.localeCompare(a));
+            const datesAsc = datesDesc.slice().reverse();
+            
+            select.innerHTML = '<option value="">不对比</option>' + 
+                datesAsc.map(d => `<option value="${d}">${d}</option>`).join('');
+            
+            selector.style.display = datesDesc.length > 0 ? 'flex' : 'none';
+            
+            // 默认选中前一天（降序第一个就是最近的）
+            if (datesDesc.length > 0) {
+                select.value = datesDesc[0];
+                compareReport = { stock, date: datesDesc[0] };
+                if (currentSection) {
+                    loadSection(currentSection);
+                }
+            }
+            
+            select.onchange = (e) => {
+                compareReport = e.target.value ? { stock, date: e.target.value } : null;
+                if (currentSection) {
+                    loadSection(currentSection);
+                }
+            };
         }
         
         async function generateTabs(stock, date) {
@@ -866,7 +996,6 @@
                 btn.className = 'tab-btn' + (section.default ? ' active' : '');
                 btn.textContent = section.name;
                 
-                // 检查文件是否存在
                 try {
                     const res = await fetch(filePath, { method: 'HEAD' });
                     if (res.ok) {
@@ -876,22 +1005,19 @@
                             loadSection(section.id);
                         };
                         tabsContainer.appendChild(btn);
-                    } else {
-                        // 文件不存在，不显示此 Tab
-                        console.log(`文件不存在: ${filePath}`);
                     }
                 } catch (e) {
                     console.error(`检查文件 ${filePath} 失败:`, e);
                 }
             }
             
-            // 如果没有可用 Tab，显示提示
             if (tabsContainer.children.length === 0) {
                 tabsContainer.innerHTML = '<span style="color:#999;font-size:13px;padding:6px 14px;">无可用章节</span>';
             }
         }
         
         async function loadSection(sectionId) {
+            currentSection = sectionId;
             const section = REPORT_SECTIONS.find(s => s.id === sectionId);
             if (!section) return;
             
@@ -901,10 +1027,13 @@
             const modalContent = document.getElementById('modalContent');
             modalContent.innerHTML = '<div class="modal-loading">正在加载...</div>';
             
+            if (observer) {
+                observer.disconnect();
+            }
+            
             try {
                 const res = await fetch(filePath);
                 if (!res.ok) {
-                    // 如果文件不存在，显示提示
                     if (res.status === 404) {
                         modalContent.innerHTML = `<div class="empty">该章节文件不存在: ${section.file}</div>`;
                         return;
@@ -913,14 +1042,38 @@
                 }
                 const text = await res.text();
                 
-                // 判断文件类型渲染
-                if (section.file.endsWith('.md')) {
-                    modalContent.innerHTML = renderMarkdown(text);
+                let html = '';
+                if (compareReport) {
+                    const comparePath = REPORTS_DIR + compareReport.stock + '/' + compareReport.date + '/' + section.file;
+                    try {
+                        const compareRes = await fetch(comparePath);
+                        if (compareRes.ok) {
+                            const compareText = await compareRes.text();
+                            html = `
+                                <div class="compare-view">
+                                    <div class="compare-panel">
+                                        <div class="compare-panel-title">${currentReport.date}</div>
+                                        <div class="report-content">${renderMarkdown(text)}</div>
+                                    </div>
+                                    <div class="compare-panel">
+                                        <div class="compare-panel-title">${compareReport.date}</div>
+                                        <div class="report-content">${renderMarkdown(compareText)}</div>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            html = renderMarkdown(text);
+                        }
+                    } catch {
+                        html = renderMarkdown(text);
+                    }
                 } else {
-                    modalContent.innerHTML = '<pre>' + text.replace(/</g, '&lt;') + '</pre>';
+                    html = renderMarkdown(text);
                 }
                 
-                // 表格样式修复
+                modalContent.innerHTML = html;
+                generateTOC();
+                
                 modalContent.querySelectorAll('table').forEach(table => {
                     table.style.width = '100%';
                     table.style.borderCollapse = 'collapse';
@@ -930,9 +1083,62 @@
             }
         }
         
+        function generateTOC() {
+            const content = document.getElementById('modalContent');
+            const tocList = document.getElementById('tocList');
+            tocList.innerHTML = '';
+            
+            const headings = content.querySelectorAll('h1, h2, h3, h4');
+            const tocMap = new Map();
+            
+            headings.forEach((heading, index) => {
+                const id = 'heading-' + index;
+                heading.id = id;
+                
+                const level = heading.tagName.toLowerCase();
+                const item = document.createElement('a');
+                item.href = '#' + id;
+                item.className = `toc-item ${level}`;
+                item.textContent = heading.textContent;
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                };
+                tocList.appendChild(item);
+                tocMap.set(id, item);
+            });
+            
+            observer = new IntersectionObserver((entries) => {
+                tocMap.forEach((item) => item.classList.remove('active'));
+                const visibleEntries = entries.filter(e => e.isIntersecting);
+                if (visibleEntries.length > 0) {
+                    const topEntry = visibleEntries.sort((a, b) => 
+                        a.boundingClientRect.top - b.boundingClientRect.top
+                    )[0];
+                    const activeItem = tocMap.get(topEntry.target.id);
+                    if (activeItem) {
+                        activeItem.classList.add('active');
+                    }
+                }
+            }, {
+                root: document.getElementById('mainContent'),
+                rootMargin: '-20% 0px -80% 0px',
+                threshold: 0
+            });
+            
+            headings.forEach(heading => observer.observe(heading));
+        }
+        
         function closeModal() {
             const modal = document.getElementById('reportModal');
             modal.classList.remove('show');
+            currentReport = null;
+            compareReport = null;
+            currentSection = null;
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
         }
         
         function clearFilters() { 
@@ -950,12 +1156,10 @@
             localStorage.setItem('reportTheme', theme);
         }
         
-        // 键盘支持：ESC 关闭
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeModal();
         });
         
-        // 点击遮罩关闭
         document.getElementById('reportModal').addEventListener('click', e => {
             if (e.target.id === 'reportModal') closeModal();
         });
