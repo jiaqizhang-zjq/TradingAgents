@@ -12,6 +12,17 @@ class TradingAgentsException(Exception):
     pass
 
 
+# ==================== 输入验证异常 ====================
+
+class ValidationError(TradingAgentsException):
+    """输入验证失败"""
+    
+    def __init__(self, field: str, message: str):
+        self.field = field
+        self.message = message
+        super().__init__(f"Validation failed for {field}: {message}")
+
+
 # ==================== 数据相关异常 ====================
 
 class DataError(TradingAgentsException):
