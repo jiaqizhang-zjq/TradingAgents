@@ -46,15 +46,15 @@ class TestContainer:
         with pytest.raises(KeyError):
             container.get("nonexistent")
             
-    def test_reset(self, container):
-        """测试重置单例实例"""
+    def test_clear_singletons(self, container):
+        """测试清空单例实例"""
         def create_service():
             return "test_service"
             
         container.register("service", create_service, singleton=True)
         container.get("service")  # 创建实例
         
-        container.reset_singletons()
+        container.clear_singletons()
         
         assert container._singletons == {}
         # 工厂函数仍然保留

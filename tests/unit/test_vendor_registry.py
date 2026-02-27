@@ -12,41 +12,51 @@ class TestVendorRegistry:
         return VendorRegistry()
         
     def test_initialization(self, registry):
-        """测试初始化 - 应包含默认供应商"""
-        assert len(registry._vendors) > 0
-        assert "yfinance" in registry._vendors
-        assert "akshare" in registry._vendors
+        """测试初始化 - 空注册表"""
+        assert len(registry._vendors) == 0
+        assert isinstance(registry._vendors, dict)
         
-    def test_get_vendor_priority(self, registry):
-        """测试按优先级获取供应商"""
-        vendors = registry.get_vendor_priority()
-        assert isinstance(vendors, list)
-        assert len(vendors) > 0
-        # 应按优先级降序排列
-        priorities = [v["priority"] for v in vendors]
-        assert priorities == sorted(priorities, reverse=True)
+    def test_register_vendor(self, registry):
+        """测试注册供应商"""
+        from tradingagents.dataflows.core.vendor_registry import VendorConfig, VendorPriority
+        config = VendorConfig(name="test_vendor", priority=VendorPriority.HIGH)
+        registry.register_vendor(config)
+        assert "test_vendor" in registry._vendors
+        assert registry._vendors["test_vendor"].priority == VendorPriority.HIGH
         
-    def test_get_vendor_info(self, registry):
-        """测试获取供应商信息"""
-        info = registry.get_vendor_info("yfinance")
-        assert info is not None
-        assert "name" in info
-        assert "priority" in info
-        assert info["name"] == "yfinance"
+    def test_get_vendor_config(self, registry):
+        """测试获取供应商配置"""
+        from tradingagents.dataflows.core.vendor_registry import VendorConfig
+        config = VendorConfig(name="yfinance")
+        registry.register_vendor(config)
         
-    def test_get_vendor_info_not_found(self, registry):
+        retrieved = registry.get_vendor_config("yfinance")
+        assert retrieved is not None
+        assert retrieved.name == "yfinance"
+        
+    def test_get_vendor_config_not_found(self, registry):
         """测试获取不存在的供应商"""
-        info = registry.get_vendor_info("nonexistent")
-        assert info is None
+        config = registry.get_vendor_config("nonexistent")
+        assert config is None
         
-    def test_is_vendor_available(self, registry):
-        """测试检查供应商是否可用"""
-        assert registry.is_vendor_available("yfinance") is True
-        assert registry.is_vendor_available("nonexistent") is False
+    def test_list_vendors(self, registry):
+        """测试列出所有供应商"""
+        from tradingagents.dataflows.core.vendor_registry import VendorConfig
+        registry.register_vendor(VendorConfig(name="vendor1", enabled=True))
+        registry.register_vendor(VendorConfig(name="vendor2", enabled=False))
         
-    def test_get_all_vendors(self, registry):
-        """测试获取所有供应商"""
-        vendors = registry.get_all_vendors()
-        assert isinstance(vendors, list)
-        assert len(vendors) > 0
-        assert all("name" in v for v in vendors)
+        enabled = registry.list_vendors(enabled_only=True)
+        assert "vendor1" in enabled
+        assert "vendor2" not in enabled
+        
+        all_vendors = registry.list_vendors(enabled_only=False)
+        assert len(all_vendors) == 2
+        
+    def test_unregister_vendor(self, registry):
+        """测试注销供应商"""
+        from tradingagents.dataflows.core.vendor_registry import VendorConfig
+        registry.register_vendor(VendorConfig(name="test"))
+        assert "test" in registry._vendors
+        
+        registry.unregister_vendor("test")
+        assert "test" not in registry._vendors

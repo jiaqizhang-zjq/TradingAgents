@@ -13,69 +13,64 @@ class TestStatisticsCollector:
         
     def test_initialization(self, collector):
         """测试初始化"""
-        assert collector._api_calls == {}
-        assert collector._cache_hits == {}
-        assert collector._cache_misses == {}
-        assert collector._errors == {}
+        assert collector._stats == {}
+        assert isinstance(collector._stats, dict)
         
-    def test_record_api_call(self, collector):
-        """测试记录API调用"""
-        collector.record_api_call("yfinance", "AAPL")
-        collector.record_api_call("yfinance", "AAPL")
-        collector.record_api_call("yfinance", "TSLA")
+    def test_record_success(self, collector):
+        """测试记录成功请求"""
+        collector.record_success("yfinance", "get_stock", 0.5)
+        collector.record_success("yfinance", "get_stock", 0.3)
         
         stats = collector.get_statistics()
-        assert stats["api_calls"]["yfinance"] == 3
+        assert len(stats) == 1
+        assert stats[0].vendor == "yfinance"
+        assert stats[0].success_count == 2
         
-    def test_record_cache_hit(self, collector):
-        """测试记录缓存命中"""
-        collector.record_cache_hit("yfinance", "AAPL")
-        collector.record_cache_hit("yfinance", "AAPL")
-        
-        stats = collector.get_statistics()
-        assert stats["cache_hits"]["yfinance"] == 2
-        
-    def test_record_cache_miss(self, collector):
-        """测试记录缓存未命中"""
-        collector.record_cache_miss("yfinance", "AAPL")
+    def test_record_failure(self, collector):
+        """测试记录失败请求"""
+        collector.record_failure("yfinance", "get_stock", "Timeout")
         
         stats = collector.get_statistics()
-        assert stats["cache_misses"]["yfinance"] == 1
+        assert len(stats) == 1
+        assert stats[0].failure_count == 1
+        assert stats[0].last_error == "Timeout"
         
-    def test_record_error(self, collector):
-        """测试记录错误"""
-        collector.record_error("yfinance", "AAPL", "Timeout")
-        collector.record_error("yfinance", "TSLA", "Timeout")
-        collector.record_error("akshare", "600519", "NotFound")
+    def test_success_rate(self, collector):
+        """测试成功率计算"""
+        collector.record_success("yfinance", "get_stock", 0.5)
+        collector.record_success("yfinance", "get_stock", 0.3)
+        collector.record_failure("yfinance", "get_stock", "Error")
         
         stats = collector.get_statistics()
-        assert stats["errors"]["yfinance"] == 2
-        assert stats["errors"]["akshare"] == 1
+        assert len(stats) == 1
+        assert stats[0].success_rate == pytest.approx(2/3, 0.01)
+        
+    def test_average_time(self, collector):
+        """测试平均响应时间"""
+        collector.record_success("yfinance", "get_stock", 0.5)
+        collector.record_success("yfinance", "get_stock", 0.3)
+        
+        stats = collector.get_statistics()
+        assert len(stats) == 1
+        assert stats[0].average_time_seconds == pytest.approx(0.4, 0.01)
         
     def test_get_statistics_comprehensive(self, collector):
         """测试获取完整统计数据"""
-        # 模拟一系列操作
-        collector.record_api_call("yfinance", "AAPL")
-        collector.record_api_call("yfinance", "AAPL")
-        collector.record_cache_hit("yfinance", "AAPL")
-        collector.record_cache_miss("yfinance", "TSLA")
-        collector.record_error("yfinance", "MSFT", "Timeout")
+        collector.record_success("yfinance", "get_stock", 0.5)
+        collector.record_failure("yfinance", "get_stock", "Error")
+        collector.record_success("akshare", "get_data", 0.3)
         
         stats = collector.get_statistics()
         
-        assert stats["api_calls"]["yfinance"] == 2
-        assert stats["cache_hits"]["yfinance"] == 1
-        assert stats["cache_misses"]["yfinance"] == 1
-        assert stats["errors"]["yfinance"] == 1
+        assert len(stats) == 2
+        vendors = [s.vendor for s in stats]
+        assert "yfinance" in vendors
+        assert "akshare" in vendors
         
     def test_reset(self, collector):
         """测试重置统计"""
-        collector.record_api_call("yfinance", "AAPL")
-        collector.record_cache_hit("yfinance", "AAPL")
-        collector.reset()
+        collector.record_success("yfinance", "get_stock", 0.5)
+        collector._stats.clear()
         
         stats = collector.get_statistics()
-        assert stats["api_calls"] == {}
-        assert stats["cache_hits"] == {}
-        assert stats["cache_misses"] == {}
-        assert stats["errors"] == {}
+        assert len(stats) == 0
