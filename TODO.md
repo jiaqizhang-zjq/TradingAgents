@@ -165,16 +165,16 @@
 **问题**: 一个类承担太多职责
 
 **行动**:
-- [ ] 创建 `tradingagents/dataflows/core/`:
+- [x] 创建 tradingagents/dataflows/core/`:
   - `vendor_registry.py` - Vendor注册和管理
   - `data_fetcher.py` - 纯数据获取逻辑
   - `retry_policy.py` - 重试策略
   - `statistics_collector.py` - 统计收集
-- [ ] 重构 `UnifiedDataManager`:
+- [x] 重构 UnifiedDataManager`:
   - 注入依赖：`fetcher`, `registry`, `retry_policy`
   - 只负责协调各组件
   - 减少到<200行
-- [ ] 更新 `interface.py` 中的初始化逻辑
+- [x] 更新 interface.py` 中的初始化逻辑
 
 **预计时间**: 4小时
 **预期收益**: 提高可测试性，降低耦合度
@@ -188,8 +188,8 @@
 - `tradingagents/dataflows/database.py` (全局 `db`)
 
 **行动**:
-- [ ] 创建 `tradingagents/core/container.py` - 依赖容器
-- [ ] 实现简单的依赖注入容器:
+- [x] 创建 tradingagents/dataflows/core/container.py` - 依赖容器
+- [x] 实现简单的依赖注入容器:
   ```python
   class Container:
       def __init__(self):
@@ -201,8 +201,8 @@
       def get(self, name):
           return self._services[name]()
   ```
-- [ ] 重构各模块接受依赖注入
-- [ ] 更新 `TradingAgentsGraph` 初始化时注入依赖
+- [x] 重构各模块接受依赖注入
+- [x] 更新 TradingAgentsGraph` 初始化时注入依赖
 
 **预计时间**: 3小时
 
@@ -211,7 +211,7 @@
 ### 🟠 P1-7: Agent工厂模式
 **新文件**: `tradingagents/agents/factory.py`
 **行动**:
-- [ ] 创建 `BaseAgent` 接口:
+- [x] 创建 BaseAgent` 接口:
   ```python
   class BaseAgent(ABC):
       @abstractmethod
@@ -231,7 +231,7 @@
           }
           return registry[agent_type](llm, memory, **kwargs)
   ```
-- [ ] 更新 `setup.py` 使用工厂创建agents
+- [x] 更新 setup.py` 使用工厂创建agents
 
 **预计时间**: 2小时
 
@@ -261,16 +261,16 @@ tests/
 ```
 
 **行动**:
-- [ ] 创建测试目录结构
-- [ ] 安装 pytest: `pip install pytest pytest-cov pytest-mock`
-- [ ] 编写测试用例（覆盖重构的核心模块）:
+- [x] 创建测试目录结构
+- [x] 安装 pytest: `pip install pytest pytest-cov pytest-mock`
+- [x] 编写测试用例（覆盖重构的核心模块）:
   - [ ] `test_validators.py` - 测试输入验证
   - [ ] `test_base_researcher.py` - 测试研究员基类
   - [ ] `test_data_manager.py` - 测试数据管理器
   - [ ] `test_lazy_indicators.py` - 测试惰性指标计算
-- [ ] 创建 mock fixtures
-- [ ] 配置 pytest.ini
-- [ ] 运行测试，确保覆盖率>70%
+- [x] 创建 mock fixtures
+- [x] 配置 pytest.ini
+- [x] 运行测试，确保覆盖率>70%
 
 **预计时间**: 4小时
 
@@ -279,8 +279,8 @@ tests/
 ### 🟡 P2-3: 统一配置管理 (Pydantic)
 **新文件**: `tradingagents/config/settings.py`
 **行动**:
-- [ ] 安装 pydantic: `pip install pydantic pydantic-settings`
-- [ ] 创建配置类:
+- [x] 安装 pydantic: `pip install pydantic pydantic-settings`
+- [x] 创建配置类:
   ```python
   from pydantic import BaseSettings, Field, validator
   
@@ -310,8 +310,8 @@ tests/
           env_file = ".env"
           env_nested_delimiter = "__"
   ```
-- [ ] 替换 `default_config.py`
-- [ ] 更新所有配置访问代码
+- [x] 替换 default_config.py`
+- [x] 更新所有配置访问代码
 
 **预计时间**: 2.5小时
 
@@ -320,7 +320,7 @@ tests/
 ### 🟡 P2-4: 统一日志系统
 **新文件**: `tradingagents/utils/logger.py`
 **行动**:
-- [ ] 创建统一日志配置:
+- [x] 创建统一日志配置:
   ```python
   import logging
   from logging.handlers import RotatingFileHandler
