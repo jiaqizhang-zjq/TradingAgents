@@ -291,6 +291,14 @@ Use this information to make a compelling {self._get_stance_en()} case, counter 
             investment_debate_state["history"] = updated_history
             investment_debate_state["current_response"] = response_content
             
+            # 更新 latest_speaker 用于 conditional_logic 判断
+            speaker_name = "Bull" if self.researcher_type == "bull_researcher" else "Bear"
+            investment_debate_state["latest_speaker"] = speaker_name
+            
+            # 更新 count 用于轮次控制
+            current_count = investment_debate_state.get("count", 0)
+            investment_debate_state["count"] = current_count + 1
+            
             if self.researcher_type == "bull_researcher":
                 investment_debate_state["bull_history"] = updated_researcher_history
             else:
