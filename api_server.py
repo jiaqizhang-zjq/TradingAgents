@@ -14,6 +14,11 @@ DB_PATH2 = os.path.join(os.path.dirname(__file__), 'tradingagents/db/trading_ana
 
 class APIHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
+        # 添加 CORS 头
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)

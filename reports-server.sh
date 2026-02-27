@@ -1,71 +1,67 @@
 #!/bin/bash
-# reports-server.sh - 管理 reports.html HTTP 服务
+# reports-server.sh - 管理 reports.html HTTP 服务和 API 服务
 
 # 配置
 DIR="$(cd "$(dirname "$0")" && pwd)"
 DEFAULT_PORT=8001
 PID_FILE="$DIR/reports-server.pid"
+API_PID_FILE="$DIR/api-server.pid"
 
 start() {
     local port="${1:-$DEFAULT_PORT}"
 
-    # 检查是否已在运行（通过 PID 文件）
-    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-        echo "❌ 服务已在运行 (PID $(cat "$PID_FILE"), 端口 $port)"
-        return 1
-    fi
-
-    # 检查端口占用（用 pgrep，不用 lsof）
-    if pgrep -f "python -m http.server $port" >/dev/null 2>&1; then
-        echo "⚠️  端口 $port 被占用，释放旧进程..."
-        pkill -9 -f "python -m http.server $port" 2>/dev/null
-        sleep 1
-    fi
+    # 停止旧服务
+    stop
 
     cd "$DIR" || return 1
+    
+    # 启动 API 服务器 (端口 8002)
+    nohup .venv/bin/python api_server.py > /dev/null 2>&1 &
+    local api_pid=$!
+    echo "$api_pid" > "$API_PID_FILE"
+    sleep 0.5
+    
+    # 启动 HTTP 服务器 (端口 8001)
     nohup python3 -m http.server "$port" > /dev/null 2>&1 &
     local pid=$!
     echo "$pid" > "$PID_FILE"
     sleep 0.5
-    if kill -0 "$pid" 2>/dev/null; then
-        echo "✅ 服务已启动 - http://localhost:$port/reports.html (PID $pid)"
+    
+    if kill -0 "$pid" 2>/dev/null && kill -0 "$api_pid" 2>/dev/null; then
+        echo "✅ 服务已启动"
+        echo "   - HTTP: http://localhost:$port/reports.html (PID $pid)"
+        echo "   - API:  http://localhost:8002 (PID $api_pid)"
     else
         echo "❌ 启动失败"
-        rm -f "$PID_FILE"
+        rm -f "$PID_FILE" "$API_PID_FILE"
         return 1
     fi
 }
 
 stop() {
-    local killed=0
-
-    # 1. 尝试通过 PID 文件
+    # 停止 HTTP 服务器
     if [ -f "$PID_FILE" ]; then
         local pid=$(cat "$PID_FILE" 2>/dev/null)
-        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-            kill "$pid" 2>/dev/null
-            sleep 0.5
-            if kill -0 "$pid" 2>/dev/null; then
-                echo "⚠️  进程 $pid 未停止，强制杀死..."
-                kill -9 "$pid" 2>/dev/null
-            fi
-            echo "✅ 服务已停止 (PID $pid)"
-            killed=1
+        if [ -n "$pid" ]; then
+            kill -9 "$pid" 2>/dev/null
+            echo "✅ HTTP 服务已停止 (PID $pid)"
         fi
         rm -f "$PID_FILE"
     fi
-
-    # 2. 强杀所有匹配的 http.server 进程（防止 PID 文件丢失）
-    local pids=$(pgrep -f "python -m http.server" 2>/dev/null)
-    if [ -n "$pids" ]; then
-        echo "⚠️  清理残留进程: $pids"
-        kill -9 $pids 2>/dev/null
-        killed=1
+    
+    # 停止 API 服务器
+    if [ -f "$API_PID_FILE" ]; then
+        local api_pid=$(cat "$API_PID_FILE" 2>/dev/null)
+        if [ -n "$api_pid" ]; then
+            kill -9 "$api_pid" 2>/dev/null
+            echo "✅ API 服务已停止 (PID $api_pid)"
+        fi
+        rm -f "$API_PID_FILE"
     fi
-
-    if [ $killed -eq 0 ]; then
-        echo "🔴 服务未运行"
-    fi
+    
+    # 清理残留进程
+    pkill -9 -f "api_server.py" 2>/dev/null
+    pkill -9 -f "python -m http.server" 2>/dev/null
 }
 
 restart() {
@@ -76,24 +72,23 @@ restart() {
 }
 
 status() {
+    local http_running=0
+    local api_running=0
+    
+    # 检查 HTTP
     if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-        local pid=$(cat "$PID_FILE")
-        # 尝试获取端口（多种方式）
-        local port=""
-        if command -v ss >/dev/null 2>&1; then
-            port=$(ss -ltn 2>/dev/null | awk -v pid="$pid" '$6 ~ /^pid=/ {print $4}' | sed 's/.*://' | head -1)
-        elif command -v netstat >/dev/null 2>&1; then
-            port=$(netstat -an 2>/dev/null | grep "$pid" | grep LISTEN | awk '{print $4}' | sed 's/.*://' | head -1)
-        fi
-        echo "🟢 服务运行中 (PID $pid, 端口 ${port:-unknown})"
-    else
-        # 查找运行中的 http.server 进程
-        local pids=$(pgrep -f "python -m http.server" 2>/dev/null)
-        if [ -n "$pids" ]; then
-            echo "🟡 服务运行中但 PID 文件丢失 (PID $pids)"
-        else
-            echo "🔴 服务未运行"
-        fi
+        echo "🟢 HTTP 服务运行中 (PID $(cat "$PID_FILE"), 端口 8001)"
+        http_running=1
+    fi
+    
+    # 检查 API
+    if [ -f "$API_PID_FILE" ] && kill -0 "$(cat "$API_PID_FILE")" 2>/dev/null; then
+        echo "🟢 API 服务运行中 (PID $(cat "$API_PID_FILE"), 端口 8002)"
+        api_running=1
+    fi
+    
+    if [ $http_running -eq 0 ] && [ $api_running -eq 0 ]; then
+        echo "🔴 服务未运行"
     fi
 }
 
@@ -112,13 +107,12 @@ case "$1" in
         status
         ;;
     *)
-        echo "用法: $0 {start|stop|restart|status} [port]"
+        echo "用法: $0 {start|stop|restart|status}"
         echo "示例:"
-        echo "  $0 start          # 启动在端口 $DEFAULT_PORT"
-        echo "  $0 start 8080     # 启动在端口 8080"
-        echo "  $0 status"
-        echo "  $0 stop"
-        echo "  $0 restart"
+        echo "  $0 start          # 启动服务"
+        echo "  $0 status         # 查看状态"
+        echo "  $0 stop           # 停止服务"
+        echo "  $0 restart        # 重启服务"
         exit 1
         ;;
 esac
