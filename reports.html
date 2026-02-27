@@ -1026,6 +1026,79 @@
             color: var(--text-secondary);
             line-height: 1.6;
         }
+        
+        /* Stock Chart Table */
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .chart-price .current {
+            font-family: 'Inter', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        
+        .chart-price .change {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            margin-left: 12px;
+        }
+        
+        .chart-price .change.positive { color: var(--buy); }
+        .chart-price .change.negative { color: var(--sell); }
+        
+        .chart-range {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .chart-table-wrapper {
+            overflow-x: auto;
+        }
+        
+        .chart-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+        
+        .chart-table th {
+            padding: 12px 8px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        .chart-table th:first-child { text-align: left; }
+        
+        .chart-table td {
+            padding: 10px 8px;
+            text-align: right;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .chart-table td:first-child { text-align: left; }
+        
+        .chart-table tr.up td { color: var(--buy); }
+        .chart-table tr.down td { color: var(--sell); }
+        
+        .chart-table tr:hover td {
+            background: rgba(0,102,204,0.05);
+        }
     </style>
 </head>
 <body>
@@ -1090,6 +1163,7 @@
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script>
         // 确保 marked 加载完成后再定义函数
         function renderMarkdown(text) {
@@ -1340,7 +1414,11 @@
             
             // 处理 API 标签
             if (section.isApi) {
-                await loadAnalystRecords();
+                if (section.isChart) {
+                    await loadStockChart();
+                } else {
+                    await loadAnalystRecords();
+                }
                 return;
             }
             
@@ -1589,7 +1667,7 @@
         async function loadStats() {
             try {
                 console.log('Loading stats from API...');
-                const response = await fetch('/api/stats?_=' + Date.now());
+                const response = await fetch('http://localhost:8003/api/stats?_=' + Date.now());
                 console.log('Response status:', response.status);
                 if (!response.ok) throw new Error('API error: ' + response.status);
                 const stats = await response.json();
@@ -1663,7 +1741,7 @@
         
         async function loadAnalystRecords() {
             try {
-                const response = await fetch(`/api/analyst-records?symbol=${currentReport.stock}&date=${currentReport.date}`);
+                const response = await fetch(`http://localhost:8003/api/analyst-records?symbol=${currentReport.stock}&date=${currentReport.date}`);
                 const records = await response.json();
                 
                 const modalContent = document.getElementById('modalContent');
@@ -1728,9 +1806,73 @@
             }
         }
         
+        async function loadStockChart() {
+            try {
+                const response = await fetch(`http://localhost:8003/api/stock-chart?symbol=${currentReport.stock}`);
+                const data = await response.json();
+                
+                const modalContent = document.getElementById('modalContent');
+                
+                if (!data || data.length === 0) {
+                    modalContent.innerHTML = '<div class="empty">暂无K线数据</div>';
+                    return;
+                }
+                
+                // 简单的K线HTML展示
+                const latest = data[data.length - 1];
+                const first = data[0];
+                const change = ((latest.close - first.open) / first.open * 100).toFixed(2);
+                const changeClass = change >= 0 ? 'positive' : 'negative';
+                
+                let html = `
+                    <div class="chart-header">
+                        <div class="chart-price">
+                            <span class="current">$${latest.close.toFixed(2)}</span>
+                            <span class="change ${changeClass}">${change >= 0 ? '+' : ''}${change}%</span>
+                        </div>
+                        <div class="chart-range">${first.date} ~ ${latest.date}</div>
+                    </div>
+                    <div class="chart-table-wrapper">
+                        <table class="chart-table">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>开盘</th>
+                                    <th>最高</th>
+                                    <th>最低</th>
+                                    <th>收盘</th>
+                                    <th>成交量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.forEach(d => {
+                    const rowClass = d.close >= d.open ? 'up' : 'down';
+                    html += `
+                        <tr class="${rowClass}">
+                            <td>${d.date}</td>
+                            <td>$${d.open.toFixed(2)}</td>
+                            <td>$${d.high.toFixed(2)}</td>
+                            <td>$${d.low.toFixed(2)}</td>
+                            <td>$${d.close.toFixed(2)}</td>
+                            <td>${(d.volume / 1000000).toFixed(2)}M</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+                modalContent.innerHTML = html;
+                
+            } catch (e) {
+                console.error('加载K线失败:', e);
+                document.getElementById('modalContent').innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
+            }
+        }
+        
         async function loadToolStats() {
             try {
-                const response = await fetch('/api/tool-calls');
+                const response = await fetch('http://localhost:8003/api/tool-calls');
                 const data = await response.json();
                 
                 if (data.total === 0) return;

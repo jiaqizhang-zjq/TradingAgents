@@ -8,7 +8,7 @@ import sqlite3
 import os
 from urllib.parse import urlparse, parse_qs
 
-PORT = 8001
+PORT = 8003
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'tradingagents/db/research_tracker.db')
 DB_PATH2 = os.path.join(BASE_DIR, 'tradingagents/db/trading_analysis.db')
@@ -86,17 +86,13 @@ class ReportsHandler(http.server.SimpleHTTPRequestHandler):
     
     def get_stock_chart(self, symbol):
         """获取股票价格数据（用于K线图）"""
-        print(f"DEBUG: get_stock_chart called with symbol={symbol}, DB_PATH2={DB_PATH2}, exists={os.path.exists(DB_PATH2)}")
-        
         if not symbol or not os.path.exists(DB_PATH2):
-            print(f"DEBUG: DB not exists or no symbol")
             return []
         
         conn = sqlite3.connect(DB_PATH2)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        # 获取最新的价格数据
         cursor.execute("""
             SELECT result_preview, created_at 
             FROM tool_calls 
@@ -106,18 +102,15 @@ class ReportsHandler(http.server.SimpleHTTPRequestHandler):
         """, (symbol,))
         
         row = cursor.fetchone()
-        print(f"DEBUG: row = {row}")
         if not row or not row['result_preview']:
-            print(f"DEBUG: no row or no preview")
             conn.close()
             return []
         
-        # 解析CSV数据
         import csv
-        from io import StringIO
         
         try:
-            lines = row['result_preview'].strip().split('\n')
+            csv_text = row['result_preview']
+            lines = csv_text.strip().split('\n')
             if len(lines) < 2:
                 conn.close()
                 return []
@@ -125,16 +118,18 @@ class ReportsHandler(http.server.SimpleHTTPRequestHandler):
             reader = csv.DictReader(lines)
             data = []
             for r in reader:
+                date_val = r.get('timestamp', '')[:10]
+                if not date_val or len(date_val) < 10:
+                    continue
                 data.append({
-                    'date': r.get('timestamp', '')[:10],
-                    'open': float(r.get('open', 0)),
-                    'high': float(r.get('high', 0)),
-                    'low': float(r.get('low', 0)),
-                    'close': float(r.get('close', 0)),
-                    'volume': int(r.get('volume', 0))
+                    'date': date_val,
+                    'open': float(r.get('open') or 0),
+                    'high': float(r.get('high') or 0),
+                    'low': float(r.get('low') or 0),
+                    'close': float(r.get('close') or 0),
+                    'volume': int(r.get('volume') or 0)
                 })
             
-            # 只返回最近60天
             conn.close()
             return data[-60:] if len(data) > 60 else data
             
