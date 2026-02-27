@@ -750,44 +750,66 @@
             font-family: 'Inter', sans-serif;
         }
         
-        /* Stats Dashboard */
+        /* Stats Dashboard - Professional Style */
         .stats-dashboard {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 32px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
         }
         
         .stat-card {
-            background: var(--card);
+            background: linear-gradient(135deg, var(--card) 0%, rgba(255,255,255,0.8) 100%);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), #60a5fa);
         }
         
         .stat-card .stat-value {
             font-family: 'Inter', sans-serif;
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 700;
-            color: var(--accent);
+            color: var(--text);
+            letter-spacing: -1px;
         }
         
         .stat-card .stat-label {
             font-family: 'Inter', sans-serif;
             font-size: 13px;
+            font-weight: 500;
             color: var(--text-muted);
-            margin-top: 4px;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .stat-card .stat-sub {
             font-family: 'Inter', sans-serif;
             font-size: 12px;
             color: var(--text-secondary);
-            margin-top: 8px;
-            padding-top: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
             border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
         }
+        
+        .stat-card .stat-sub .label { color: var(--text-muted); }
+        .stat-card .stat-sub .value { font-weight: 600; }
+        .stat-card .stat-sub .value.positive { color: var(--buy); }
+        .stat-card .stat-sub .value.negative { color: var(--sell); }
         
         /* Stock List with Stats */
         .stock-stats {
@@ -924,6 +946,86 @@
         
         .history-table .return.positive { color: var(--buy); }
         .history-table .return.negative { color: var(--sell); }
+        
+        /* Analyst Records */
+        .analyst-records { margin-top: 20px; }
+        .analyst-records h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            margin: 24px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--accent);
+        }
+        
+        .analyst-records .record-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .analyst-records .record-header {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        
+        .analyst-records .record-date {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .analyst-records .prediction {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+        
+        .analyst-records .prediction.buy { background: var(--buy-bg); color: var(--buy); }
+        .analyst-records .prediction.sell { background: var(--sell-bg); color: var(--sell); }
+        .analyst-records .prediction.hold { background: var(--hold-bg); color: var(--hold); }
+        
+        .analyst-records .confidence {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .analyst-records .outcome {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 3px;
+        }
+        
+        .analyst-records .outcome.correct { background: var(--buy-bg); color: var(--buy); }
+        .analyst-records .outcome.incorrect { background: var(--sell-bg); color: var(--sell); }
+        .analyst-records .outcome.partial { background: var(--hold-bg); color: var(--hold); }
+        
+        .analyst-records .return {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: auto;
+        }
+        
+        .analyst-records .return.positive { color: var(--buy); }
+        .analyst-records .return.negative { color: var(--sell); }
+        
+        .analyst-records .record-reasoning {
+            font-family: 'Source Serif 4', serif;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
@@ -1026,6 +1128,7 @@
         // 报告章节配置（根据实际文件结构调整）
         const REPORT_SECTIONS = [
             { id: 'final', name: '最终决策', file: '11_final_decision.md', default: true },
+            { id: 'records', name: '分析师记录', file: null, isApi: true },
             { id: 'index', name: '索引', file: '00_index.md' },
             { id: 'market', name: '市场分析', file: '01_market_analysis.md' },
             { id: 'sentiment', name: '情绪分析', file: '02_sentiment_analysis.md' },
@@ -1189,23 +1292,32 @@
             const basePath = REPORTS_DIR + stock + '/' + date + '/';
             
             for (const section of REPORT_SECTIONS) {
-                const filePath = basePath + section.file;
                 const btn = document.createElement('button');
                 btn.className = 'tab-btn' + (section.default ? ' active' : '');
                 btn.textContent = section.name;
                 
-                try {
-                    const res = await fetch(filePath, { method: 'HEAD' });
-                    if (res.ok) {
-                        btn.onclick = () => {
-                            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                            btn.classList.add('active');
-                            loadSection(section.id);
-                        };
-                        tabsContainer.appendChild(btn);
+                let shouldShow = false;
+                
+                if (section.isApi) {
+                    // API 标签始终显示
+                    shouldShow = true;
+                } else if (section.file) {
+                    const filePath = basePath + section.file;
+                    try {
+                        const res = await fetch(filePath, { method: 'HEAD' });
+                        shouldShow = res.ok;
+                    } catch (e) {
+                        shouldShow = false;
                     }
-                } catch (e) {
-                    console.error(`检查文件 ${filePath} 失败:`, e);
+                }
+                
+                if (shouldShow) {
+                    btn.onclick = () => {
+                        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        loadSection(section.id);
+                    };
+                    tabsContainer.appendChild(btn);
                 }
             }
             
@@ -1219,15 +1331,21 @@
             const section = REPORT_SECTIONS.find(s => s.id === sectionId);
             if (!section) return;
             
-            const basePath = REPORTS_DIR + currentReport.stock + '/' + currentReport.date + '/';
-            const filePath = basePath + section.file;
-            
             const modalContent = document.getElementById('modalContent');
             modalContent.innerHTML = '<div class="modal-loading">正在加载...</div>';
             
             if (observer) {
                 observer.disconnect();
             }
+            
+            // 处理 API 标签
+            if (section.isApi) {
+                await loadAnalystRecords();
+                return;
+            }
+            
+            const basePath = REPORTS_DIR + currentReport.stock + '/' + currentReport.date + '/';
+            const filePath = basePath + section.file;
             
             try {
                 const res = await fetch(filePath);
@@ -1470,8 +1588,12 @@
         
         async function loadStats() {
             try {
-                const response = await fetch('http://localhost:8002/api/stats');
+                console.log('Loading stats from API...');
+                const response = await fetch('/api/stats?_=' + Date.now());
+                console.log('Response status:', response.status);
+                if (!response.ok) throw new Error('API error: ' + response.status);
                 const stats = await response.json();
+                console.log('Stats loaded:', stats.length, 'records');
                 
                 if (stats.length === 0) {
                     document.getElementById('statsDashboard').style.display = 'none';
@@ -1485,19 +1607,44 @@
                 const stocks = stats.length;
                 
                 const dashboard = document.getElementById('statsDashboard');
+                const winRate = Math.round(correct/total*100);
+                const partial = stats.reduce((sum, s) => sum + s.partial, 0);
+                const incorrect = stats.reduce((sum, s) => sum + s.incorrect, 0);
+                
                 dashboard.innerHTML = `
                     <div class="stat-card">
                         <div class="stat-value">${stocks}</div>
-                        <div class="stat-label">分析股票数</div>
+                        <div class="stat-label">覆盖股票</div>
+                        <div class="stat-sub">
+                            <span class="label">最新:</span>
+                            <span class="value">${stats[0]?.latest_date || '-'}</span>
+                        </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${total}</div>
-                        <div class="stat-label">总预测次数</div>
-                        <div class="stat-sub">胜率 ${Math.round(correct/total*100)}%</div>
+                        <div class="stat-label">研究样本</div>
+                        <div class="stat-sub">
+                            <span class="label">胜率:</span>
+                            <span class="value ${winRate >= 50 ? 'positive' : 'negative'}">${winRate}%</span>
+                        </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" style="color: ${avgReturn >= 0 ? 'var(--buy)' : 'var(--sell)'}">${avgReturn >= 0 ? '+' : ''}${avgReturn.toFixed(2)}%</div>
-                        <div class="stat-label">平均收益率</div>
+                        <div class="stat-label">平均收益</div>
+                        <div class="stat-sub">
+                            <span class="label">正确:</span>
+                            <span class="value positive">${correct}</span>
+                            <span class="label" style="margin-left:8px">错误:</span>
+                            <span class="value negative">${incorrect}</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${partial}</div>
+                        <div class="stat-label">部分正确</div>
+                        <div class="stat-sub">
+                            <span class="label">占比:</span>
+                            <span class="value">${Math.round(partial/total*100)}%</span>
+                        </div>
                     </div>
                 `;
                 
@@ -1505,13 +1652,85 @@
                 loadToolStats();
             } catch (e) {
                 console.error('加载统计失败:', e);
-                document.getElementById('statsDashboard').style.display = 'none';
+                // 不隐藏 dashboard，显示错误信息
+                document.getElementById('statsDashboard').innerHTML = `
+                    <div class="stat-card" style="background:#fee2e2;color:#dc2626;grid-column:span 3;">
+                        <div class="stat-value" style="color:#dc2626;font-size:16px;">API 连接失败: ${e.message}</div>
+                    </div>
+                `;
+            }
+        }
+        
+        async function loadAnalystRecords() {
+            try {
+                const response = await fetch(`/api/analyst-records?symbol=${currentReport.stock}&date=${currentReport.date}`);
+                const records = await response.json();
+                
+                const modalContent = document.getElementById('modalContent');
+                
+                if (records.length === 0) {
+                    modalContent.innerHTML = '<div class="empty">暂无分析师记录</div>';
+                    return;
+                }
+                
+                // 按分析师类型分组
+                const analystTypes = {};
+                records.forEach(r => {
+                    if (!analystTypes[r.analyst]) {
+                        analystTypes[r.analyst] = [];
+                    }
+                    analystTypes[r.analyst].push(r);
+                });
+                
+                // 生成 HTML
+                let html = '<div class="analyst-records">';
+                
+                for (const [analyst, recs] of Object.entries(analystTypes)) {
+                    const analystName = {
+                        'bull': '多头分析师',
+                        'bear': '空头分析师', 
+                        'manager': '研究经理',
+                        'trader': '交易员',
+                        'risk_manager': '风控经理',
+                        'aggressive': '激进风控',
+                        'conservative': '保守风控',
+                        'neutral': '中性风控'
+                    }[analyst] || analyst;
+                    
+                    html += `<h3>${analystName}</h3>`;
+                    
+                    recs.forEach(r => {
+                        const predClass = r.prediction.toLowerCase();
+                        const outcomeClass = r.outcome;
+                        const returnVal = r.return >= 0 ? `+${r.return}%` : `${r.return}%`;
+                        
+                        html += `
+                            <div class="record-card">
+                                <div class="record-header">
+                                    <span class="record-date">${r.date}</span>
+                                    <span class="prediction ${predClass}">${r.prediction}</span>
+                                    <span class="confidence">置信度: ${(r.confidence * 100).toFixed(0)}%</span>
+                                    <span class="outcome ${outcomeClass}">${r.outcome}</span>
+                                    <span class="return ${r.return >= 0 ? 'positive' : 'negative'}">${returnVal}</span>
+                                </div>
+                                <div class="record-reasoning">${r.reasoning.replace(/[#*]/g, '').substring(0, 200)}...</div>
+                            </div>
+                        `;
+                    });
+                }
+                
+                html += '</div>';
+                modalContent.innerHTML = html;
+                
+            } catch (e) {
+                console.error('加载分析师记录失败:', e);
+                document.getElementById('modalContent').innerHTML = `<div class="empty">加载失败: ${e.message}</div>`;
             }
         }
         
         async function loadToolStats() {
             try {
-                const response = await fetch('http://localhost:8002/api/tool-calls');
+                const response = await fetch('/api/tool-calls');
                 const data = await response.json();
                 
                 if (data.total === 0) return;
@@ -1520,13 +1739,13 @@
                 const maxCount = Math.max(...data.by_tool.map(t => t.count));
                 
                 dashboard.innerHTML += `
-                    <div class="stat-card" style="grid-column: span 3;">
-                        <div class="stat-value">${data.total}</div>
-                        <div class="stat-label">API 调用次数</div>
+                    <div class="stat-card" style="grid-column: span 4;">
+                        <div class="stat-value">${data.total.toLocaleString()}</div>
+                        <div class="stat-label">API 调用统计</div>
                         <div class="tool-stats">
                             <div class="tool-panel">
                                 <h3>按工具</h3>
-                                ${data.by_tool.slice(0, 8).map(t => `
+                                ${data.by_tool.slice(0, 6).map(t => `
                                     <div class="tool-bar">
                                         <span class="tool-name">${t.name}</span>
                                         <span class="tool-count">${t.count}</span>

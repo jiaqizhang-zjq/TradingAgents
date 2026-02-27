@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reports API Server - 提供报告数据的 REST API"""
+"""Reports Server - HTTP + API 在同一个端口"""
 
 import http.server
 import socketserver
@@ -8,40 +8,44 @@ import sqlite3
 import os
 from urllib.parse import urlparse, parse_qs
 
-PORT = 8002
-DB_PATH = os.path.join(os.path.dirname(__file__), 'tradingagents/db/research_tracker.db')
-DB_PATH2 = os.path.join(os.path.dirname(__file__), 'tradingagents/db/trading_analysis.db')
+PORT = 8001
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'tradingagents/db/research_tracker.db')
+DB_PATH2 = os.path.join(BASE_DIR, 'tradingagents/db/trading_analysis.db')
 
-class APIHandler(http.server.SimpleHTTPRequestHandler):
+class ReportsHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        # 添加 CORS 头
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
         
+        # API 路由
         if path == '/api/stats':
             self.send_json(self.get_stats())
-        elif path == '/api/stock/:symbol':
+        elif path == '/api/stock-history':
             symbol = query.get('symbol', [''])[0]
             self.send_json(self.get_stock_history(symbol))
+        elif path == '/api/stock-chart':
+            symbol = query.get('symbol', [''])[0]
+            self.send_json(self.get_stock_chart(symbol))
+        elif path == '/api/analyst-records':
+            symbol = query.get('symbol', [''])[0]
+            date = query.get('date', [''])[0]
+            self.send_json(self.get_analyst_records(symbol, date))
         elif path == '/api/tool-calls':
-            symbol = query.get('symbol', [None])[0]
-            self.send_json(self.get_tool_calls(symbol))
+            self.send_json(self.get_tool_calls())
         else:
-            self.send_error(404)
+            # 其他请求交给默认处理
+            super().do_GET()
     
     def send_json(self, data):
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
     
     def get_stats(self):
-        """获取所有股票的统计信息"""
         if not os.path.exists(DB_PATH):
             return []
         
@@ -80,8 +84,119 @@ class APIHandler(http.server.SimpleHTTPRequestHandler):
         conn.close()
         return results
     
+    def get_stock_chart(self, symbol):
+        """获取股票价格数据（用于K线图）"""
+        print(f"DEBUG: get_stock_chart called with symbol={symbol}, DB_PATH2={DB_PATH2}, exists={os.path.exists(DB_PATH2)}")
+        
+        if not symbol or not os.path.exists(DB_PATH2):
+            print(f"DEBUG: DB not exists or no symbol")
+            return []
+        
+        conn = sqlite3.connect(DB_PATH2)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # 获取最新的价格数据
+        cursor.execute("""
+            SELECT result_preview, created_at 
+            FROM tool_calls 
+            WHERE tool_name = 'get_stock_data' AND symbol = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (symbol,))
+        
+        row = cursor.fetchone()
+        print(f"DEBUG: row = {row}")
+        if not row or not row['result_preview']:
+            print(f"DEBUG: no row or no preview")
+            conn.close()
+            return []
+        
+        # 解析CSV数据
+        import csv
+        from io import StringIO
+        
+        try:
+            lines = row['result_preview'].strip().split('\n')
+            if len(lines) < 2:
+                conn.close()
+                return []
+            
+            reader = csv.DictReader(lines)
+            data = []
+            for r in reader:
+                data.append({
+                    'date': r.get('timestamp', '')[:10],
+                    'open': float(r.get('open', 0)),
+                    'high': float(r.get('high', 0)),
+                    'low': float(r.get('low', 0)),
+                    'close': float(r.get('close', 0)),
+                    'volume': int(r.get('volume', 0))
+                })
+            
+            # 只返回最近60天
+            conn.close()
+            return data[-60:] if len(data) > 60 else data
+            
+        except Exception as e:
+            conn.close()
+            return []
+    
+    def get_analyst_records(self, symbol, date=''):
+        """获取指定股票的所有分析师预测记录"""
+        if not symbol or not os.path.exists(DB_PATH):
+            return []
+        
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        if date:
+            cursor.execute("""
+                SELECT 
+                    trade_date,
+                    researcher_type,
+                    prediction,
+                    confidence,
+                    reasoning,
+                    actual_return,
+                    outcome
+                FROM research_records 
+                WHERE symbol = ? AND trade_date = ?
+                ORDER BY researcher_type
+            """, (symbol, date))
+        else:
+            cursor.execute("""
+                SELECT 
+                    trade_date,
+                    researcher_type,
+                    prediction,
+                    confidence,
+                    reasoning,
+                    actual_return,
+                    outcome
+                FROM research_records 
+                WHERE symbol = ? AND actual_return IS NOT NULL
+                ORDER BY trade_date DESC, researcher_type
+                LIMIT 50
+            """, (symbol,))
+        
+        results = []
+        for row in cursor.fetchall():
+            results.append({
+                'date': row['trade_date'],
+                'analyst': row['researcher_type'],
+                'prediction': row['prediction'],
+                'confidence': row['confidence'],
+                'reasoning': row['reasoning'][:300] if row['reasoning'] else '',
+                'return': round(row['actual_return'] * 100, 2) if row['actual_return'] else 0,
+                'outcome': row['outcome']
+            })
+        
+        conn.close()
+        return results
+    
     def get_stock_history(self, symbol):
-        """获取指定股票的历史预测记录"""
         if not symbol or not os.path.exists(DB_PATH):
             return []
         
@@ -90,13 +205,7 @@ class APIHandler(http.server.SimpleHTTPRequestHandler):
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT 
-                trade_date,
-                researcher_type,
-                prediction,
-                confidence,
-                actual_return,
-                outcome
+            SELECT trade_date, researcher_type, prediction, confidence, actual_return, outcome
             FROM research_records 
             WHERE symbol = ? AND actual_return IS NOT NULL
             ORDER BY trade_date DESC, researcher_type
@@ -116,8 +225,7 @@ class APIHandler(http.server.SimpleHTTPRequestHandler):
         conn.close()
         return results
     
-    def get_tool_calls(self, symbol=None):
-        """获取工具调用统计"""
+    def get_tool_calls(self):
         if not os.path.exists(DB_PATH2):
             return {'total': 0, 'by_tool': [], 'by_vendor': []}
         
@@ -125,11 +233,9 @@ class APIHandler(http.server.SimpleHTTPRequestHandler):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        # 总调用数
         cursor.execute("SELECT COUNT(*) as total FROM tool_calls")
         total = cursor.fetchone()['total']
         
-        # 按工具统计
         cursor.execute("""
             SELECT tool_name, COUNT(*) as count 
             FROM tool_calls 
@@ -139,7 +245,6 @@ class APIHandler(http.server.SimpleHTTPRequestHandler):
         """)
         by_tool = [{'name': row['tool_name'], 'count': row['count']} for row in cursor.fetchall()]
         
-        # 按数据源统计
         cursor.execute("""
             SELECT vendor_used, COUNT(*) as count 
             FROM tool_calls 
@@ -153,6 +258,9 @@ class APIHandler(http.server.SimpleHTTPRequestHandler):
         return {'total': total, 'by_tool': by_tool, 'by_vendor': by_vendor}
 
 if __name__ == '__main__':
-    with socketserver.TCPServer(("", PORT), APIHandler) as httpd:
-        print(f"API Server running at http://localhost:{PORT}")
+    os.chdir(BASE_DIR)
+    with socketserver.TCPServer(("", PORT), ReportsHandler) as httpd:
+        print(f"Server running at http://localhost:{PORT}")
+        print(f"Reports: http://localhost:{PORT}/reports.html")
+        print(f"API: http://localhost:{PORT}/api/stats")
         httpd.serve_forever()

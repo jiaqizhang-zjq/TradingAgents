@@ -15,22 +15,16 @@ start() {
 
     cd "$DIR" || return 1
     
-    # 启动 API 服务器 (端口 8002)
+    # 启动统一服务器 (端口 8001，同时处理 HTTP 和 API)
     nohup .venv/bin/python api_server.py > /dev/null 2>&1 &
     local api_pid=$!
     echo "$api_pid" > "$API_PID_FILE"
     sleep 0.5
     
-    # 启动 HTTP 服务器 (端口 8001)
-    nohup python3 -m http.server "$port" > /dev/null 2>&1 &
-    local pid=$!
-    echo "$pid" > "$PID_FILE"
-    sleep 0.5
-    
-    if kill -0 "$pid" 2>/dev/null && kill -0 "$api_pid" 2>/dev/null; then
+    if kill -0 "$api_pid" 2>/dev/null; then
         echo "✅ 服务已启动"
-        echo "   - HTTP: http://localhost:$port/reports.html (PID $pid)"
-        echo "   - API:  http://localhost:8002 (PID $api_pid)"
+        echo "   - HTTP: http://localhost:$port/reports.html (PID $api_pid)"
+        echo "   - API:  http://localhost:$port/api/*"
     else
         echo "❌ 启动失败"
         rm -f "$PID_FILE" "$API_PID_FILE"
@@ -39,16 +33,6 @@ start() {
 }
 
 stop() {
-    # 停止 HTTP 服务器
-    if [ -f "$PID_FILE" ]; then
-        local pid=$(cat "$PID_FILE" 2>/dev/null)
-        if [ -n "$pid" ]; then
-            kill -9 "$pid" 2>/dev/null
-            echo "✅ HTTP 服务已停止 (PID $pid)"
-        fi
-        rm -f "$PID_FILE"
-    fi
-    
     # 停止 API 服务器
     if [ -f "$API_PID_FILE" ]; then
         local api_pid=$(cat "$API_PID_FILE" 2>/dev/null)
@@ -72,22 +56,15 @@ restart() {
 }
 
 status() {
-    local http_running=0
     local api_running=0
-    
-    # 检查 HTTP
-    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-        echo "🟢 HTTP 服务运行中 (PID $(cat "$PID_FILE"), 端口 8001)"
-        http_running=1
-    fi
     
     # 检查 API
     if [ -f "$API_PID_FILE" ] && kill -0 "$(cat "$API_PID_FILE")" 2>/dev/null; then
-        echo "🟢 API 服务运行中 (PID $(cat "$API_PID_FILE"), 端口 8002)"
+        echo "🟢 服务运行中 (PID $(cat "$API_PID_FILE"), 端口 8001)"
         api_running=1
     fi
     
-    if [ $http_running -eq 0 ] && [ $api_running -eq 0 ]; then
+    if [ $api_running -eq 0 ]; then
         echo "🔴 服务未运行"
     fi
 }
