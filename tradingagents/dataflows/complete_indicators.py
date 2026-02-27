@@ -27,24 +27,28 @@ class CompleteTechnicalIndicators:
     """完整技术指标计算器"""
     
     @staticmethod
-    def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    def calculate_all_indicators(df: pd.DataFrame, inplace: bool = False) -> pd.DataFrame:
         """
-        计算所有技术指标（使用模块化结构）
+        计算所有技术指标（使用模块化结构，支持inplace修改）
         
         Args:
             df: 包含 OHLCV 数据的 DataFrame，需要包含以下列：
                 - open, high, low, close, volume
+            inplace: True则直接修改df，False则返回新DataFrame（默认False保持兼容性）
                 
         Returns:
             包含所有技术指标的 DataFrame
         """
-        result_df = df.copy()
+        if not inplace:
+            df = df.copy()
+        
+        result_df = df
         
         # ==================== 移动平均线指标 ====================
-        result_df = MovingAverageIndicators.calculate_sma(result_df)
-        result_df = MovingAverageIndicators.calculate_ema(result_df)
-        result_df = MovingAverageIndicators.calculate_bollinger_bands(result_df)
-        result_df = MovingAverageIndicators.calculate_atr(result_df)
+        result_df = MovingAverageIndicators.calculate_sma(result_df, inplace=True)
+        result_df = MovingAverageIndicators.calculate_ema(result_df, inplace=True)
+        result_df = MovingAverageIndicators.calculate_bollinger_bands(result_df, inplace=True)
+        result_df = MovingAverageIndicators.calculate_atr(result_df, inplace=True)
         
         # ==================== 动量指标 ====================
         result_df["rsi"] = MomentumIndicators.calculate_rsi(result_df["close"])
@@ -60,7 +64,7 @@ class CompleteTechnicalIndicators:
         result_df["minus_di"] = minus_di
         
         # ==================== 成交量指标 ====================
-        result_df = VolumeIndicators.calculate_all_volume_indicators(result_df)
+        result_df = VolumeIndicators.calculate_all_volume_indicators(result_df, inplace=True)
         
         # ==================== 压力支撑指标 ====================
         window = 20
