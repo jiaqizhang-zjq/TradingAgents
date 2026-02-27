@@ -2,6 +2,11 @@
 """
 完整技术指标计算库
 包含：成交量指标、压力支撑线、趋势指标、动量指标、波动率指标、蜡烛图形态等
+
+重构说明：原1426行已拆分为模块化结构
+- indicators/moving_averages.py - 移动平均线
+- indicators/momentum_indicators.py - 动量指标
+- indicators/volume_indicators.py - 成交量指标
 """
 
 import numpy as np
@@ -13,6 +18,9 @@ from .indicator_groups import (
     BASE_COLUMNS,
     get_indicator_columns
 )
+from .indicators.moving_averages import MovingAverageIndicators
+from .indicators.momentum_indicators import MomentumIndicators
+from .indicators.volume_indicators import VolumeIndicators
 
 
 class CompleteTechnicalIndicators:
@@ -21,7 +29,7 @@ class CompleteTechnicalIndicators:
     @staticmethod
     def calculate_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
         """
-        计算所有技术指标
+        计算所有技术指标（使用模块化结构）
         
         Args:
             df: 包含 OHLCV 数据的 DataFrame，需要包含以下列：
@@ -32,69 +40,27 @@ class CompleteTechnicalIndicators:
         """
         result_df = df.copy()
         
-        # ==================== 移动平均线 ====================
-        # SMA
-        result_df["close_5_sma"] = result_df["close"].rolling(window=5).mean()
-        result_df["close_10_sma"] = result_df["close"].rolling(window=10).mean()
-        result_df["close_20_sma"] = result_df["close"].rolling(window=20).mean()
-        result_df["close_50_sma"] = result_df["close"].rolling(window=50).mean()
-        result_df["close_100_sma"] = result_df["close"].rolling(window=100).mean()
-        result_df["close_200_sma"] = result_df["close"].rolling(window=200).mean()
+        # ==================== 移动平均线指标 ====================
+        result_df = MovingAverageIndicators.calculate_sma(result_df)
+        result_df = MovingAverageIndicators.calculate_ema(result_df)
+        result_df = MovingAverageIndicators.calculate_bollinger_bands(result_df)
+        result_df = MovingAverageIndicators.calculate_atr(result_df)
         
-        # EMA
-        result_df["close_5_ema"] = result_df["close"].ewm(span=5, adjust=False).mean()
-        result_df["close_10_ema"] = result_df["close"].ewm(span=10, adjust=False).mean()
-        result_df["close_20_ema"] = result_df["close"].ewm(span=20, adjust=False).mean()
-        result_df["close_50_ema"] = result_df["close"].ewm(span=50, adjust=False).mean()
-        result_df["close_100_ema"] = result_df["close"].ewm(span=100, adjust=False).mean()
-        result_df["close_200_ema"] = result_df["close"].ewm(span=200, adjust=False).mean()
+        # ==================== 动量指标 ====================
+        result_df["rsi"] = MomentumIndicators.calculate_rsi(result_df["close"])
         
-        # ==================== MACD ====================
-        macd, signal, hist = CompleteTechnicalIndicators._calculate_macd(result_df["close"])
+        macd, signal, hist = MomentumIndicators.calculate_macd(result_df["close"])
         result_df["macd"] = macd
         result_df["macds"] = signal
         result_df["macdh"] = hist
         
-        # ==================== RSI ====================
-        result_df["rsi"] = CompleteTechnicalIndicators._calculate_rsi(result_df["close"])
-        
-        # ==================== 布林带 ====================
-        sma20 = result_df["close"].rolling(window=20).mean()
-        std20 = result_df["close"].rolling(window=20).std()
-        result_df["boll"] = sma20
-        result_df["boll_ub"] = sma20 + (std20 * 2)
-        result_df["boll_lb"] = sma20 - (std20 * 2)
-        result_df["boll_width"] = (result_df["boll_ub"] - result_df["boll_lb"]) / result_df["boll"]
-        
-        # ==================== ATR ====================
-        result_df["atr"] = CompleteTechnicalIndicators._calculate_atr(result_df)
-        result_df["atr_pct"] = (result_df["atr"] / result_df["close"]) * 100
-        
-        # ==================== 成交量指标 ====================
-        result_df["vwma"] = CompleteTechnicalIndicators._calculate_vwma(result_df)
-        result_df["obv"] = CompleteTechnicalIndicators._calculate_obv(result_df)
-        
-        # 成交量均线
-        result_df["volume_sma_5"] = result_df["volume"].rolling(window=5).mean()
-        result_df["volume_sma_10"] = result_df["volume"].rolling(window=10).mean()
-        result_df["volume_sma_20"] = result_df["volume"].rolling(window=20).mean()
-        result_df["volume_sma_50"] = result_df["volume"].rolling(window=50).mean()
-        
-        # 量比
-        result_df["volume_ratio_5"] = result_df["volume"] / result_df["volume_sma_5"]
-        result_df["volume_ratio_20"] = result_df["volume"] / result_df["volume_sma_20"]
-        
-        # 成交量变化率
-        result_df["volume_change_pct"] = result_df["volume"].pct_change() * 100
-        
-        # 成交量加速度
-        result_df["volume_acceleration"] = result_df["volume_change_pct"].diff()
-        
-        # ==================== ADX ====================
-        adx, plus_di, minus_di = CompleteTechnicalIndicators._calculate_adx(result_df)
+        adx, plus_di, minus_di = MomentumIndicators.calculate_adx(result_df)
         result_df["adx"] = adx
         result_df["plus_di"] = plus_di
         result_df["minus_di"] = minus_di
+        
+        # ==================== 成交量指标 ====================
+        result_df = VolumeIndicators.calculate_all_volume_indicators(result_df)
         
         # ==================== 压力支撑指标 ====================
         window = 20
