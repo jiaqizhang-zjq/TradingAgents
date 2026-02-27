@@ -1,17 +1,18 @@
 # TradingAgents/graph/conditional_logic.py
 
+from typing import Dict, Any
 from tradingagents.agents.utils.agent_states import AgentState
 
 
 class ConditionalLogic:
     """Handles conditional logic for determining graph flow."""
 
-    def __init__(self, max_debate_rounds=2, max_risk_discuss_rounds=2):
+    def __init__(self, max_debate_rounds: int = 2, max_risk_discuss_rounds: int = 2) -> None:
         """Initialize with configuration parameters."""
-        self.max_debate_rounds = max_debate_rounds
-        self.max_risk_discuss_rounds = max_risk_discuss_rounds
+        self.max_debate_rounds: int = max_debate_rounds
+        self.max_risk_discuss_rounds: int = max_risk_discuss_rounds
 
-    def should_continue_market(self, state: AgentState):
+    def should_continue_market(self, state: AgentState) -> str:
         """Determine if market analysis should continue."""
         messages = state["messages"]
         last_message = messages[-1]

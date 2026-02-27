@@ -56,9 +56,6 @@ from .unified_data_manager import (
 # Configuration and routing logic
 from .config import get_config
 
-# 全局统一数据管理器实例
-_data_manager: UnifiedDataManager = None
-
 # ========== LOCAL VENDOR 实现 ==========
 def _parse_stock_data(stock_data_str):
     """解析股票数据字符串为DataFrame"""
@@ -397,13 +394,15 @@ def _local_get_chart_patterns(symbol, start_date, end_date, lookback=60, *args, 
 
 # ========== 数据管理器初始化 ==========
 def get_data_manager() -> UnifiedDataManager:
-    """获取全局数据管理器实例"""
-    global _data_manager
+    """
+    获取数据管理器实例（单例模式，线程安全）
     
-    if _data_manager is None:
-        _data_manager = _init_data_manager()
+    使用函数属性存储实例，避免全局变量
+    """
+    if not hasattr(get_data_manager, '_instance'):
+        get_data_manager._instance = _init_data_manager()
     
-    return _data_manager
+    return get_data_manager._instance
 
 def _init_data_manager() -> UnifiedDataManager:
     """初始化数据管理器"""

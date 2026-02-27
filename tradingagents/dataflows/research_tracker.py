@@ -794,13 +794,18 @@ class ResearchTracker:
             }
 
 
-# 全局追踪器实例
-_tracker = None
-
-
 def get_research_tracker(db_path: str = "tradingagents/db/research_tracker.db") -> ResearchTracker:
-    """获取全局 ResearchTracker 实例"""
-    global _tracker
-    if _tracker is None:
-        _tracker = ResearchTracker(db_path)
-    return _tracker
+    """
+    获取 ResearchTracker 实例（单例模式，线程安全）
+    
+    使用函数属性存储实例，避免全局变量
+    
+    Args:
+        db_path: 数据库路径
+        
+    Returns:
+        ResearchTracker 实例
+    """
+    if not hasattr(get_research_tracker, '_instance'):
+        get_research_tracker._instance = ResearchTracker(db_path)
+    return get_research_tracker._instance

@@ -130,6 +130,7 @@ Debate History:
             "bear_history": investment_debate_state.get("bear_history", ""),
             "bull_history": investment_debate_state.get("bull_history", ""),
             "current_response": response_content,
+            "latest_speaker": investment_debate_state.get("latest_speaker", ""),  # 保留 latest_speaker
             "count": investment_debate_state["count"],
             "research_manager_prediction": prediction,
             "research_manager_confidence": confidence,
