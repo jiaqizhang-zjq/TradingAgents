@@ -794,14 +794,18 @@
                 </div>
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
-            <div class="modal-body-wrapper">
+            <div class="modal-body-wrapper" id="modalBodyWrapper">
                 <nav class="sidebar" id="tocSidebar">
-                    <div class="sidebar-title">目录</div>
-                    <ul class="toc-list" id="tocList"></ul>
+                    <div class="sidebar-title" id="tocTitle1">目录</div>
+                    <ul class="toc-list" id="tocList1"></ul>
                 </nav>
                 <div class="main-content" id="mainContent">
                     <div class="report-content" id="modalContent"></div>
                 </div>
+                <nav class="sidebar" id="tocSidebar2" style="display:none;">
+                    <div class="sidebar-title" id="tocTitle2">对比目录</div>
+                    <ul class="toc-list" id="tocList2"></ul>
+                </nav>
             </div>
         </div>
     </div>
@@ -1088,7 +1092,12 @@
                 }
                 
                 modalContent.innerHTML = html;
-                generateTOC();
+                
+                if (compareReport) {
+                    generateTOCForCompare();
+                } else {
+                    generateTOC();
+                }
                 
                 modalContent.querySelectorAll('table').forEach(table => {
                     table.style.width = '100%';
@@ -1101,10 +1110,16 @@
         
         function generateTOC() {
             const content = document.getElementById('modalContent');
-            const tocList = document.getElementById('tocList');
-            tocList.innerHTML = '';
+            const tocList = document.getElementById('tocList1');
+            const tocSidebar2 = document.getElementById('tocSidebar2');
+            const modalBodyWrapper = document.getElementById('modalBodyWrapper');
             
-            const headings = content.querySelectorAll('h1, h2, h3, h4');
+            tocList.innerHTML = '';
+            tocSidebar2.style.display = 'none';
+            modalBodyWrapper.style.gridTemplateColumns = 'var(--sidebar-width) 1fr';
+            modalBodyWrapper.style.display = 'flex';
+            
+            const headings = content.querySelectorAll('.compare-panel:first-child h1, .compare-panel:first-child h2, .compare-panel:first-child h3, .compare-panel:first-child h4');
             const tocMap = new Map();
             
             headings.forEach((heading, index) => {
@@ -1123,6 +1138,10 @@
                 tocList.appendChild(item);
                 tocMap.set(id, item);
             });
+            
+            if (observer) {
+                observer.disconnect();
+            }
             
             observer = new IntersectionObserver((entries) => {
                 tocMap.forEach((item) => item.classList.remove('active'));
@@ -1143,6 +1162,89 @@
             });
             
             headings.forEach(heading => observer.observe(heading));
+        }
+        
+        function generateTOCForCompare() {
+            const content = document.getElementById('modalContent');
+            const tocList1 = document.getElementById('tocList1');
+            const tocList2 = document.getElementById('tocList2');
+            const tocSidebar2 = document.getElementById('tocSidebar2');
+            const tocTitle1 = document.getElementById('tocTitle1');
+            const tocTitle2 = document.getElementById('tocTitle2');
+            const modalBodyWrapper = document.getElementById('modalBodyWrapper');
+            
+            tocList1.innerHTML = '';
+            tocList2.innerHTML = '';
+            tocSidebar2.style.display = 'block';
+            tocTitle1.textContent = currentReport.date;
+            tocTitle2.textContent = compareReport.date;
+            
+            const headings1 = content.querySelectorAll('.compare-panel:first-child h1, .compare-panel:first-child h2, .compare-panel:first-child h3, .compare-panel:first-child h4');
+            const headings2 = content.querySelectorAll('.compare-panel:last-child h1, .compare-panel:last-child h2, .compare-panel:last-child h3, .compare-panel:last-child h4');
+            
+            const tocMap1 = new Map();
+            const tocMap2 = new Map();
+            
+            headings1.forEach((heading, index) => {
+                const id = 'heading1-' + index;
+                heading.id = id;
+                
+                const level = heading.tagName.toLowerCase();
+                const item = document.createElement('a');
+                item.href = '#' + id;
+                item.className = `toc-item ${level}`;
+                item.textContent = heading.textContent;
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                };
+                tocList1.appendChild(item);
+                tocMap1.set(id, item);
+            });
+            
+            headings2.forEach((heading, index) => {
+                const id = 'heading2-' + index;
+                heading.id = id;
+                
+                const level = heading.tagName.toLowerCase();
+                const item = document.createElement('a');
+                item.href = '#' + id;
+                item.className = `toc-item ${level}`;
+                item.textContent = heading.textContent;
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                };
+                tocList2.appendChild(item);
+                tocMap2.set(id, item);
+            });
+            
+            if (observer) {
+                observer.disconnect();
+            }
+            
+            observer = new IntersectionObserver((entries) => {
+                const allMap = { ...tocMap1, ...tocMap2 };
+                Object.values(allMap).forEach(item => item.classList.remove('active'));
+                
+                const visibleEntries = entries.filter(e => e.isIntersecting);
+                if (visibleEntries.length > 0) {
+                    const topEntry = visibleEntries.sort((a, b) => 
+                        a.boundingClientRect.top - b.boundingClientRect.top
+                    )[0];
+                    
+                    const activeItem = tocMap1[topEntry.target.id] || tocMap2[topEntry.target.id];
+                    if (activeItem) {
+                        activeItem.classList.add('active');
+                    }
+                }
+            }, {
+                root: document.getElementById('mainContent'),
+                rootMargin: '-20% 0px -80% 0px',
+                threshold: 0
+            });
+            
+            [...headings1, ...headings2].forEach(heading => observer.observe(heading));
         }
         
         function closeModal() {
