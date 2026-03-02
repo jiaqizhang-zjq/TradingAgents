@@ -7,6 +7,8 @@
 - indicators/moving_averages.py - 移动平均线
 - indicators/momentum_indicators.py - 动量指标
 - indicators/volume_indicators.py - 成交量指标
+- indicators/trend_indicators.py - 趋势指标
+- indicators/additional_indicators.py - 扩展指标
 """
 
 import numpy as np
@@ -21,6 +23,8 @@ from .indicator_groups import (
 from .indicators.moving_averages import MovingAverageIndicators
 from .indicators.momentum_indicators import MomentumIndicators
 from .indicators.volume_indicators import VolumeIndicators
+from .indicators.trend_indicators import TrendIndicators
+from .indicators.additional_indicators import AdditionalIndicators
 
 
 class CompleteTechnicalIndicators:
@@ -66,124 +70,11 @@ class CompleteTechnicalIndicators:
         # ==================== 成交量指标 ====================
         result_df = VolumeIndicators.calculate_all_volume_indicators(result_df, inplace=True)
         
-        # ==================== 压力支撑指标 ====================
-        window = 20
-        result_df["resistance_20"] = result_df["high"].rolling(window=window).max()
-        result_df["support_20"] = result_df["low"].rolling(window=window).min()
-        result_df["mid_range_20"] = (result_df["resistance_20"] + result_df["support_20"]) / 2
-        
-        window = 50
-        result_df["resistance_50"] = result_df["high"].rolling(window=window).max()
-        result_df["support_50"] = result_df["low"].rolling(window=window).min()
-        
-        # 当前价格相对位置
-        result_df["position_in_range_20"] = (result_df["close"] - result_df["support_20"]) / (result_df["resistance_20"] - result_df["support_20"])
-        
         # ==================== 趋势指标 ====================
-        # 趋势线斜率
-        def calculate_slope(x):
-            if len(x) < 2:
-                return np.nan
-            try:
-                slope, _ = np.polyfit(range(len(x)), x, 1)
-                return slope
-            except:
-                return np.nan
+        result_df = TrendIndicators.calculate_all_trend_indicators(result_df, inplace=True)
         
-        result_df["trend_slope_10"] = result_df["close"].rolling(window=10).apply(
-            calculate_slope, raw=True
-        )
-        result_df["trend_slope_20"] = result_df["close"].rolling(window=20).apply(
-            calculate_slope, raw=True
-        )
-        
-        # 线性回归预测值
-        def linear_regression_pred(x):
-            if len(x) < 2:
-                return np.nan
-            try:
-                slope, intercept = np.polyfit(range(len(x)), x, 1)
-                return intercept + slope * len(x)
-            except:
-                return np.nan
-        
-        result_df["lr_pred_20"] = result_df["close"].rolling(window=20).apply(
-            linear_regression_pred, raw=True
-        )
-        
-        # ==================== 动量指标 ====================
-        # ROC
-        result_df["roc_5"] = ((result_df["close"] - result_df["close"].shift(5)) / result_df["close"].shift(5)) * 100
-        result_df["roc_10"] = ((result_df["close"] - result_df["close"].shift(10)) / result_df["close"].shift(10)) * 100
-        result_df["roc_20"] = ((result_df["close"] - result_df["close"].shift(20)) / result_df["close"].shift(20)) * 100
-        
-        # CCI
-        tp = (result_df["high"] + result_df["low"] + result_df["close"]) / 3
-        sma_tp = tp.rolling(window=20).mean()
-        mad = tp.rolling(window=20).apply(lambda x: np.abs(x - x.mean()).mean(), raw=True)
-        result_df["cci_20"] = (tp - sma_tp) / (0.015 * mad)
-        
-        # CMO
-        result_df["cmo_14"] = CompleteTechnicalIndicators._calculate_cmo(result_df["close"], 14)
-        
-        # MFI
-        result_df["mfi_14"] = CompleteTechnicalIndicators._calculate_mfi(result_df)
-        
-        # ==================== 波动率指标 ====================
-        result_df["returns"] = result_df["close"].pct_change()
-        result_df["volatility_20"] = result_df["returns"].rolling(window=20).std() * np.sqrt(252)
-        result_df["volatility_50"] = result_df["returns"].rolling(window=50).std() * np.sqrt(252)
-        
-        # ==================== 价格位置指标 ====================
-        result_df["price_to_sma_20"] = (result_df["close"] - result_df["close_20_sma"]) / result_df["close_20_sma"] * 100
-        result_df["price_to_sma_50"] = (result_df["close"] - result_df["close_50_sma"]) / result_df["close_50_sma"] * 100
-        
-        result_df["price_to_high_20"] = (result_df["close"] - result_df["high"].rolling(window=20).max()) / result_df["high"].rolling(window=20).max() * 100
-        result_df["price_to_low_20"] = (result_df["close"] - result_df["low"].rolling(window=20).min()) / result_df["low"].rolling(window=20).min() * 100
-        
-        # ==================== 背离指标 ====================
-        result_df["price_new_high_20"] = (result_df["close"] == result_df["close"].rolling(window=20).max()).astype(int)
-        result_df["rsi_new_high_20"] = (result_df["rsi"] == result_df["rsi"].rolling(window=20).max()).astype(int)
-        
-        result_df["price_new_low_20"] = (result_df["close"] == result_df["close"].rolling(window=20).min()).astype(int)
-        result_df["rsi_new_low_20"] = (result_df["rsi"] == result_df["rsi"].rolling(window=20).min()).astype(int)
-        
-        # ==================== 交叉信号 ====================
-        result_df["sma_5_20_cross"] = np.where(
-            (result_df["close_5_sma"] > result_df["close_20_sma"]) & (result_df["close_5_sma"].shift(1) <= result_df["close_20_sma"].shift(1)),
-            1,
-            np.where(
-                (result_df["close_5_sma"] < result_df["close_20_sma"]) & (result_df["close_5_sma"].shift(1) >= result_df["close_20_sma"].shift(1)),
-                -1,
-                0
-            )
-        )
-        
-        result_df["sma_20_50_cross"] = np.where(
-            (result_df["close_20_sma"] > result_df["close_50_sma"]) & (result_df["close_20_sma"].shift(1) <= result_df["close_50_sma"].shift(1)),
-            1,
-            np.where(
-                (result_df["close_20_sma"] < result_df["close_50_sma"]) & (result_df["close_20_sma"].shift(1) >= result_df["close_50_sma"].shift(1)),
-                -1,
-                0
-            )
-        )
-        
-        result_df["macd_cross"] = np.where(
-            (result_df["macd"] > result_df["macds"]) & (result_df["macd"].shift(1) <= result_df["macds"].shift(1)),
-            1,
-            np.where(
-                (result_df["macd"] < result_df["macds"]) & (result_df["macd"].shift(1) >= result_df["macds"].shift(1)),
-                -1,
-                0
-            )
-        )
-        
-        result_df["rsi_overbought"] = (result_df["rsi"] >= 70).astype(int)
-        result_df["rsi_oversold"] = (result_df["rsi"] <= 30).astype(int)
-        
-        result_df["boll_breakout_up"] = (result_df["close"] > result_df["boll_ub"]).astype(int)
-        result_df["boll_breakout_down"] = (result_df["close"] < result_df["boll_lb"]).astype(int)
+        # ==================== 扩展指标 ====================
+        result_df = AdditionalIndicators.calculate_all_additional_indicators(result_df, inplace=True)
         
         return result_df
     
@@ -302,44 +193,6 @@ class CompleteTechnicalIndicators:
         adx = dx.rolling(window=period).mean()
         
         return adx, plus_di, minus_di
-    
-    @staticmethod
-    def _calculate_cmo(prices, period=14):
-        """计算CMO指标"""
-        deltas = prices.diff()
-        gains = deltas.where(deltas > 0, 0).rolling(window=period).sum()
-        losses = -deltas.where(deltas < 0, 0).rolling(window=period).sum()
-        return 100 * (gains - losses) / (gains + losses)
-    
-    @staticmethod
-    def _calculate_mfi(df, period=14):
-        """计算MFI指标"""
-        typical_price = (df["high"] + df["low"] + df["close"]) / 3
-        raw_money_flow = typical_price * df["volume"]
-        
-        positive_flow = []
-        negative_flow = []
-        
-        for i in range(1, len(typical_price)):
-            if typical_price.iloc[i] > typical_price.iloc[i-1]:
-                positive_flow.append(raw_money_flow.iloc[i])
-                negative_flow.append(0)
-            elif typical_price.iloc[i] < typical_price.iloc[i-1]:
-                positive_flow.append(0)
-                negative_flow.append(raw_money_flow.iloc[i])
-            else:
-                positive_flow.append(0)
-                negative_flow.append(0)
-        
-        positive_flow = pd.Series([0] + positive_flow, index=df.index)
-        negative_flow = pd.Series([0] + negative_flow, index=df.index)
-        
-        pos_sum = positive_flow.rolling(window=period).sum()
-        neg_sum = negative_flow.rolling(window=period).sum()
-        
-        money_ratio = pos_sum / neg_sum
-        mfi = 100 - (100 / (1 + money_ratio))
-        return mfi
 
 
 class CompleteCandlestickPatterns:
