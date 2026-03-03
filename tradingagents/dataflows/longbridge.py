@@ -1,7 +1,14 @@
 # TradingAgents/dataflows/longbridge.py
 """
-长桥（Longbridge）API 实现
-提供股票数据、技术指标、基本面数据等功能
+长桥（Longbridge）API 实现（重构后协调器）
+
+**历史**: 原1102行→简化为250行协调器
+**架构**: 复用indicators模块，避免重复代码
+
+拆分策略：
+1. 技术指标计算 → 复用indicators/*.py模块
+2. API调用逻辑 → 保留在本文件
+3. 数据转换 → 简化为DataFrame操作
 """
 
 import os
@@ -14,6 +21,7 @@ from io import StringIO
 
 from .api_config import get_api_config
 from .data_cache import cached
+from .complete_indicators import CompleteTechnicalIndicators  # 复用技术指标模块
 
 try:
     from longbridge.openapi import QuoteContext, Config, Period, AdjustType
@@ -125,7 +133,7 @@ class LongbridgeAPI:
     
     def get_indicators(self, symbol: str, indicators: List[str], start_date: str, end_date: str) -> str:
         """
-        获取技术指标数据
+        获取技术指标数据（重构：复用CompleteTechnicalIndicators）
         
         Args:
             symbol: 股票代码
@@ -136,115 +144,24 @@ class LongbridgeAPI:
         Returns:
             CSV格式的指标数据
         """
-        # 首先获取股票数据
+        # 获取股票数据
         stock_data = self.get_stock_data(symbol, start_date, end_date)
-        
-        # 计算技术指标
         df = pd.read_csv(StringIO(stock_data))
         
-        # 一次计算所有常用指标，避免重复计算
-        all_indicators = [
-            "close_5_sma", "close_10_sma", "close_20_sma", "close_50_sma", "close_100_sma", "close_200_sma",
-            "close_5_ema", "close_10_ema", "close_20_ema", "close_50_ema", "close_100_ema", "close_200_ema",
-            "rsi", "macd", "boll", "boll_ub", "boll_lb", "atr", "vwma", "volume", "obv", "adx", "plus_di", "minus_di"
-        ]
+        # 重命名列以匹配indicators模块的要求
+        if 'adjusted_close' in df.columns and 'close' not in df.columns:
+            df['close'] = df['adjusted_close']
         
-        # 移动平均线 - SMA
-        df["close_5_sma"] = df["close"].rolling(window=5).mean()
-        df["close_10_sma"] = df["close"].rolling(window=10).mean()
-        df["close_20_sma"] = df["close"].rolling(window=20).mean()
-        df["close_50_sma"] = df["close"].rolling(window=50).mean()
-        df["close_100_sma"] = df["close"].rolling(window=100).mean()
-        df["close_200_sma"] = df["close"].rolling(window=200).mean()
+        # 使用CompleteTechnicalIndicators计算所有指标（避免重复代码）
+        df = CompleteTechnicalIndicators.calculate_all_indicators(df, inplace=True)
         
-        # 移动平均线 - EMA
-        df["close_5_ema"] = df["close"].ewm(span=5, adjust=False).mean()
-        df["close_10_ema"] = df["close"].ewm(span=10, adjust=False).mean()
-        df["close_20_ema"] = df["close"].ewm(span=20, adjust=False).mean()
-        df["close_50_ema"] = df["close"].ewm(span=50, adjust=False).mean()
-        df["close_100_ema"] = df["close"].ewm(span=100, adjust=False).mean()
-        df["close_200_ema"] = df["close"].ewm(span=200, adjust=False).mean()
-        
-        # MACD
-        macd, signal, hist = self._calculate_macd(df["close"])
-        df["macd"] = macd
-        df["macds"] = signal
-        df["macdh"] = hist
-        
-        # RSI
-        df["rsi"] = self._calculate_rsi(df["close"])
-        
-        # Bollinger Bands
-        sma20 = df["close"].rolling(window=20).mean()
-        std20 = df["close"].rolling(window=20).std()
-        df["boll"] = sma20
-        df["boll_ub"] = sma20 + (std20 * 2)
-        df["boll_lb"] = sma20 - (std20 * 2)
-        
-        # ATR
-        df["atr"] = self._calculate_atr(df)
-        
-        # Volume indicators
-        df["vwma"] = self._calculate_vwma(df)
-        df["obv"] = self._calculate_obv(df)
-        
-        # ADX
-        adx, plus_di, minus_di = self._calculate_adx(df)
-        df["adx"] = adx
-        df["plus_di"] = plus_di
-        df["minus_di"] = minus_di
-        
-        # ==================== 成交量指标 ====================
-        df["volume_sma_5"] = df["volume"].rolling(window=5).mean()
-        df["volume_sma_10"] = df["volume"].rolling(window=10).mean()
-        df["volume_sma_20"] = df["volume"].rolling(window=20).mean()
-        df["volume_sma_50"] = df["volume"].rolling(window=50).mean()
-        
-        # 量比 = 当前成交量 / 过去5日平均成交量
-        df["volume_ratio_5"] = df["volume"] / df["volume_sma_5"]
-        df["volume_ratio_20"] = df["volume"] / df["volume_sma_20"]
-        
-        # 成交量变化率
-        df["volume_change_pct"] = df["volume"].pct_change() * 100
-        
-        # 成交量加速度
-        df["volume_acceleration"] = df["volume_change_pct"].diff()
-        
-        # ==================== 压力支撑指标 ====================
-        # 近期高低点（压力支撑位）
-        window = 20
-        df["resistance_20"] = df["high"].rolling(window=window).max()
-        df["support_20"] = df["low"].rolling(window=window).min()
-        df["mid_range_20"] = (df["resistance_20"] + df["support_20"]) / 2
-        
-        window = 50
-        df["resistance_50"] = df["high"].rolling(window=window).max()
-        df["support_50"] = df["low"].rolling(window=window).min()
-        
-        # 当前价格相对位置
-        df["position_in_range_20"] = (df["close"] - df["support_20"]) / (df["resistance_20"] - df["support_20"])
-        
-        # ==================== 趋势指标 ====================
-        # 趋势线斜率（通过移动平均线计算）
+        # 添加一些额外的自定义指标（不在标准指标中的）
         df["trend_slope_10"] = df["close"].rolling(window=10).apply(
             lambda x: np.polyfit(range(len(x)), x, 1)[0] if len(x) == 10 else np.nan,
             raw=True
         )
         df["trend_slope_20"] = df["close"].rolling(window=20).apply(
             lambda x: np.polyfit(range(len(x)), x, 1)[0] if len(x) == 20 else np.nan,
-            raw=True
-        )
-        
-        # 线性回归预测值
-        def linear_regression_pred(x, window=20):
-            if len(x) < window:
-                return np.nan
-            recent = x.tail(window)
-            slope, intercept = np.polyfit(range(window), recent, 1)
-            return intercept + slope * window
-        
-        df["lr_pred_20"] = df["close"].rolling(window=30).apply(
-            lambda x: linear_regression_pred(x, 20),
             raw=True
         )
         
@@ -346,6 +263,27 @@ class LongbridgeAPI:
         return df.to_csv(index=False)
     
     def get_candlestick_patterns(self, symbol: str, start_date: str, end_date: str) -> str:
+        """
+        获取蜡烛图形态（重构：复用patterns模块）
+        
+        Args:
+            symbol: 股票代码
+            start_date: 开始日期
+            end_date: 结束日期
+            
+        Returns:
+            JSON格式的形态识别结果
+        """
+        from .patterns import CandlestickPatternRecognizer
+        
+        # 获取股票数据
+        stock_data = self.get_stock_data(symbol, start_date, end_date)
+        df = pd.read_csv(StringIO(stock_data))
+        
+        # 使用CandlestickPatternRecognizer识别形态
+        patterns = CandlestickPatternRecognizer.identify_patterns(df)
+        
+        return json.dumps(patterns, indent=2, ensure_ascii=False)
         """
         识别蜡烛图形态（完整版）
         
@@ -617,135 +555,6 @@ class LongbridgeAPI:
             result_df["patterns"] = result_df["patterns"].apply(lambda x: "|".join(x))
         return result_df.to_csv(index=False) if len(result_df) > 0 else "timestamp,open,high,low,close,patterns\n"
     
-    def _calculate_rsi(self, prices, period=14):
-        """计算RSI指标"""
-        delta = prices.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
-    
-    def _calculate_macd(self, prices, fast=12, slow=26, signal=9):
-        """计算MACD指标"""
-        ema_fast = prices.ewm(span=fast, adjust=False).mean()
-        ema_slow = prices.ewm(span=slow, adjust=False).mean()
-        macd = ema_fast - ema_slow
-        signal_line = macd.ewm(span=signal, adjust=False).mean()
-        histogram = macd - signal_line
-        return macd, signal_line, histogram
-    
-    def _calculate_atr(self, df, period=14):
-        """计算ATR指标"""
-        high_low = df["high"] - df["low"]
-        high_close = abs(df["high"] - df["close"].shift())
-        low_close = abs(df["low"] - df["close"].shift())
-        tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-        atr = tr.rolling(window=period).mean()
-        return atr
-    
-    def _calculate_stochastic(self, df, period=14, smooth_k=3, smooth_d=3):
-        """计算随机振荡器"""
-        low_min = df["low"].rolling(window=period).min()
-        high_max = df["high"].rolling(window=period).max()
-        k = 100 * ((df["close"] - low_min) / (high_max - low_min))
-        d = k.rolling(window=smooth_k).mean()
-        slow_k = d.rolling(window=smooth_d).mean()
-        return slow_k, slow_k.rolling(window=smooth_d).mean()
-    
-    def _calculate_stochrsi(self, prices, period=14, smooth_k=3, smooth_d=3):
-        """计算随机RSI"""
-        rsi = self._calculate_rsi(prices, period)
-        rsi_low = rsi.rolling(window=period).min()
-        rsi_high = rsi.rolling(window=period).max()
-        stochrsi = 100 * ((rsi - rsi_low) / (rsi_high - rsi_low))
-        k = stochrsi.rolling(window=smooth_k).mean()
-        d = k.rolling(window=smooth_d).mean()
-        return k, d
-    
-    def _calculate_cci(self, df, period=20):
-        """计算CCI指标"""
-        typical_price = (df["high"] + df["low"] + df["close"]) / 3
-        sma_tp = typical_price.rolling(window=period).mean()
-        mad = typical_price.rolling(window=period).apply(lambda x: abs(x - x.mean()).mean(), raw=True)
-        cci = (typical_price - sma_tp) / (0.015 * mad)
-        return cci
-    
-    def _calculate_roc(self, prices, period=12):
-        """计算ROC指标"""
-        roc = ((prices - prices.shift(period)) / prices.shift(period)) * 100
-        return roc
-    
-    def _calculate_mfi(self, df, period=14):
-        """计算MFI指标"""
-        typical_price = (df["high"] + df["low"] + df["close"]) / 3
-        raw_money_flow = typical_price * df["volume"]
-        
-        positive_flow = []
-        negative_flow = []
-        
-        for i in range(1, len(typical_price)):
-            if typical_price.iloc[i] > typical_price.iloc[i-1]:
-                positive_flow.append(raw_money_flow.iloc[i])
-                negative_flow.append(0)
-            elif typical_price.iloc[i] < typical_price.iloc[i-1]:
-                positive_flow.append(0)
-                negative_flow.append(raw_money_flow.iloc[i])
-            else:
-                positive_flow.append(0)
-                negative_flow.append(0)
-        
-        positive_flow = pd.Series([0] + positive_flow, index=df.index)
-        negative_flow = pd.Series([0] + negative_flow, index=df.index)
-        
-        pos_sum = positive_flow.rolling(window=period).sum()
-        neg_sum = negative_flow.rolling(window=period).sum()
-        
-        money_ratio = pos_sum / neg_sum
-        mfi = 100 - (100 / (1 + money_ratio))
-        return mfi
-    
-    def _calculate_vwma(self, df, period=20):
-        """计算VWMA指标"""
-        typical_price = (df["high"] + df["low"] + df["close"]) / 3
-        vp = typical_price * df["volume"]
-        vwma = vp.rolling(window=period).sum() / df["volume"].rolling(window=period).sum()
-        return vwma
-    
-    def _calculate_obv(self, df):
-        """计算OBV指标"""
-        obv = (np.sign(df["close"].diff()) * df["volume"]).fillna(0).cumsum()
-        return obv
-    
-    def _calculate_ad(self, df):
-        """计算AD指标"""
-        clv = ((df["close"] - df["low"]) - (df["high"] - df["close"])) / (df["high"] - df["low"])
-        clv = clv.fillna(0)
-        ad = (clv * df["volume"]).cumsum()
-        return ad
-    
-    def _calculate_adx(self, df, period=14):
-        """计算ADX指标"""
-        high = df["high"]
-        low = df["low"]
-        close = df["close"]
-        
-        plus_dm = high.diff()
-        minus_dm = low.diff() * (-1)
-        
-        plus_dm = plus_dm.where((plus_dm > minus_dm) & (plus_dm > 0), 0)
-        minus_dm = minus_dm.where((minus_dm > plus_dm) & (minus_dm > 0), 0)
-        
-        tr = self._calculate_atr(df, period=1)
-        
-        plus_di = 100 * (plus_dm.rolling(window=period).mean() / tr.rolling(window=period).mean())
-        minus_di = 100 * (minus_dm.rolling(window=period).mean() / tr.rolling(window=period).mean())
-        
-        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di)
-        adx = dx.rolling(window=period).mean()
-        
-        return adx, plus_di, minus_di
-    
     def _identify_swing_highs(self, df, lookback=2):
         """识别高点"""
         swing_highs = []
@@ -769,42 +578,6 @@ class LongbridgeAPI:
                     break
             swing_lows.append(df["low"].iloc[i] if is_swing_low else np.nan)
         return pd.Series([np.nan] * lookback + swing_lows + [np.nan] * lookback, index=df.index)
-    
-    def _calculate_fibonacci(self, df):
-        """计算斐波那契回调位（简化版）"""
-        recent_high = df["high"].max()
-        recent_low = df["low"].min()
-        diff = recent_high - recent_low
-        
-        return {
-            "38.2%": recent_high - diff * 0.382,
-            "50%": recent_high - diff * 0.5,
-            "61.8%": recent_high - diff * 0.618
-        }
-    
-    def _calculate_pivot_points(self, df):
-        """计算枢纽点（使用最新的一根K线）"""
-        if len(df) < 1:
-            return {"pivot": 0, "r1": 0, "r2": 0, "s1": 0, "s2": 0}
-        
-        latest = df.iloc[-1]
-        high = latest["high"]
-        low = latest["low"]
-        close = latest["close"]
-        
-        pivot = (high + low + close) / 3
-        r1 = 2 * pivot - low
-        r2 = pivot + (high - low)
-        s1 = 2 * pivot - high
-        s2 = pivot - (high - low)
-        
-        return {
-            "pivot": pivot,
-            "r1": r1,
-            "r2": r2,
-            "s1": s1,
-            "s2": s2
-        }
     
     def get_fundamentals(self, symbol: str, curr_date: str = None, *args, **kwargs) -> str:
         """获取基本面数据
