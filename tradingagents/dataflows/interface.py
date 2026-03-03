@@ -56,53 +56,21 @@ from .unified_data_manager import (
 # Configuration and routing logic
 from .config import get_config
 
+# 导入核心工具模块
+from .core import (
+    parse_stock_data as _core_parse_stock_data,
+    prepare_clean_dataframe as _core_prepare_clean_dataframe,
+    collect_all_needed_indicators as _core_collect_all_needed_indicators,
+    build_grouped_results as _core_build_grouped_results,
+)
+
 # 导入依赖注入容器
 from tradingagents.core.container import get_container
 
 # ========== LOCAL VENDOR 实现 ==========
 def _parse_stock_data(stock_data_str):
-    """解析股票数据字符串为DataFrame"""
-    try:
-        # 尝试解析CSV格式 (timestamp,open,high,low,close,volume,adjusted_close)
-        if 'timestamp' in stock_data_str and 'open' in stock_data_str and 'high' in stock_data_str:
-            df = pd.read_csv(io.StringIO(stock_data_str))
-            
-            if 'timestamp' in df.columns:
-                df['Date'] = pd.to_datetime(df['timestamp'])
-                df = df.set_index('Date')
-                
-                for col in ['open', 'high', 'low', 'close', 'volume']:
-                    if col in df.columns:
-                        df[col.capitalize()] = pd.to_numeric(df[col], errors='coerce')
-                        df = df.drop(columns=[col])
-                
-                return df
-        
-        # 尝试解析表格格式 (| Date | Open | ... |)
-        if 'Date' in stock_data_str and 'Open' in stock_data_str:
-            lines = stock_data_str.strip().split('\n')
-            filtered_lines = [line for line in lines if not line.strip().startswith('|-') and line.strip()]
-            cleaned_data = '\n'.join(filtered_lines)
-            
-            df = pd.read_csv(io.StringIO(cleaned_data), sep='\\s*\\|\\s*', engine='python')
-            
-            df.columns = [col.strip() for col in df.columns if col.strip()]
-            
-            if 'Date' in df.columns:
-                df['Date'] = pd.to_datetime(df['Date'])
-                df = df.set_index('Date')
-                
-                for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
-                    if col in df.columns:
-                        df[col] = pd.to_numeric(df[col], errors='coerce')
-                
-                return df
-    except Exception as e:
-        print(f"[_parse_stock_data] Error: {e}")
-        import traceback
-        print(f"[_parse_stock_data] Traceback:\n{traceback.format_exc()}")
-        pass
-    return None
+    """解析股票数据字符串为DataFrame（委托给core模块）"""
+    return _core_parse_stock_data(stock_data_str)
 
 def _local_get_indicators(symbol, indicator, curr_date, look_back_days, *args, **kwargs):
     """本地计算技术指标（使用惰性计算优化）"""
@@ -194,15 +162,8 @@ def _collect_all_needed_indicators() -> set:
 
 
 def _build_grouped_results(df_with_indicators: pd.DataFrame, look_back_days: int) -> dict:
-    """按分组构建结果字典"""
-    from .indicator_groups import INDICATOR_GROUPS
-    
-    result = {}
-    for group_name, indicators in INDICATOR_GROUPS.items():
-        group_df = df_with_indicators[[col for col in indicators if col in df_with_indicators.columns]]
-        group_df = group_df.tail(look_back_days + 10)
-        result[group_name] = group_df.to_csv(index=False)
-    return result
+    """按分组构建结果字典（委托给core模块）"""
+    return _core_build_grouped_results(df_with_indicators, look_back_days)
 
 
 def _local_get_all_indicators(symbol, curr_date, look_back_days, stock_data='', *args, **kwargs):

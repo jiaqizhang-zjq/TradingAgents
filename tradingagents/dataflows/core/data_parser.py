@@ -1,79 +1,75 @@
-"""
-数据解析器模块
-负责解析各种格式的数据（CSV、JSON等）
-"""
+"""数据解析模块"""
+
+import io
 import pandas as pd
-from typing import Optional
 
 
-class DataParser:
-    """数据解析器"""
+def parse_stock_data(stock_data_str: str) -> pd.DataFrame | None:
+    """解析股票数据字符串为DataFrame
     
-    @staticmethod
-    def parse_stock_data(stock_data_str: str) -> Optional[pd.DataFrame]:
-        """
-        解析股票数据字符串为DataFrame
+    Args:
+        stock_data_str: 股票数据字符串（CSV或表格格式）
         
-        Args:
-            stock_data_str: CSV格式的股票数据字符串
+    Returns:
+        解析后的DataFrame，失败返回None
+    """
+    try:
+        # 尝试解析CSV格式 (timestamp,open,high,low,close,volume,adjusted_close)
+        if 'timestamp' in stock_data_str and 'open' in stock_data_str and 'high' in stock_data_str:
+            df = pd.read_csv(io.StringIO(stock_data_str))
+            
+            if 'timestamp' in df.columns:
+                df['Date'] = pd.to_datetime(df['timestamp'])
+                df = df.set_index('Date')
+                
+                for col in ['open', 'high', 'low', 'close', 'volume']:
+                    if col in df.columns:
+                        df[col.capitalize()] = pd.to_numeric(df[col], errors='coerce')
+                        df = df.drop(columns=[col])
+                
+                return df
         
-        Returns:
-            DataFrame或None
-        """
-        try:
+        # 尝试解析表格格式 (| Date | Open | ... |)
+        if 'Date' in stock_data_str and 'Open' in stock_data_str:
             lines = stock_data_str.strip().split('\n')
-            if len(lines) < 2:
-                return None
+            filtered_lines = [line for line in lines if not line.strip().startswith('|-') and line.strip()]
+            cleaned_data = '\n'.join(filtered_lines)
             
-            header = [col.strip() for col in lines[0].split(',')]
-            data = []
+            df = pd.read_csv(io.StringIO(cleaned_data), sep='\\s*\\|\\s*', engine='python')
             
-            for line in lines[1:]:
-                if line.strip():
-                    row = [col.strip() for col in line.split(',')]
-                    if len(row) == len(header):
-                        data.append(row)
+            df.columns = [col.strip() for col in df.columns if col.strip()]
             
-            if not data:
-                return None
-            
-            df = pd.DataFrame(data, columns=header)
-            
-            # 转换数值列
-            numeric_cols = ['open', 'high', 'low', 'close', 'volume']
-            for col in numeric_cols:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-            # 转换日期列
-            if 'date' in df.columns:
-                df['date'] = pd.to_datetime(df['date'])
-                df = df.set_index('date').sort_index()
-            
-            return df
-        except Exception:
-            return None
+            if 'Date' in df.columns:
+                df['Date'] = pd.to_datetime(df['Date'])
+                df = df.set_index('Date')
+                
+                for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+                return df
+    except Exception as e:
+        print(f"[parse_stock_data] Error: {e}")
+        import traceback
+        print(f"[parse_stock_data] Traceback:\n{traceback.format_exc()}")
+        pass
+    return None
+
+
+def prepare_clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """准备干净的DataFrame用于指标计算
     
-    @staticmethod
-    def reverse_sort_by_date(data_str: str, max_lines: int = 20) -> str:
-        """
-        按日期逆序排列数据并返回最新N条
+    Args:
+        df: 原始DataFrame
         
-        Args:
-            data_str: 数据字符串
-            max_lines: 最大返回行数
-        
-        Returns:
-            逆序排列后的数据字符串
-        """
-        try:
-            lines = data_str.split('\n')
-            if len(lines) <= 2:
-                return data_str
-            
-            header = lines[0]
-            data_lines = lines[1:]
-            data_lines.reverse()
-            return header + '\n' + '\n'.join(data_lines[:max_lines])
-        except Exception:
-            return data_str[:500]
+    Returns:
+        清理后的DataFrame（小写列名）
+    """
+    df_clean = pd.DataFrame()
+    df_clean['timestamp'] = df.index
+    df_clean['open'] = df['Open']
+    df_clean['high'] = df['High']
+    df_clean['low'] = df['Low']
+    df_clean['close'] = df['Close']
+    df_clean['volume'] = df['Volume']
+    return df_clean
