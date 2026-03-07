@@ -8,10 +8,11 @@ DEFAULT_CONFIG = {
         "dataflows/data_cache",
     ),
     # LLM settings - 使用 OpenCode Zen (Minimax/GLM)
-    "llm_provider": "openai",
-    "deep_think_llm": "minimax-m2.5-free",
-    "quick_think_llm": "minimax-m2.5-free",
-    "backend_url": "https://opencode.ai/zen/v1",
+    "llm_provider": "openrouter",
+    "deep_think_llm": "stepfun/step-3.5-flash:free",
+    "quick_think_llm": "stepfun/step-3.5-flash:free",
+    #"backend_url": "https://opencode.ai/zen/v1",
+    #"backend_url": "https://opencode.ai/zen/v1",
     # Provider-specific thinking configuration
     "google_thinking_level": None,      # "high", "minimal", etc.
     "openai_reasoning_effort": None,    # "medium", "high", "low"

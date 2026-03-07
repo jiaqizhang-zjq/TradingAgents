@@ -260,6 +260,10 @@ class CompleteTechnicalIndicators:
             group_df = df[[col for col in keep_cols if col in df.columns]].copy()
             group_df = group_df.tail(look_back_days + 10)
             
+            # 删除重复的基础 OHLCV 列（每组都有，只留指标）
+            base_cols = ['open', 'high', 'low', 'close', 'volume', 'adjusted_close']
+            group_df = group_df.drop(columns=[col for col in base_cols if col in group_df.columns], errors='ignore')
+            
             result += f"\n=== {group_name.upper()} INDICATOR GROUP ===\n"
             result += group_df.to_csv(index=False)
             result += "\n"

@@ -15,14 +15,14 @@ PATH=/usr/local/bin:/usr/bin:/bin
 0 22 * * * pkill -f 'caffeinate -i' &
 
 # 股票分析任务（后台运行，无超时限制）
-0 10 * * * 1-5 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh NVDA > logs/NVDA-cron.log 2>&1 &
-0 11 * * * 1-5 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh TSLA > logs/TSLA-cron.log 2>&1 &
-0 12 * * * 1-5 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh LMND > logs/LMND-cron.log 2>&1 &
-0 13 * * * 1-5 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh APLD > logs/APLD-cron.log 2>&1 &
-0 14 * * * 1-5 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh RKLB > logs/RKLB-cron.log 2>&1 &
-0 15 * * * 1-5 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh INTC > logs/INTC-cron.log 2>&1 &
-0 16 * * * 1-5 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh IREN > logs/IREN-cron.log 2>&1 &
-0 17 * * * 1-5 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh KTOS > logs/KTOS-cron.log 2>&1 &
+0 10 * * * 2-6 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh NVDA > logs/NVDA-cron.log 2>&1 &
+0 11 * * * 2-6 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh TSLA > logs/TSLA-cron.log 2>&1 &
+0 12 * * * 2-6 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh LMND > logs/LMND-cron.log 2>&1 &
+0 13 * * * 2-6 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh APLD > logs/APLD-cron.log 2>&1 &
+0 14 * * * 2-6 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh RKLB > logs/RKLB-cron.log 2>&1 &
+0 15 * * * 2-6 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh INTC > logs/INTC-cron.log 2>&1 &
+0 16 * * * 2-6 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh IREN > logs/IREN-cron.log 2>&1 &
+0 17 * * * 2-6 cd /Users/jiaqi.zjq/workingspace/ai_trading/TradingAgents && ./run_trading.sh KTOS > logs/KTOS-cron.log 2>&1 &
 ```
 
 ## 恢复方法

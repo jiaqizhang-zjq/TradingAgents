@@ -138,20 +138,40 @@ def create_market_analyst(llm):
         current_date = state["trade_date"]
         ticker = state["company_of_interest"]
         
+        # DEBUG: 打印 state["messages"] 的内容和长度
+        config = get_config()
+        if config.get("debug", {}).get("enabled", False):
+            print(f"\n[DEBUG market_analyst_node] Entering node at {datetime.now().strftime('%H:%M:%S')}")
+            print(f"[DEBUG] state['messages'] count: {len(state.get('messages', []))}")
+            total_chars = 0
+            for i, msg in enumerate(state.get('messages', [])):
+                if isinstance(msg, tuple) and len(msg) >= 2:
+                    msg_type = msg[0]
+                    msg_content = str(msg[1])
+                else:
+                    msg_type = type(msg).__name__
+                    msg_content = str(msg)
+                total_chars += len(msg_content)
+                print(f"  [{i}] {msg_type}: {len(msg_content)} chars (first 200: {msg_content[:200]}{'...' if len(msg_content)>200 else ''})")
+            print(f"[DEBUG] Total characters in messages history: {total_chars}")
+            print("-" * 80)
+        
         # 获取语言配置
         config = get_config()
         language = config.get("output_language", "zh")
         
+        # 获取股票数据（180天回测范围）
         end_date = current_date
         start_date = (datetime.strptime(end_date, "%Y-%m-%d") - timedelta(days=180)).strftime("%Y-%m-%d")
-        
         stock_data = get_stock_data.invoke({"symbol": ticker, "start_date": start_date, "end_date": end_date})
         
+        # 获取技术指标（stock_data 仍然传入，但 OHLCV 已从指标组中删除，避免重复）
+        # 改为60天数据，减少长度
         indicators_data = get_all_indicators.invoke({
             "symbol": ticker,
             "curr_date": current_date,
-            "look_back_days": 120,
-            "stock_data": stock_data
+            "look_back_days": 60,         # 改为60天
+            "stock_data": stock_data      # 传入实际数据
         })
         
         # 获取西方图表形态
@@ -161,8 +181,8 @@ def create_market_analyst(llm):
                 "symbol": ticker,
                 "start_date": start_date,
                 "end_date": end_date,
-                "lookback": 60,
-                "stock_data": stock_data
+                "lookback": 60,             # 改为60天
+                "stock_data": stock_data    # 传入实际数据
             })
         except Exception as e:
             chart_patterns_data = f"Error getting chart patterns: {str(e)}"
@@ -211,19 +231,40 @@ def create_market_analyst(llm):
         prompt = prompt.partial(indicators_data=indicators_data)
         prompt = prompt.partial(chart_patterns_data=chart_patterns_data)
 
+        # DEBUG: 构造最终的 prompt messages 并打印
+        config_debug = config.get("debug", {})
+        if config_debug.get("enabled", False):
+            print("=" * 80)
+            print("DEBUG: Full Prompt Messages Before LLM Call:")
+            print("=" * 80)
+            try:
+                # 构造完整的消息列表
+                full_messages = prompt.format_messages(messages=state["messages"])
+                total_chars = 0
+                # 写入文件，不截断
+                dump_path = f"/tmp/market_analyst_prompt_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+                with open(dump_path, "w", encoding="utf-8") as f:
+                    for i, msg in enumerate(full_messages):
+                        content = msg.content if hasattr(msg, 'content') else str(msg)
+                        total_chars += len(content)
+                        f.write(f"[{i}] {msg.type}: {len(content)} chars\n")
+                        f.write(content)
+                        f.write("\n" + "-" * 40 + "\n")
+                        # 终端打印摘要
+                        print(f"[{i}] {msg.type}: {len(content)} chars")
+                        if len(content) > 500:
+                            print(content[:500] + "\n... (truncated for terminal, full in file)\n")
+                        else:
+                            print(content)
+                        print("-" * 40)
+                    f.write(f"Total characters in prompt: {total_chars}\n")
+                print(f"Full prompt written to: {dump_path}")
+                print(f"Total characters in prompt: {total_chars}")
+            except Exception as e:
+                print(f"[DEBUG] Error formatting prompt: {e}")
+            print("=" * 80)
+        
         chain = prompt | llm
-        
-        # 调试信息：打印完整prompt（由debug开关控制）
-        debug_config = config.get("debug", {})
-        if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
-            print("=" * 80)
-            print("DEBUG: Market Analyst Prompt Before LLM Call:")
-            print("=" * 80)
-            print(f"Language: {language}")
-            print(f"System Message: {system_message[:500]}..." if len(system_message) > 500 else f"System Message: {system_message}")
-            print(f"Assistant Prompt: {assistant_prompt[:500]}..." if len(assistant_prompt) > 500 else f"Assistant Prompt: {assistant_prompt}")
-            print("=" * 80)
-        
         result = chain.invoke(state["messages"])
         report = result.content
 
