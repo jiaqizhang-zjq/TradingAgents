@@ -30,8 +30,9 @@ from dotenv import load_dotenv
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
 
-# 加载 .env 环境变量
-load_dotenv()
+# 加载 .env 环境变量（优先使用项目内的配置）
+env_path = os.path.join(BASE_DIR, ".env")
+load_dotenv(env_path, override=True)
 
 # 可用分析师列表
 AVAILABLE_ANALYSTS = ["market", "social", "news", "fundamentals", "candlestick"]
