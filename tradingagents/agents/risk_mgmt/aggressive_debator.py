@@ -58,8 +58,6 @@ def create_aggressive_debator(llm):
 K线分析报告：{candlestick_report}
 
 对话历史：{history}
-保守型分析师观点：{current_conservative_response}
-中立型分析师观点：{current_neutral_response}
 
 以对话方式输出，展现20年资深专家的专业水准。"""
         else:
@@ -74,7 +72,7 @@ Social Media Sentiment Report: {sentiment_report}
 Latest World Affairs Report: {news_report}
 Company Fundamentals Report: {fundamentals_report}
 Candlestick Analysis Report: {candlestick_report}
-Here is the current conversation history: {history} Here are the last arguments from the conservative analyst: {current_conservative_response} Here are the last arguments from the neutral analyst: {current_neutral_response}. If there are no responses from the other viewpoints, do not hallucinate and just present your point.
+Here is the current conversation history: {history}. If there are no responses from the other viewpoints, do not hallucinate and just present your point.
 
 Engage actively by addressing any specific concerns raised, refuting the weaknesses in their logic, and asserting the benefits of risk-taking to outpace market norms. Maintain a focus on debating and persuading, not just presenting data. Challenge each counterpoint to underscore why a high-risk approach is optimal. Output conversationally as if you are speaking without any special formatting."""
 

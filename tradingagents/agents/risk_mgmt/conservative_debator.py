@@ -40,7 +40,7 @@ def create_conservative_debator(llm):
 最新世界事务报告：{news_report}
 公司基本面报告：{fundamentals_report}
 K线分析报告：{candlestick_report}
-这是当前的对话历史：{history} 以下是激进型分析师的上一次回应：{current_aggressive_response} 以下是中立型分析师的上一次回应：{current_neutral_response}。如果其他观点没有回应，不要编造，只需陈述你的观点。
+这是当前的对话历史：{history}。如果其他观点没有回应，不要编造，只需陈述你的观点。
 
 通过质疑他们的乐观情绪并强调他们可能忽视的潜在缺点来参与讨论。回应他们的每一个反驳观点，以展示为什么保守立场最终是公司资产的最安全路径。专注于辩论和批评他们的论点，以证明低风险策略相对于他们方法的优势。以对话方式输出，就像你在说话一样，不要使用任何特殊格式。"""
         else:
@@ -55,7 +55,7 @@ Social Media Sentiment Report: {sentiment_report}
 Latest World Affairs Report: {news_report}
 Company Fundamentals Report: {fundamentals_report}
 Candlestick Analysis Report: {candlestick_report}
-Here is the current conversation history: {history} Here is the last response from the aggressive analyst: {current_aggressive_response} Here is the last response from the neutral analyst: {current_neutral_response}. If there are no responses from the other viewpoints, do not hallucinate and just present your point.
+Here is the current conversation history: {history}. If there are no responses from the other viewpoints, do not hallucinate and just present your point.
 
 Engage by questioning their optimism and emphasizing the potential downsides they may have overlooked. Address each of their counterpoints to showcase why a conservative stance is ultimately the safest path for the firm's assets. Focus on debating and critiquing their arguments to demonstrate the strength of a low-risk strategy over their approaches. Output conversationally as if you are speaking without any special formatting."""
 

@@ -86,7 +86,6 @@ def create_bull_researcher(llm, memory):
 公司基本面报告：{fundamentals_report}
 蜡烛图分析报告：{candlestick_report}
 辩论对话历史：{history}
-上次看跌论点：{current_response}
 类似情况下的反思和经验教训：{past_memory_str}
 利用这些信息提出一个令人信服的看涨论点，反驳看跌的担忧，并参与一场动态辩论，展示看涨立场的优势。你还必须解决反思问题，并从过去的经验教训中学习。"""
         else:
@@ -103,7 +102,6 @@ Latest world affairs news: {news_report}
 Company fundamentals report: {fundamentals_report}
 Candlestick analysis report: {candlestick_report}
 Conversation history of the debate: {history}
-Last bear argument: {current_response}
 Reflections from similar situations and lessons learned: {past_memory_str}
 Use this information to deliver a compelling bull argument, refute the bear's concerns, and engage in a dynamic debate that demonstrates the strengths of the bull position. You must also address reflections and learn from lessons and mistakes you made in the past.
 """

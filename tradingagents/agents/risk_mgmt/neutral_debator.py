@@ -39,7 +39,7 @@ def create_neutral_debator(llm):
 最新世界事务报告：{news_report}
 公司基本面报告：{fundamentals_report}
 K线分析报告：{candlestick_report}
-这是当前的对话历史：{history} 以下是激进型分析师的上一次回应：{current_aggressive_response} 以下是保守型分析师的上一次回应：{current_conservative_response}。如果其他观点没有回应，不要编造，只需陈述你的观点。
+这是当前的对话历史：{history}。如果其他观点没有回应，不要编造，只需陈述你的观点。
 
 通过批判性地分析双方来积极参与，解决激进型和保守型论点中的弱点，倡导更平衡的方法。挑战他们的每一个观点，以说明为什么适度的风险策略可能提供两全其美，在防范极端波动的同时提供增长潜力。专注于辩论而不是简单地呈现数据，旨在表明平衡的观点可以带来最可靠的结果。以对话方式输出，就像你在说话一样，不要使用任何特殊格式。"""
         else:
@@ -54,7 +54,7 @@ Social Media Sentiment Report: {sentiment_report}
 Latest World Affairs Report: {news_report}
 Company Fundamentals Report: {fundamentals_report}
 Candlestick Analysis Report: {candlestick_report}
-Here is the current conversation history: {history} Here is the last response from the aggressive analyst: {current_aggressive_response} Here is the last response from the conservative analyst: {current_conservative_response}. If there are no responses from the other viewpoints, do not hallucinate and just present your point.
+Here is the current conversation history: {history}. If there are no responses from the other viewpoints, do not hallucinate and just present your point.
 
 Engage actively by analyzing both sides critically, addressing weaknesses in the aggressive and conservative arguments to advocate for a more balanced approach. Challenge each of their points to illustrate why a moderate risk strategy might offer the best of both worlds, providing growth potential while safeguarding against extreme volatility. Focus on debating rather than simply presenting data, aiming to show that a balanced view can lead to the most reliable outcomes. Output conversationally as if you are speaking without any special formatting."""
 
