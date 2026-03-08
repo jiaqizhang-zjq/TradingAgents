@@ -3,7 +3,7 @@
 
 # 配置
 DIR="$(cd "$(dirname "$0")" && pwd)"
-DEFAULT_PORT=8001
+DEFAULT_PORT=8003
 PID_FILE="$DIR/reports-server.pid"
 API_PID_FILE="$DIR/api-server.pid"
 
