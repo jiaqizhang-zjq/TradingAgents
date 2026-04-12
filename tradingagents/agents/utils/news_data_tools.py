@@ -1,5 +1,5 @@
 from langchain_core.tools import tool
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 from tradingagents.dataflows.interface import get_data_manager
 from tradingagents.agents.utils.logging_utils import log_tool_call
 from tradingagents.utils.logger import get_logger
@@ -108,7 +108,7 @@ def get_insider_transactions(
 @tool
 def get_social_media_data(
     ticker: Annotated[str, "Ticker symbol"],
-    platforms: Annotated[List[str], "List of platforms (reddit, twitter)"] = ["reddit", "twitter"],
+    platforms: Annotated[Optional[List[str]], "List of platforms (reddit, twitter)"] = None,
     limit: Annotated[int, "Number of posts per platform"] = 20,
 ) -> str:
     """
@@ -123,10 +123,12 @@ def get_social_media_data(
     Returns:
         str: JSON string containing social media data
     """
+    if platforms is None:
+        platforms = ["reddit", "twitter"]
     if not HAS_SOCIAL_MEDIA:
         return "Social media module not available. Please install praw and tweepy."
     
     try:
         return get_stock_mentions(ticker, platforms, limit)
-    except Exception as e:
+    except (ConnectionError, ValueError, TimeoutError, OSError, ImportError) as e:
         return f"Error retrieving social media data: {str(e)}"

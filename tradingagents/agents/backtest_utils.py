@@ -9,6 +9,7 @@ from typing import Optional
 
 from tradingagents.utils.validators import validate_symbol, validate_date
 from tradingagents.utils.logger import get_logger
+from tradingagents.constants import DEFAULT_INITIAL_CAPITAL, PREDICTION_THRESHOLD
 
 logger = get_logger(__name__)
 
@@ -69,7 +70,7 @@ def get_price_on_date(symbol: str, target_date: str) -> Optional[float]:
                     return float(df['Close'].iloc[-1])
                 if 'adjusted_close' in df.columns:
                     return float(df['adjusted_close'].iloc[-1])
-            except Exception:
+            except (pd.errors.ParserError, ValueError, KeyError):
                 pass
         
         # 尝试直接转换为浮点数
@@ -81,7 +82,7 @@ def get_price_on_date(symbol: str, target_date: str) -> Optional[float]:
         logger.warning("无法解析 %s 的价格数据", symbol)
         return None
         
-    except Exception as e:
+    except (ConnectionError, ValueError, TimeoutError, OSError, KeyError) as e:
         logger.error("获取 %s 在 %s 的价格失败: %s", symbol, target_date, e)
         return None
 
@@ -93,7 +94,7 @@ def calculate_return(buy_price: float, current_price: float) -> Optional[float]:
     return (current_price - buy_price) / buy_price
 
 
-def calculate_profit(buy_price: float, current_price: float, initial_capital: float = 10000) -> Optional[float]:
+def calculate_profit(buy_price: float, current_price: float, initial_capital: float = DEFAULT_INITIAL_CAPITAL) -> Optional[float]:
     """计算总收益"""
     if buy_price is None or current_price is None:
         return None
@@ -101,7 +102,7 @@ def calculate_profit(buy_price: float, current_price: float, initial_capital: fl
     return (current_price - buy_price) * shares
 
 
-def calculate_shares(buy_price: float, initial_capital: float = 10000) -> float:
+def calculate_shares(buy_price: float, initial_capital: float = DEFAULT_INITIAL_CAPITAL) -> float:
     """计算持股数量"""
     if buy_price is None or buy_price <= 0:
         return 0
@@ -128,7 +129,7 @@ def determine_outcome(prediction: str, actual_return: float, buy_price: float, c
         outcome: 'correct', 'incorrect', 或 'partial'
     """
     if prediction == "HOLD":
-        if -0.02 <= actual_return <= 0.02:
+        if -PREDICTION_THRESHOLD <= actual_return <= PREDICTION_THRESHOLD:
             return "correct"
         elif abs(actual_return) > 0.05:
             return "incorrect"
@@ -150,7 +151,7 @@ def determine_outcome(prediction: str, actual_return: float, buy_price: float, c
         else:
             return "partial"
     else:
-        if -0.02 <= actual_return <= 0.02:
+        if -PREDICTION_THRESHOLD <= actual_return <= PREDICTION_THRESHOLD:
             return "correct"
         else:
             return "partial"

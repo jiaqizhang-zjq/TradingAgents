@@ -9,15 +9,16 @@ import sqlite3
 import json
 from datetime import datetime
 from typing import Dict, List, Optional
-from contextlib import contextmanager
 
 from .models import ResearchOutcome, ResearchRecord, ResearcherStats
+from tradingagents.dataflows.db_mixin import DatabaseMixin
 from tradingagents.utils.logger import get_logger
+from tradingagents.constants import DEFAULT_DB_PATH, DEFAULT_INITIAL_CAPITAL, PREDICTION_THRESHOLD
 
 logger = get_logger(__name__)
 
 
-class ResearchTracker:
+class ResearchTracker(DatabaseMixin):
     """
     Research Team 胜率追踪器（重构后）
     
@@ -27,23 +28,9 @@ class ResearchTracker:
     3. 统计胜率、收益率等指标
     """
     
-    def __init__(self, db_path: str = "tradingagents/db/research_tracker.db"):
+    def __init__(self, db_path: str = DEFAULT_DB_PATH):
         self.db_path = db_path
         self._init_database()
-    
-    @contextmanager
-    def _get_connection(self):
-        """获取数据库连接上下文管理器"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            conn.close()
     
     def _init_database(self):
         """初始化数据库表结构（简化版）"""
@@ -68,7 +55,7 @@ class ResearchTracker:
                     created_at TEXT NOT NULL,
                     metadata TEXT DEFAULT '{}',
                     buy_price REAL,
-                    initial_capital REAL DEFAULT 10000,
+                    initial_capital REAL DEFAULT 10000,  -- 与 DEFAULT_INITIAL_CAPITAL 常量一致
                     shares REAL,
                     total_return REAL,
                     backtest_date TEXT,
@@ -116,7 +103,7 @@ class ResearchTracker:
     def record_research(self, researcher_name: str, researcher_type: str, symbol: str, 
                        trade_date: str, prediction: str, confidence: float = 0.0,
                        reasoning: str = "", holding_days: int = 5, metadata: Dict = None,
-                       buy_price: float = None, initial_capital: float = 10000.0,
+                       buy_price: float = None, initial_capital: float = DEFAULT_INITIAL_CAPITAL,
                        shares: float = None, total_return: float = None) -> bool:
         """记录一次研究预测"""
         try:
@@ -137,7 +124,7 @@ class ResearchTracker:
                       buy_price, initial_capital, shares, total_return))
                 
                 return True
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 记录研究预测失败: %s", e)
             return False
     
@@ -163,7 +150,7 @@ class ResearchTracker:
                              (outcome, actual_return, verified_date, researcher_name, symbol, trade_date))
                 
                 return True
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 验证预测失败: %s", e)
             return False
     
@@ -171,11 +158,11 @@ class ResearchTracker:
         """自动判断预测结果"""
         prediction = prediction.upper()
         if prediction == "BUY":
-            return ResearchOutcome.CORRECT.value if actual_return > 0.02 else ResearchOutcome.INCORRECT.value
+            return ResearchOutcome.CORRECT.value if actual_return > PREDICTION_THRESHOLD else ResearchOutcome.INCORRECT.value
         elif prediction == "SELL":
-            return ResearchOutcome.CORRECT.value if actual_return < -0.02 else ResearchOutcome.INCORRECT.value
+            return ResearchOutcome.CORRECT.value if actual_return < -PREDICTION_THRESHOLD else ResearchOutcome.INCORRECT.value
         else:  # HOLD
-            return ResearchOutcome.CORRECT.value if abs(actual_return) <= 0.02 else ResearchOutcome.PARTIAL.value
+            return ResearchOutcome.CORRECT.value if abs(actual_return) <= PREDICTION_THRESHOLD else ResearchOutcome.PARTIAL.value
     
     def get_researcher_stats(self, researcher_name: str, symbol: str = None, 
                             start_date: str = None, end_date: str = None) -> Optional[ResearcherStats]:
@@ -202,7 +189,7 @@ class ResearchTracker:
                 cursor.execute('INSERT OR REPLACE INTO researcher_configs (researcher_name, researcher_type, description, created_at, config_json) VALUES (?, ?, ?, ?, ?)',
                              (researcher_name, researcher_type, description, created_at, json.dumps(config or {})))
                 return True
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 注册研究员失败: %s", e)
             return False
     
@@ -223,7 +210,7 @@ class ResearchTracker:
                 
                 cursor.execute(query, params)
                 return [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 获取研究员列表失败: %s", e)
             return []
     
@@ -245,7 +232,7 @@ class ResearchTracker:
 _tracker_instance: Optional[ResearchTracker] = None
 
 
-def get_research_tracker(db_path: str = "tradingagents/db/research_tracker.db") -> ResearchTracker:
+def get_research_tracker(db_path: str = DEFAULT_DB_PATH) -> ResearchTracker:
     """获取全局 ResearchTracker 实例（单例模式）"""
     global _tracker_instance
     if _tracker_instance is None:

@@ -8,6 +8,7 @@ import os
 import sqlite3
 from typing import List, Set, Tuple
 
+from tradingagents.constants import DEFAULT_ANALYSIS_DB_PATH
 from tradingagents.agents.utils.memory_storage import get_connection
 from tradingagents.utils.logger import get_logger
 
@@ -54,7 +55,7 @@ def _build_full_situation(analysis_cursor, symbol: str, trade_date: str,
                 f"--- 基本面报告 ---\n{fundamentals_report}\n\n"
                 f"--- 蜡烛图报告 ---\n{candlestick_report}"
             )
-    except Exception:
+    except sqlite3.Error:
         pass
     
     return reasoning
@@ -107,7 +108,7 @@ def learn_from_research_records(
     memory_name: str,
     existing_documents: List[str],
     limit: int = 100,
-    analysis_db_path: str = "tradingagents/db/trading_analysis.db"
+    analysis_db_path: str = DEFAULT_ANALYSIS_DB_PATH
 ) -> Tuple[List[str], List[str], List[float], int]:
     """Learn from verified research records, combining with analysis reports.
     
@@ -199,7 +200,7 @@ def learn_from_research_records(
                 existing_situations.add(situation)
                 count += 1
     
-    except Exception as e:
+    except (sqlite3.Error, KeyError, TypeError, ValueError) as e:
         logger.error("❌ 从研究记录学习失败: %s", e, exc_info=True)
     
     return new_documents, new_recommendations, new_returns, count

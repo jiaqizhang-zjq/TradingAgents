@@ -11,6 +11,10 @@ from typing import Any, Optional, Dict
 from pathlib import Path
 import os
 
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class DataCache:
     """数据缓存类"""
@@ -54,7 +58,7 @@ class DataCache:
             "kwargs": sorted(kwargs.items())
         }
         key_str = json.dumps(key_data, sort_keys=True)
-        return hashlib.md5(key_str.encode()).hexdigest()
+        return hashlib.sha256(key_str.encode()).hexdigest()
     
     def _get_cache_file_path(self, cache_key: str) -> Path:
         """获取缓存文件路径"""
@@ -100,8 +104,8 @@ class DataCache:
                     return cache_data["data"]
                 else:
                     cache_file.unlink()
-            except Exception:
-                pass
+            except (json.JSONDecodeError, KeyError, ValueError, OSError) as e:
+                logger.debug("读取缓存文件失败 (%s): %s", cache_file.name, e)
         
         return None
     
@@ -132,8 +136,8 @@ class DataCache:
         try:
             with open(cache_file, "w") as f:
                 json.dump(cache_data, f, indent=2)
-        except Exception:
-            pass
+        except (OSError, TypeError) as e:
+            logger.debug("写入缓存文件失败 (%s): %s", cache_file.name, e)
     
     def clear(self, func_name: Optional[str] = None) -> None:
         """
@@ -160,8 +164,8 @@ class DataCache:
                     
                     if cache_data.get("func_name") == func_name:
                         cache_file.unlink()
-                except Exception:
-                    pass
+                except (json.JSONDecodeError, KeyError, OSError) as e:
+                    logger.debug("清除缓存文件失败 (%s): %s", cache_file.name, e)
         else:
             # 清除所有缓存
             self.memory_cache.clear()
@@ -169,8 +173,8 @@ class DataCache:
             for cache_file in self.cache_dir.glob("*.json"):
                 try:
                     cache_file.unlink()
-                except Exception:
-                    pass
+                except OSError as e:
+                    logger.debug("删除缓存文件失败 (%s): %s", cache_file.name, e)
     
     def get_stats(self) -> Dict[str, Any]:
         """获取缓存统计信息"""

@@ -8,6 +8,8 @@ from typing import Annotated
 from datetime import datetime
 import yfinance as yf
 
+from tradingagents.exceptions import DataNotFoundError, DataFetchError
+
 
 def get_fundamentals(
     ticker: Annotated[str, "ticker symbol of the company"],
@@ -19,7 +21,7 @@ def get_fundamentals(
         info = ticker_obj.info
 
         if not info:
-            raise Exception(f"No fundamentals data found for symbol '{ticker}'")
+            raise DataNotFoundError("fundamentals", ticker)
 
         fields = [
             ("Name", info.get("longName")),
@@ -63,7 +65,7 @@ def get_fundamentals(
         return header + "\n".join(lines)
 
     except Exception as e:
-        raise Exception(f"Error retrieving fundamentals for {ticker}: {str(e)}")
+        raise DataFetchError("yfinance", ticker, "fundamentals retrieval failed", original_error=e) from e
 
 
 def _fetch_financial_statement(ticker: str, data_type: str, freq: str = "quarterly") -> str:
@@ -96,13 +98,13 @@ def _fetch_financial_statement(ticker: str, data_type: str, freq: str = "quarter
     
     attr_name = attr_map.get((data_type, freq.lower()))
     if attr_name is None:
-        raise Exception(f"Invalid data_type '{data_type}' or freq '{freq}'")
+        raise ValueError(f"Invalid data_type '{data_type}' or freq '{freq}'")
     
     data = getattr(ticker_obj, attr_name)
     
     if data.empty:
         label = type_labels.get(data_type, data_type)
-        raise Exception(f"No {label} data found for symbol '{ticker}'")
+        raise DataNotFoundError(f"{label} data", ticker)
     
     csv_string = data.to_csv()
     label = type_labels.get(data_type, data_type)
@@ -121,7 +123,7 @@ def get_balance_sheet(
     try:
         return _fetch_financial_statement(ticker, "balance_sheet", freq)
     except Exception as e:
-        raise Exception(f"Error retrieving balance sheet for {ticker}: {str(e)}")
+        raise DataFetchError("yfinance", ticker, "balance sheet retrieval failed", original_error=e) from e
 
 
 def get_cashflow(
@@ -133,7 +135,7 @@ def get_cashflow(
     try:
         return _fetch_financial_statement(ticker, "cashflow", freq)
     except Exception as e:
-        raise Exception(f"Error retrieving cash flow for {ticker}: {str(e)}")
+        raise DataFetchError("yfinance", ticker, "cash flow retrieval failed", original_error=e) from e
 
 
 def get_income_statement(
@@ -145,7 +147,7 @@ def get_income_statement(
     try:
         return _fetch_financial_statement(ticker, "income_stmt", freq)
     except Exception as e:
-        raise Exception(f"Error retrieving income statement for {ticker}: {str(e)}")
+        raise DataFetchError("yfinance", ticker, "income statement retrieval failed", original_error=e) from e
 
 
 def get_insider_transactions(
@@ -157,7 +159,7 @@ def get_insider_transactions(
         data = ticker_obj.insider_transactions
         
         if data is None or data.empty:
-            raise Exception(f"No insider transactions data found for symbol '{ticker}'")
+            raise DataNotFoundError("insider transactions", ticker)
             
         csv_string = data.to_csv()
         
@@ -167,4 +169,4 @@ def get_insider_transactions(
         return header + csv_string
         
     except Exception as e:
-        raise Exception(f"Error retrieving insider transactions for {ticker}: {str(e)}")
+        raise DataFetchError("yfinance", ticker, "insider transactions retrieval failed", original_error=e) from e

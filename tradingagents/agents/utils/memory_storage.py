@@ -25,7 +25,7 @@ def get_connection(db_path: str):
     try:
         yield conn
         conn.commit()
-    except Exception as e:
+    except sqlite3.Error as e:
         conn.rollback()
         raise e
     finally:
@@ -99,7 +99,7 @@ def save_records(db_path: str, memory_name: str,
             
             conn.commit()
             logger.info("✅ Memory %s 已保存到数据库: %d 条记录", memory_name, len(documents))
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error("❌ 保存内存到数据库失败: %s", e)
 
 
@@ -137,7 +137,7 @@ def load_records(db_path: str, memory_name: str) -> Tuple[List[str], List[str], 
             
             if documents:
                 logger.info("✅ Memory %s 从数据库加载: %d 条记录", memory_name, len(documents))
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error("❌ 从数据库加载内存失败: %s", e)
     
     return documents, recommendations, returns
@@ -175,7 +175,7 @@ def save_backtest_record(db_path: str, memory_name: str,
             
             conn.commit()
             logger.info("✅ Memory %s 从回测更新: %s @ %s, 收益: %.2f%%", memory_name, symbol, trade_date, actual_return * 100)
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error("❌ 从回测更新内存失败: %s", e)
 
 
@@ -194,5 +194,5 @@ def clear_records(db_path: str, memory_name: str):
             ''', (memory_name,))
             conn.commit()
             logger.info("✅ Memory %s 已清空", memory_name)
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error("❌ 清空内存失败: %s", e)

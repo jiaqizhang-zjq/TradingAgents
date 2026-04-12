@@ -8,6 +8,7 @@
 """
 
 import json
+import sqlite3
 from datetime import datetime
 from typing import Dict, Any
 
@@ -74,7 +75,7 @@ class StatePersistence:
             else:
                 logger.error("❌ 保存到数据库失败")
                 
-        except Exception as e:
+        except (sqlite3.Error, KeyError, TypeError, ValueError) as e:
             logger.error("❌ 数据库保存错误: %s", e)
     
     def _save_to_files(self, final_state: Dict[str, Any]):
@@ -105,7 +106,7 @@ class StatePersistence:
                 final_trade_decision=final_state.get("final_trade_decision", "")
             )
                 
-        except Exception as e:
+        except (OSError, KeyError, TypeError, ValueError) as e:
             logger.error("❌ 文件保存错误: %s", e)
     
     def _record_research_predictions(self, final_state: Dict[str, Any]):
@@ -133,7 +134,7 @@ class StatePersistence:
             
             logger.info("✅ 研究员预测已记录到胜率追踪器")
             
-        except Exception as e:
+        except (sqlite3.Error, KeyError, TypeError, ValueError) as e:
             logger.error("❌ 记录研究员预测失败: %s", e)
     
     def _record_bull_bear(self, tracker, symbol: str, trade_date: str, invest_debate: Dict):

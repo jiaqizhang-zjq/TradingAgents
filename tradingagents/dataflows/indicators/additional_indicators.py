@@ -7,6 +7,15 @@
 import numpy as np
 import pandas as pd
 
+from tradingagents.constants import (
+    CCI_CONSTANT,
+    RSI_OVERBOUGHT,
+    RSI_OVERSOLD,
+    TRADING_DAYS_PER_YEAR,
+    VOLATILITY_WINDOW_20,
+    VOLATILITY_WINDOW_50,
+)
+
 
 class AdditionalIndicators:
     """扩展指标计算器"""
@@ -110,8 +119,8 @@ class AdditionalIndicators:
             df = df.copy()
         
         df["returns"] = df["close"].pct_change()
-        df["volatility_20"] = df["returns"].rolling(window=20).std() * np.sqrt(252)
-        df["volatility_50"] = df["returns"].rolling(window=50).std() * np.sqrt(252)
+        df[f"volatility_{VOLATILITY_WINDOW_20}"] = df["returns"].rolling(window=VOLATILITY_WINDOW_20).std() * np.sqrt(TRADING_DAYS_PER_YEAR)
+        df[f"volatility_{VOLATILITY_WINDOW_50}"] = df["returns"].rolling(window=VOLATILITY_WINDOW_50).std() * np.sqrt(TRADING_DAYS_PER_YEAR)
         
         return df
     

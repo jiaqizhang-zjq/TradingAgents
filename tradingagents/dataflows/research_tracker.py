@@ -9,12 +9,13 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 
-from contextlib import contextmanager
 from enum import Enum
 
 # 导入依赖注入容器
 from tradingagents.core.container import get_container
+from tradingagents.dataflows.db_mixin import DatabaseMixin
 from tradingagents.utils.logger import get_logger
+from tradingagents.constants import DEFAULT_DB_PATH, DEFAULT_INITIAL_CAPITAL, PREDICTION_THRESHOLD
 
 logger = get_logger(__name__)
 
@@ -81,7 +82,7 @@ class ResearcherStats:
             self.symbols_traded = []
 
 
-class ResearchTracker:
+class ResearchTracker(DatabaseMixin):
     """
     Research Team 胜率追踪器
     
@@ -93,23 +94,9 @@ class ResearchTracker:
     5. 预留扩展接口，方便添加新的研究员类型
     """
     
-    def __init__(self, db_path: str = "tradingagents/db/research_tracker.db"):
+    def __init__(self, db_path: str = DEFAULT_DB_PATH):
         self.db_path = db_path
         self._init_database()
-    
-    @contextmanager
-    def _get_connection(self):
-        """获取数据库连接上下文管理器"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            conn.close()
     
     def _init_database(self):
         """初始化数据库表结构"""
@@ -134,7 +121,7 @@ class ResearchTracker:
                     created_at TEXT NOT NULL,
                     metadata TEXT DEFAULT '{}',
                     buy_price REAL,  -- 买入价格（交易当天收盘价）
-                    initial_capital REAL DEFAULT 10000,  -- 初始资金，默认1万美元
+                    initial_capital REAL DEFAULT 10000,  -- 初始资金（与 DEFAULT_INITIAL_CAPITAL 常量一致）
                     shares REAL,  -- 头寸数量
                     total_return REAL,  -- 总收益（金额）
                     backtest_date TEXT,  -- 回测日期
@@ -209,7 +196,7 @@ class ResearchTracker:
         holding_days: int = 5,
         metadata: Dict = None,
         buy_price: float = None,
-        initial_capital: float = 10000.0,
+        initial_capital: float = DEFAULT_INITIAL_CAPITAL,
         shares: float = None,
         total_return: float = None
     ) -> bool:
@@ -268,7 +255,7 @@ class ResearchTracker:
                 logger.info("✅ 记录研究预测: %s -> %s %s", researcher_name, symbol, prediction)
                 return True
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 记录研究预测失败: %s", e)
             return False
     
@@ -335,7 +322,7 @@ class ResearchTracker:
                 logger.info("✅ 验证预测: %s %s -> %s (收益: %.2f%%)", researcher_name, symbol, outcome, actual_return * 100)
                 return True
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 验证预测失败: %s", e)
             return False
     
@@ -344,23 +331,23 @@ class ResearchTracker:
         prediction = prediction.upper()
         
         if prediction == "BUY":
-            if actual_return > 0.02:  # 涨超过2%
+            if actual_return > PREDICTION_THRESHOLD:  # 涨超过阈值
                 return ResearchOutcome.CORRECT.value
-            elif actual_return < -0.02:  # 跌超过2%
+            elif actual_return < -PREDICTION_THRESHOLD:  # 跌超过阈值
                 return ResearchOutcome.INCORRECT.value
             else:
                 return ResearchOutcome.PARTIAL.value
                 
         elif prediction == "SELL":
-            if actual_return < -0.02:  # 跌超过2%
+            if actual_return < -PREDICTION_THRESHOLD:  # 跌超过阈值
                 return ResearchOutcome.CORRECT.value
-            elif actual_return > 0.02:  # 涨超过2%
+            elif actual_return > PREDICTION_THRESHOLD:  # 涨超过阈值
                 return ResearchOutcome.INCORRECT.value
             else:
                 return ResearchOutcome.PARTIAL.value
                 
         else:  # HOLD
-            if abs(actual_return) < 0.02:  # 波动小于2%
+            if abs(actual_return) < PREDICTION_THRESHOLD:  # 波动小于阈值
                 return ResearchOutcome.CORRECT.value
             else:
                 return ResearchOutcome.INCORRECT.value
@@ -464,7 +451,7 @@ class ResearchTracker:
                 
                 return stats_list
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 获取统计信息失败: %s", e)
             return []
     
@@ -518,7 +505,7 @@ class ResearchTracker:
                     'avg_return': row['avg_return'] or 0
                 }
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 获取股票统计失败: %s", e)
             return {}
     
@@ -565,7 +552,7 @@ class ResearchTracker:
                 logger.info("✅ 注册研究员: %s (%s)", researcher_name, researcher_type)
                 return True
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 注册研究员失败: %s", e)
             return False
     
@@ -618,7 +605,7 @@ class ResearchTracker:
                     for row in rows
                 ]
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 获取研究员列表失败: %s", e)
             return []
     
@@ -674,7 +661,7 @@ class ResearchTracker:
                 
                 return verified_count
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 批量验证失败: %s", e)
             return 0
     
@@ -789,7 +776,7 @@ class ResearchTracker:
                     'symbol': symbol
                 }
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 获取胜率失败: %s", e)
             return {
                 'win_rate': default_win_rate,
@@ -800,7 +787,7 @@ class ResearchTracker:
             }
 
 
-def get_research_tracker(db_path: str = "tradingagents/db/research_tracker.db") -> ResearchTracker:
+def get_research_tracker(db_path: str = DEFAULT_DB_PATH) -> ResearchTracker:
     """
     获取 ResearchTracker 实例（通过依赖注入容器）
     

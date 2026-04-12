@@ -37,6 +37,7 @@ from tradingagents.agents.backtest_stats import (
     print_backtest_stats,
 )
 from tradingagents.utils.logger import get_logger
+from tradingagents.constants import DEFAULT_INITIAL_CAPITAL, MIN_STOCK_DATA_DAYS
 
 logger = get_logger(__name__)
 
@@ -45,12 +46,12 @@ def _ensure_table_schema(cursor, conn):
     """确保表结构正确"""
     try:
         cursor.execute("ALTER TABLE research_records ADD COLUMN buy_price REAL")
-        cursor.execute("ALTER TABLE research_records ADD COLUMN initial_capital REAL DEFAULT 10000")
+        cursor.execute(f"ALTER TABLE research_records ADD COLUMN initial_capital REAL DEFAULT {DEFAULT_INITIAL_CAPITAL}")
         cursor.execute("ALTER TABLE research_records ADD COLUMN shares REAL")
         cursor.execute("ALTER TABLE research_records ADD COLUMN total_return REAL")
         conn.commit()
-    except Exception:
-        pass
+    except sqlite3.OperationalError:
+        pass  # 列已存在，忽略
 
 
 def _get_last_trade_date(cursor, target_date: str, symbol: str = None) -> str:
@@ -128,7 +129,7 @@ def _backfill_buy_prices(cursor, conn, records):
                 continue
 
             if initial_capital is None:
-                initial_capital = 10000
+                initial_capital = DEFAULT_INITIAL_CAPITAL
             if shares is None or shares == 0:
                 shares = calculate_shares(buy_price, initial_capital)
 
@@ -184,8 +185,8 @@ def _calculate_and_update_returns(cursor, conn, records, verify_date: str) -> in
         if metadata:
             try:
                 meta = json.loads(metadata) if isinstance(metadata, str) else metadata
-            except Exception:
-                pass
+            except (json.JSONDecodeError, TypeError):
+                logger.warning("记录 %s metadata 解析失败，使用空字典", record_id)
 
         meta["position_change"] = {
             "action": prediction,

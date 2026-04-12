@@ -764,3 +764,65 @@ TODO.md                        [本文件]
 
 **状态**: 🎯 核心目标达成，超预期完成
 **最后更新**: 2026-02-27
+
+---
+
+## 🔄 深度优化迭代 (2026-04)
+
+### Round 1: 自定义异常体系建设
+- 创建 `tradingagents/exceptions.py`，定义 18+ 异常类层次
+- `TradingAgentsException` → `DataError` / `LLMError` / `StateError` / `ConfigError` / `APIError` / `AgentError` / `CacheError` / `DatabaseError`
+- 细分子类：`DataFetchError`, `DataNotFoundError`, `DataValidationError`, `InsufficientDataError`, `LLMInvokeError`, `LLMTimeoutError`, `LLMResponseParseError`, `APIKeyError`, `APIRateLimitError`, `APIResponseError`
+- 初步替换部分 `raise Exception(...)` 为自定义异常
+
+### Round 2: 异常体系全面落地 + 代码质量
+- 所有 19 处 `raise Exception(...)` → `DataNotFoundError` / `DataFetchError` / `ValueError`
+- 涉及文件：`y_finance_financials.py`, `yfinance_news.py`, `longbridge.py`, `y_finance_indicators.py`
+- 结果：`raise Exception(...)` 从 19 → **0**
+
+### Round 3: 异常捕获精细化（第一轮）
+- 系统性替换 `except Exception` 为具体异常类型
+- 引入：`sqlite3.Error`, `sqlite3.OperationalError`, `json.JSONDecodeError`, `OSError`, `ValueError`, `TypeError`, `pd.errors.ParserError`, `ConnectionError`, `TimeoutError`, `KeyError`, `IndexError`
+- `hashlib.md5` → `hashlib.sha256` 安全升级（`data_cache.py`, `incremental_indicators.py`）
+
+### Round 4: 异常捕获精细化（第二轮）
+- 覆盖剩余 ~25 处 `except Exception`（12 个文件）
+- 引入更多精确类型：`np.linalg.LinAlgError`, `pd.errors.ArrowInvalid`, `ImportError`
+- 识别并保留 22 处 intentionally broad 的 `except Exception`（顶层编排、重试装饰器、性能监控等）
+- 结果：`except Exception` 从 ~80+ → **22 intentionally broad**
+
+### Round 5a: 代码清洁度
+- 移除 `data_parser.py` 冗余 `pass`（except 块中 logger.error 后的无用 pass）
+- 清理 ~20 个未使用 imports（涉及 11 个文件）
+  - `import time`, `import json`, `from langchain_core.messages import AIMessage`
+
+### Round 5b: 魔法数字常量化
+- `constants.py` 新增：`RSI_OVERBOUGHT=70`, `RSI_OVERSOLD=30`, `CCI_CONSTANT=0.015`, `TRADING_DAYS_PER_YEAR=252`, `CCI_PERIOD=20`, `VOLATILITY_WINDOW_20/50`, `TREND_SLOPE_WINDOW_10/20`, `ROC_PERIODS=[5,10,20]`, `CMO_PERIOD=14`, `MFI_PERIOD=14`, `PREDICTION_THRESHOLD=0.02`, `DEFAULT_INITIAL_CAPITAL=10000.0`, `MIN_STOCK_DATA_DAYS=200`
+- 8 个文件中的所有魔法数字替换为常量引用
+
+### Round 6: 重复代码消除 + 硬编码路径 + 可变默认参数
+- **DataLoaderMixin** (`data_loader_mixin.py`): 提取 `DataPreloader` 和 `AsyncDataLoader` 共享的 `_load_stock_data` / `_calculate_indicators` / `_format_indicator`（消除 ~93 行重复）
+- **DatabaseMixin** (`db_mixin.py`): 提取 `research_tracker.py` / `database.py` / `tracker/tracker.py` 共享的 `_get_connection` 上下文管理器（消除 ~45 行重复）
+- 硬编码路径集中化：`constants.py` 新增 `DEFAULT_ANALYSIS_DB_PATH`, `TOOL_CALL_LOG_PATH`；10 处 DB 路径 + 1 处日志路径 → 常量引用
+- 可变默认参数修复：`social_media.py`（2处）、`news_data_tools.py`（1处）的 `List[str] = [...]` → `Optional[List[str]] = None` + 延迟初始化
+- 类型注解补充：`interface.py`（4函数）、`logging_utils.py`（1函数）
+
+### 累计优化指标
+
+| 指标 | 初始值 | 最终值 |
+|------|--------|--------|
+| `raise Exception(...)` | 19 | **0** ✅ |
+| `bare except:` | 0 | **0** ✅ |
+| `hashlib.md5` | 2 | **0** ✅ |
+| `print()` (非 logger) | 0 | **0** ✅ |
+| `except Exception` 宽泛捕获 | ~80+ | **22 intentionally broad** ✅ |
+| 冗余 `pass` | 1 | **0** ✅ |
+| 未使用 imports | ~20+ | **0** ✅ |
+| 魔法数字 | ~50+ | **全部常量化** ✅ |
+| 重复代码（DataLoader） | ~93 行 | **提取到 DataLoaderMixin** ✅ |
+| 重复代码（DB连接） | ~45 行 | **提取到 DatabaseMixin** ✅ |
+| 硬编码路径 | 11 处 | **0** ✅ |
+| 可变默认参数 | 3 处 | **0** ✅ |
+| 单元测试 | 178 | **178 全部通过** ✅ |
+
+**最后更新**: 2026-04-12

@@ -8,6 +8,7 @@ from rank_bm25 import BM25Okapi
 from typing import List, Tuple, Optional, Dict, Any
 import re
 
+from tradingagents.constants import DEFAULT_DB_PATH
 from tradingagents.agents.utils.memory_storage import (
     init_database,
     save_records,
@@ -36,7 +37,7 @@ class FinancialSituationMemory:
         self.recommendations: List[str] = []
         self.returns: List[float] = []
         self.bm25 = None
-        self.db_path = "tradingagents/db/research_tracker.db"
+        self.db_path = DEFAULT_DB_PATH
         
         if config:
             self.db_path = config.get("db_path", self.db_path)
@@ -202,10 +203,10 @@ if __name__ == "__main__":
         recommendations = matcher.get_memories(current_situation, n_matches=2)
 
         for i, rec in enumerate(recommendations, 1):
-            print(f"\nMatch {i}:")
-            print(f"Similarity Score: {rec['similarity_score']:.2f}")
-            print(f"Matched Situation: {rec['matched_situation']}")
-            print(f"Recommendation: {rec['recommendation']}")
+            logger.info("Match %d:", i)
+            logger.info("  Similarity Score: %.2f", rec['similarity_score'])
+            logger.info("  Matched Situation: %s", rec['matched_situation'])
+            logger.info("  Recommendation: %s", rec['recommendation'])
 
     except Exception as e:
-        print(f"Error during recommendation: {str(e)}")
+        logger.error("Error during recommendation: %s", e)

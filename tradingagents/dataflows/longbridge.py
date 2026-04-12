@@ -23,6 +23,21 @@ from io import StringIO
 from .api_config import get_api_config
 from .data_cache import cached
 from .complete_indicators import CompleteTechnicalIndicators  # 复用技术指标模块
+from tradingagents.exceptions import DataNotFoundError, DataFetchError
+from tradingagents.constants import (
+    CCI_CONSTANT,
+    CCI_PERIOD,
+    CMO_PERIOD,
+    MFI_PERIOD,
+    ROC_PERIODS,
+    RSI_OVERBOUGHT,
+    RSI_OVERSOLD,
+    TRADING_DAYS_PER_YEAR,
+    TREND_SLOPE_WINDOW_10,
+    TREND_SLOPE_WINDOW_20,
+    VOLATILITY_WINDOW_20,
+    VOLATILITY_WINDOW_50,
+)
 
 try:
     from longbridge.openapi import QuoteContext, Config, Period, AdjustType
@@ -92,7 +107,7 @@ class LongbridgeAPI:
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
         
         if self.quote_ctx is None:
-            raise Exception("长桥 API 未正确初始化")
+            raise DataFetchError("longbridge", symbol, "API 未正确初始化")
         
         # 转换为长桥的代码格式（美股加上 .US）
         lb_symbol = symbol
@@ -109,7 +124,7 @@ class LongbridgeAPI:
         )
         
         if not bars:
-            raise Exception(f"长桥 API 返回空数据: {lb_symbol}")
+            raise DataNotFoundError("stock data", lb_symbol)
         
         # 转换数据
         data_list = []
@@ -126,7 +141,7 @@ class LongbridgeAPI:
             })
         
         if not data_list:
-            raise Exception(f"日期范围内无数据: {start_date} 到 {end_date}")
+            raise DataNotFoundError("stock data", f"{symbol} ({start_date} to {end_date})")
         
         df = pd.DataFrame(data_list)
         df = df.sort_values('timestamp')
@@ -254,8 +269,8 @@ class LongbridgeAPI:
         )
         
         # RSI超买超卖信号
-        df["rsi_overbought"] = (df["rsi"] >= 70).astype(int)
-        df["rsi_oversold"] = (df["rsi"] <= 30).astype(int)
+        df["rsi_overbought"] = (df["rsi"] >= RSI_OVERBOUGHT).astype(int)
+        df["rsi_oversold"] = (df["rsi"] <= RSI_OVERSOLD).astype(int)
         
         # 布林带突破信号
         df["boll_breakout_up"] = (df["close"] > df["boll_ub"]).astype(int)
@@ -285,277 +300,36 @@ class LongbridgeAPI:
         patterns = CandlestickPatternRecognizer.identify_patterns(df)
         
         return json.dumps(patterns, indent=2, ensure_ascii=False)
+    
+    def _calculate_mfi(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
         """
-        识别蜡烛图形态（完整版）
+        计算 MFI (Money Flow Index)
         
         Args:
-            symbol: 股票代码
-            start_date: 开始日期
-            end_date: 结束日期
+            df: 包含 high, low, close, volume 列的 DataFrame
+            period: 计算周期，默认14
             
         Returns:
-            CSV格式的蜡烛图形态数据
+            MFI 指标 Series
         """
-        stock_data = self.get_stock_data(symbol, start_date, end_date)
-        df = pd.read_csv(StringIO(stock_data))
+        typical_price = (df["high"] + df["low"] + df["close"]) / 3
+        money_flow = typical_price * df["volume"]
         
-        patterns = []
+        positive_flow = pd.Series(0.0, index=df.index)
+        negative_flow = pd.Series(0.0, index=df.index)
         
-        for i in range(3, len(df)):
-            prev3 = df.iloc[i-3] if i >= 3 else None
-            prev2 = df.iloc[i-2]
-            prev1 = df.iloc[i-1]
-            curr = df.iloc[i]
-            
-            pattern_info = {
-                "timestamp": curr["timestamp"],
-                "open": curr["open"],
-                "high": curr["high"],
-                "low": curr["low"],
-                "close": curr["close"],
-                "patterns": []
-            }
-            
-            # 计算实体大小、上下影线
-            curr_body = abs(curr["close"] - curr["open"])
-            curr_range = curr["high"] - curr["low"]
-            curr_upper_shadow = curr["high"] - max(curr["open"], curr["close"])
-            curr_lower_shadow = min(curr["open"], curr["close"]) - curr["low"]
-            curr_is_bullish = curr["close"] > curr["open"]
-            curr_is_bearish = curr["close"] < curr["open"]
-            
-            prev1_body = abs(prev1["close"] - prev1["open"])
-            prev1_range = prev1["high"] - prev1["low"]
-            prev1_is_bullish = prev1["close"] > prev1["open"]
-            prev1_is_bearish = prev1["close"] < prev1["open"]
-            
-            prev2_body = abs(prev2["close"] - prev2["open"])
-            prev2_is_bullish = prev2["close"] > prev2["open"]
-            prev2_is_bearish = prev2["close"] < prev2["open"]
-            
-            # ==================== 单一蜡烛形态 ====================
-            
-            # 1. 十字星类
-            if curr_body < curr_range * 0.1:
-                if curr_upper_shadow > curr_body * 3 and curr_lower_shadow > curr_body * 3:
-                    pattern_info["patterns"].append("DOJI_LONG_LEGGED")
-                elif curr_upper_shadow > curr_lower_shadow * 2:
-                    pattern_info["patterns"].append("DOJI_GRAVESTONE")
-                elif curr_lower_shadow > curr_upper_shadow * 2:
-                    pattern_info["patterns"].append("DOJI_DRAGONFLY")
-                else:
-                    pattern_info["patterns"].append("DOJI")
-            
-            # 2. 锤头类
-            if (curr_body < curr_range * 0.35 and
-                curr_lower_shadow > curr_body * 2 and
-                curr_upper_shadow < curr_body * 0.5):
-                if curr_is_bullish:
-                    pattern_info["patterns"].append("HAMMER")
-                else:
-                    pattern_info["patterns"].append("HANGING_MAN")
-            
-            # 3. 倒锤头类
-            if (curr_body < curr_range * 0.35 and
-                curr_upper_shadow > curr_body * 2 and
-                curr_lower_shadow < curr_body * 0.5):
-                if curr_is_bearish:
-                    pattern_info["patterns"].append("INVERTED_HAMMER")
-                else:
-                    pattern_info["patterns"].append("SHOOTING_STAR")
-            
-            # 4. 纺锤线
-            if (curr_body < curr_range * 0.5 and
-                curr_body > curr_range * 0.2 and
-                curr_upper_shadow > curr_body * 0.5 and
-                curr_lower_shadow > curr_body * 0.5):
-                pattern_info["patterns"].append("SPINNING_TOP")
-            
-            # 5. 大阳线/大阴线
-            if curr_body > curr_range * 0.8:
-                if curr_is_bullish:
-                    pattern_info["patterns"].append("MARUBOZU_BULLISH")
-                else:
-                    pattern_info["patterns"].append("MARUBOZU_BEARISH")
-            
-            # 6. 长上影线/长下影线
-            if curr_upper_shadow > curr_body * 3:
-                pattern_info["patterns"].append("LONG_UPPER_SHADOW")
-            if curr_lower_shadow > curr_body * 3:
-                pattern_info["patterns"].append("LONG_LOWER_SHADOW")
-            
-            # ==================== 双蜡烛形态 ====================
-            
-            # 7. 看涨吞没
-            if (prev1_is_bearish and
-                curr_is_bullish and
-                curr["open"] < prev1["close"] and
-                curr["close"] > prev1["open"] and
-                curr_body > prev1_body * 1.3):
-                pattern_info["patterns"].append("BULLISH_ENGULFING")
-            
-            # 8. 看跌吞没
-            if (prev1_is_bullish and
-                curr_is_bearish and
-                curr["open"] > prev1["close"] and
-                curr["close"] < prev1["open"] and
-                curr_body > prev1_body * 1.3):
-                pattern_info["patterns"].append("BEARISH_ENGULFING")
-            
-            # 9. 刺透形态
-            if (prev1_is_bearish and
-                curr_is_bullish and
-                curr["open"] < prev1["low"] and
-                curr["close"] > (prev1["open"] + prev1["close"]) / 2 and
-                curr["close"] < prev1["open"]):
-                pattern_info["patterns"].append("PIERCING_PATTERN")
-            
-            # 10. 乌云盖顶
-            if (prev1_is_bullish and
-                curr_is_bearish and
-                curr["open"] > prev1["high"] and
-                curr["close"] < (prev1["open"] + prev1["close"]) / 2 and
-                curr["close"] > prev1["close"]):
-                pattern_info["patterns"].append("DARK_CLOUD_COVER")
-            
-            # 11. 母子线（孕线）
-            if (curr_body < prev1_body * 0.6 and
-                curr["high"] < prev1["high"] and
-                curr["low"] > prev1["low"]):
-                if prev1_is_bullish and curr_is_bearish:
-                    pattern_info["patterns"].append("HARAMI_BEARISH")
-                elif prev1_is_bearish and curr_is_bullish:
-                    pattern_info["patterns"].append("HARAMI_BULLISH")
-                else:
-                    pattern_info["patterns"].append("HARAMI")
-            
-            # 12. 十字孕线
-            if (curr_body < curr_range * 0.1 and
-                curr["high"] < prev1["high"] and
-                curr["low"] > prev1["low"]):
-                pattern_info["patterns"].append("HARAMI_CROSS")
-            
-            # 13. 平头底/平头顶
-            if abs(curr["low"] - prev1["low"]) < prev1_range * 0.01:
-                pattern_info["patterns"].append("FLAT_BOTTOM")
-            if abs(curr["high"] - prev1["high"]) < prev1_range * 0.01:
-                pattern_info["patterns"].append("FLAT_TOP")
-            
-            # ==================== 三蜡烛形态 ====================
-            
-            if i >= 3:
-                prev3_body = abs(prev3["close"] - prev3["open"])
-                prev3_is_bullish = prev3["close"] > prev3["open"]
-                prev3_is_bearish = prev3["close"] < prev3["open"]
-                
-                # 14. 晨星
-                if (prev3_is_bearish and
-                    prev2_body < prev3_body * 0.5 and
-                    prev1_is_bullish and
-                    prev1_body > prev2_body * 1.5):
-                    pattern_info["patterns"].append("MORNING_STAR")
-                
-                # 15. 黄昏星
-                if (prev3_is_bullish and
-                    prev2_body < prev3_body * 0.5 and
-                    prev1_is_bearish and
-                    prev1_body > prev2_body * 1.5):
-                    pattern_info["patterns"].append("EVENING_STAR")
-                
-                # 16. 三只乌鸦
-                if (prev2_is_bearish and
-                    prev1_is_bearish and
-                    curr_is_bearish and
-                    prev1["open"] < prev2["close"] and
-                    curr["open"] < prev1["close"] and
-                    prev1_body > prev2_body * 0.7 and
-                    curr_body > prev1_body * 0.7):
-                    pattern_info["patterns"].append("THREE_BLACK_CROWS")
-                
-                # 17. 三白兵
-                if (prev2_is_bullish and
-                    prev1_is_bullish and
-                    curr_is_bullish and
-                    prev1["open"] > prev2["close"] and
-                    curr["open"] > prev1["close"] and
-                    prev1_body > prev2_body * 0.7 and
-                    curr_body > prev1_body * 0.7):
-                    pattern_info["patterns"].append("THREE_WHITE_SOLDIERS")
-                
-                # 18. 上升三法
-                if (prev3_is_bullish and
-                    prev3_body > prev2_body * 2 and
-                    prev2_is_bearish and
-                    prev1_is_bearish and
-                    curr_is_bullish and
-                    curr["close"] > prev3["close"] and
-                    prev2["low"] > prev3["low"] and
-                    prev1["low"] > prev3["low"]):
-                    pattern_info["patterns"].append("THREE_RISING_METHODS")
-                
-                # 19. 下降三法
-                if (prev3_is_bearish and
-                    prev3_body > prev2_body * 2 and
-                    prev2_is_bullish and
-                    prev1_is_bullish and
-                    curr_is_bearish and
-                    curr["close"] < prev3["close"] and
-                    prev2["high"] < prev3["high"] and
-                    prev1["high"] < prev3["high"]):
-                    pattern_info["patterns"].append("THREE_FALLING_METHODS")
-                
-                # 20. 红三兵受阻
-                if (prev2_is_bullish and
-                    prev1_is_bullish and
-                    curr_is_bullish and
-                    prev1_body > prev2_body and
-                    curr_body < prev1_body * 0.7):
-                    pattern_info["patterns"].append("THREE_ADVANCING_BLOCKS")
-                
-                # 21. 白三兵受阻
-                if (prev2_is_bearish and
-                    prev1_is_bearish and
-                    curr_is_bearish and
-                    prev1_body > prev2_body and
-                    curr_body < prev1_body * 0.7):
-                    pattern_info["patterns"].append("THREE_DECLINING_BLOCKS")
-            
-            # ==================== 趋势确认形态 ====================
-            
-            # 22. 连续上涨/下跌
-            if i >= 2:
-                consecutive_up = 0
-                consecutive_down = 0
-                for j in range(max(0, i-4), i+1):
-                    if df.iloc[j]["close"] > df.iloc[j]["open"]:
-                        consecutive_up += 1
-                        consecutive_down = 0
-                    else:
-                        consecutive_down += 1
-                        consecutive_up = 0
-                
-                if consecutive_up >= 3:
-                    pattern_info["patterns"].append(f"CONSECUTIVE_UP_{consecutive_up}")
-                if consecutive_down >= 3:
-                    pattern_info["patterns"].append(f"CONSECUTIVE_DOWN_{consecutive_down}")
-            
-            # 23. 新高/新低
-            if i >= 20:
-                recent_high = df.iloc[max(0, i-20):i+1]["high"].max()
-                recent_low = df.iloc[max(0, i-20):i+1]["low"].min()
-                if curr["high"] >= recent_high * 0.999:
-                    pattern_info["patterns"].append("NEW_20_HIGH")
-                if curr["low"] <= recent_low * 1.001:
-                    pattern_info["patterns"].append("NEW_20_LOW")
-            
-            if pattern_info["patterns"]:
-                patterns.append(pattern_info)
+        tp_diff = typical_price.diff()
+        positive_flow[tp_diff > 0] = money_flow[tp_diff > 0]
+        negative_flow[tp_diff < 0] = money_flow[tp_diff < 0]
         
-        result_df = pd.DataFrame(patterns)
-        if len(result_df) > 0:
-            result_df["patterns"] = result_df["patterns"].apply(lambda x: "|".join(x))
-        return result_df.to_csv(index=False) if len(result_df) > 0 else "timestamp,open,high,low,close,patterns\n"
-    
+        positive_sum = positive_flow.rolling(window=period).sum()
+        negative_sum = negative_flow.rolling(window=period).sum()
+        
+        money_ratio = positive_sum / negative_sum.replace(0, np.nan)
+        mfi = 100 - (100 / (1 + money_ratio))
+        
+        return mfi
+
     def _identify_swing_highs(self, df, lookback=2):
         """识别高点"""
         swing_highs = []
@@ -594,7 +368,7 @@ class LongbridgeAPI:
         self._initialize()
         
         if self.quote_ctx is None:
-            raise Exception("长桥 API 未正确初始化")
+            raise DataFetchError("longbridge", symbol, "API 未正确初始化")
         
         lb_symbol = symbol
         if not (lb_symbol.endswith('.US') or lb_symbol.endswith('.HK') or lb_symbol.endswith('.SH') or lb_symbol.endswith('.SZ')):
@@ -603,7 +377,7 @@ class LongbridgeAPI:
         info_list = self.quote_ctx.static_info([lb_symbol])
         
         if not info_list:
-            raise Exception(f"长桥 API 返回空数据: {lb_symbol}")
+            raise DataNotFoundError("fundamentals", lb_symbol)
         
         info = info_list[0]
         

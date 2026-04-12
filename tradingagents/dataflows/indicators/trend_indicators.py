@@ -63,7 +63,7 @@ class TrendIndicators:
             try:
                 slope, _ = np.polyfit(range(len(x)), x, 1)
                 return slope
-            except:
+            except (ValueError, TypeError, np.linalg.LinAlgError):
                 return np.nan
         
         df["trend_slope_10"] = df["close"].rolling(window=10).apply(
@@ -96,7 +96,7 @@ class TrendIndicators:
             try:
                 slope, intercept = np.polyfit(range(len(x)), x, 1)
                 return intercept + slope * len(x)
-            except:
+            except (ValueError, TypeError, np.linalg.LinAlgError):
                 return np.nan
         
         df["lr_pred_20"] = df["close"].rolling(window=20).apply(

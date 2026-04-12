@@ -102,7 +102,7 @@ def create_candlestick_analyst(llm):
                 "end_date": end_date,
                 "stock_data": stock_data
             })
-        except Exception as e:
+        except (ValueError, TypeError, KeyError) as e:
             candlestick_patterns_data = f"Error getting candlestick patterns: {str(e)}"
         
         # 根据语言选择系统提示词

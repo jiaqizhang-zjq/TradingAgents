@@ -26,6 +26,11 @@ MAX_RETRY_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 2
 RETRY_BACKOFF_MULTIPLIER = 2
 
+# ==================== 辩论间隔 ====================
+# 研究员辩论每轮发言后的等待时间（秒），避免 API 限速
+# 设为 0 可取消等待，加快辩论速度
+RESEARCHER_DEBATE_SLEEP_SECONDS = 1
+
 # ==================== 缓存配置 ====================
 CACHE_TTL_HOURS = 24
 MAX_CACHE_SIZE = 1000
@@ -73,7 +78,11 @@ LOG_DATE_FORMAT = "%H:%M:%S"
 
 # ==================== 数据库配置 ====================
 DEFAULT_DB_PATH = "tradingagents/db/research_tracker.db"
+DEFAULT_ANALYSIS_DB_PATH = "tradingagents/db/trading_analysis.db"
 DB_TIMEOUT_SECONDS = 30
+
+# ==================== 日志文件路径 ====================
+TOOL_CALL_LOG_PATH = "langgraph_outputs/tool_calls.log"
 
 # ==================== API配置 ====================
 API_REQUEST_TIMEOUT = 30
@@ -221,6 +230,18 @@ DIVERGENCE_WINDOW = 20
 # ==================== 蜡烛图形态检测窗口 ====================
 PATTERN_LOOKBACK = 60
 PEAK_TROUGH_WINDOW = 5
+
+# ==================== 预测验证阈值 ====================
+# 用于判断预测是否正确的价格变动阈值（2%）
+PREDICTION_THRESHOLD = 0.02
+
+# ==================== 回测配置 ====================
+# 回测默认初始资金（美元）
+DEFAULT_INITIAL_CAPITAL = 10000.0
+
+# ==================== 数据窗口 ====================
+# 股票数据最小天数窗口（用于技术指标计算所需的历史数据量）
+MIN_STOCK_DATA_DAYS = 200
 
 # ==================== 交易信号 ====================
 SIGNAL_BULLISH = 1

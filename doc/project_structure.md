@@ -94,6 +94,8 @@ TradingAgents/
 │   │   ├── database.py       # Peewee ORM → SQLite
 │   │   ├── research_tracker.py # 研究员胜率追踪
 │   │   ├── data_cache.py     # API 响应缓存
+│   │   ├── data_loader_mixin.py # 数据加载共享逻辑 Mixin
+│   │   ├── db_mixin.py       # 数据库连接共享逻辑 Mixin
 │   │   ├── api_config.py     # API 密钥管理
 │   │   ├── config.py         # 数据流配置
 │   │   │

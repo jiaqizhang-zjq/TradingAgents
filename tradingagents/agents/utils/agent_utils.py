@@ -1,6 +1,10 @@
 from langchain_core.messages import HumanMessage, RemoveMessage
 from datetime import datetime, timedelta
 
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 def is_market_open(symbol: str = "AAPL", target_date: str = None) -> bool:
     """通过获取股票数据判断是否开盘"""
@@ -31,7 +35,7 @@ def is_market_open(symbol: str = "AAPL", target_date: str = None) -> bool:
         df = df.sort_values('timestamp')
         latest_date = str(df['timestamp'].iloc[-1])[:10]
         return latest_date == end_date
-    except Exception as e:
+    except (ConnectionError, ValueError, TimeoutError, OSError, KeyError) as e:
         logger.error("is_market_open error: %s", e)
         return False
 

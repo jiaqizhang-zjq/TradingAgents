@@ -2,14 +2,13 @@
 基础研究员类 - 消除 Bull/Bear Researcher 的重复代码
 """
 
-from langchain_core.messages import AIMessage
 import time
-import json
 import re
 from typing import Callable, Dict, Any
 
 from tradingagents.dataflows.research_tracker import get_research_tracker
 from tradingagents.dataflows.config import get_config
+from tradingagents.constants import RESEARCHER_DEBATE_SLEEP_SECONDS
 
 
 class BaseResearcher:
@@ -391,7 +390,7 @@ Use this information to make a compelling {stance_label} case from your perspect
             researcher_histories[self.researcher_type] = updated_researcher_history
             investment_debate_state["researcher_histories"] = researcher_histories
 
-            time.sleep(1)
+            time.sleep(RESEARCHER_DEBATE_SLEEP_SECONDS)
 
             return {"investment_debate_state": investment_debate_state}
         

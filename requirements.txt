@@ -1,10 +1,10 @@
 # Auto-generated from pyproject.toml — keep in sync
 # Install: pip install -r requirements.txt
 # Authoritative source: pyproject.toml [project.dependencies]
+# 可选依赖: pip install tradingagents[redis] / pip install tradingagents[all]
 
 langchain-core>=0.3.81
 backtrader>=1.9.78.123
-chainlit>=2.5.5
 langchain-anthropic>=0.3.15
 langchain-experimental>=0.3.4
 langchain-google-genai>=2.1.5
@@ -15,7 +15,6 @@ parsel>=1.10.0
 pytz>=2025.2
 questionary>=2.1.0
 rank-bm25>=0.2.2
-redis>=6.2.0
 requests>=2.32.4
 rich>=14.0.0
 typer>=0.21.0

@@ -29,6 +29,8 @@ if os.path.exists(VENV_PYTHON):
 from dotenv import load_dotenv
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.utils.validators import InputValidator
+from tradingagents.exceptions import ValidationError
 
 # 加载 .env 环境变量
 load_dotenv()
@@ -65,6 +67,31 @@ def run_trading_analysis(
         analysts: 分析师列表
         output_lang: 输出语言
     """
+    # ---- 输入验证 ----
+    try:
+        symbol = InputValidator.validate_symbol(symbol)
+    except ValidationError as e:
+        print(f"\n❌ 股票代码无效: {e}")
+        return None, None
+
+    try:
+        date = InputValidator.validate_date(date)
+    except ValidationError as e:
+        print(f"\n❌ 日期无效: {e}")
+        return None, None
+
+    if analysts:
+        invalid = [a for a in analysts if a not in AVAILABLE_ANALYSTS]
+        if invalid:
+            print(f"\n❌ 无效的分析师: {', '.join(invalid)}")
+            print(f"   可选: {', '.join(AVAILABLE_ANALYSTS)}")
+            return None, None
+
+    if llm_provider and llm_provider not in AVAILABLE_PROVIDERS:
+        print(f"\n❌ 无效的 LLM 提供商: {llm_provider}")
+        print(f"   可选: {', '.join(AVAILABLE_PROVIDERS)}")
+        return None, None
+
     print(f"\n{'='*50}")
     print(f"TradingAgents 分析")
     print(f"股票: {symbol}")

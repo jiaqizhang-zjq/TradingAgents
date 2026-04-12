@@ -53,7 +53,7 @@ class IncrementalIndicatorCache:
     def _get_cache_key(self, symbol: str, date_range: str) -> str:
         """生成缓存键"""
         key_str = f"{symbol}_{date_range}"
-        return hashlib.md5(key_str.encode()).hexdigest()
+        return hashlib.sha256(key_str.encode()).hexdigest()
     
     def _get_cache_path(self, cache_key: str) -> Path:
         """获取缓存文件路径"""
@@ -88,7 +88,7 @@ class IncrementalIndicatorCache:
         
         try:
             return pd.read_parquet(cache_path)
-        except Exception:
+        except (OSError, ValueError, pd.errors.ArrowInvalid):
             return None
     
     def set(self, symbol: str, date_range: str, df: pd.DataFrame):
@@ -109,7 +109,7 @@ class IncrementalIndicatorCache:
             # 保存元数据
             with open(meta_path, 'w') as f:
                 json.dump({'symbol': symbol, 'date_range': date_range}, f)
-        except Exception:
+        except (OSError, TypeError):
             pass
     
     def clear(self, symbol: Optional[str] = None):
@@ -137,7 +137,7 @@ class IncrementalIndicatorCache:
                         if cache_file.exists():
                             cache_file.unlink()
                         meta_file.unlink()
-                except Exception:
+                except (json.JSONDecodeError, OSError):
                     pass
 
 

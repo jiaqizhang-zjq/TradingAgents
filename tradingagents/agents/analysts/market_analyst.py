@@ -167,7 +167,7 @@ def create_market_analyst(llm):
                 "lookback": 60,
                 "stock_data": stock_data
             })
-        except Exception as e:
+        except (ValueError, TypeError, KeyError) as e:
             chart_patterns_data = f"Error getting chart patterns: {str(e)}"
         
         # 根据语言选择系统提示词

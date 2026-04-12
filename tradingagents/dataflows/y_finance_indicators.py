@@ -117,7 +117,7 @@ def get_stock_stats_bulk(
             )
             df = wrap(data)
         except FileNotFoundError:
-            raise Exception("Stockstats fail: Yahoo Finance data not fetched yet!")
+            raise DataFetchError("yahoo_finance", symbol, "Yahoo Finance data not fetched yet")
     else:
         today_date = pd.Timestamp.today()
         

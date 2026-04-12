@@ -1,5 +1,4 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-import time
 from tradingagents.agents.utils.agent_utils import get_fundamentals, get_balance_sheet, get_cashflow, get_income_statement
 from tradingagents.dataflows.config import get_config
 from tradingagents.utils.logger import get_logger
@@ -31,25 +30,25 @@ def create_fundamentals_analyst(llm):
         fundamentals_data = ""
         try:
             fundamentals_data = get_fundamentals.invoke({"ticker": ticker, "curr_date": current_date})
-        except Exception as e:
+        except (ConnectionError, ValueError, TimeoutError, OSError) as e:
             fundamentals_data = f"Error fetching fundamentals: {str(e)}"
         
         balance_sheet_data = ""
         try:
             balance_sheet_data = get_balance_sheet.invoke({"ticker": ticker, "freq": "quarterly", "curr_date": current_date})
-        except Exception as e:
+        except (ConnectionError, ValueError, TimeoutError, OSError) as e:
             balance_sheet_data = f"Error fetching balance sheet: {str(e)}"
         
         cashflow_data = ""
         try:
             cashflow_data = get_cashflow.invoke({"ticker": ticker, "freq": "quarterly", "curr_date": current_date})
-        except Exception as e:
+        except (ConnectionError, ValueError, TimeoutError, OSError) as e:
             cashflow_data = f"Error fetching cashflow: {str(e)}"
         
         income_statement_data = ""
         try:
             income_statement_data = get_income_statement.invoke({"ticker": ticker, "freq": "quarterly", "curr_date": current_date})
-        except Exception as e:
+        except (ConnectionError, ValueError, TimeoutError, OSError) as e:
             income_statement_data = f"Error fetching income statement: {str(e)}"
         
         # 根据语言选择系统提示词

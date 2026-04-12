@@ -10,6 +10,9 @@ from typing import List, Dict, Any, Optional
 import warnings
 
 from .api_config import get_api_config
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 try:
     import praw
@@ -200,7 +203,7 @@ class SocialMediaAPI:
     def get_stock_mentions(
         self,
         symbol: str,
-        platforms: List[str] = ["reddit", "twitter"],
+        platforms: Optional[List[str]] = None,
         limit: int = 20
     ) -> str:
         """
@@ -214,6 +217,8 @@ class SocialMediaAPI:
         Returns:
             JSON 格式的社交媒体数据
         """
+        if platforms is None:
+            platforms = ["reddit", "twitter"]
         results = {
             "symbol": symbol,
             "collected_at": datetime.now().isoformat(),
@@ -233,10 +238,12 @@ class SocialMediaAPI:
                             limit=limit // len(subreddits)
                         )
                         reddit_posts.extend(json.loads(posts_json))
-                    except Exception:
+                    except (json.JSONDecodeError, ImportError, ValueError, ConnectionError) as e:
+                        logger.warning("获取 %s 子版块数据失败: %s", subreddit, e)
                         continue
                 results["data"]["reddit"] = reddit_posts
-            except Exception as e:
+            except (ImportError, ValueError, ConnectionError) as e:
+                logger.warning("Reddit 数据获取失败: %s", e)
                 results["data"]["reddit"] = {"error": str(e)}
                 
         if "twitter" in platforms:
@@ -246,7 +253,8 @@ class SocialMediaAPI:
                     limit=limit
                 )
                 results["data"]["twitter"] = json.loads(tweets_json)
-            except Exception as e:
+            except (ImportError, ValueError, ConnectionError) as e:
+                logger.warning("Twitter 数据获取失败: %s", e)
                 results["data"]["twitter"] = {"error": str(e)}
                 
         return json.dumps(results, indent=2)
@@ -290,9 +298,11 @@ def get_twitter_tweets(
 
 def get_stock_mentions(
     symbol: str,
-    platforms: List[str] = ["reddit", "twitter"],
+    platforms: Optional[List[str]] = None,
     limit: int = 20
 ) -> str:
     """获取股票在社交媒体上的提及"""
+    if platforms is None:
+        platforms = ["reddit", "twitter"]
     api = get_social_media_api()
     return api.get_stock_mentions(symbol, platforms, limit)

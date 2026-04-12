@@ -39,7 +39,7 @@ class DateAdjuster:
                 return (new_start_date, end_date)
             
             return (start_date, end_date)
-        except Exception:
+        except ValueError:
             # 解析失败，返回原始日期
             return (start_date, end_date)
     
@@ -58,7 +58,7 @@ class DateAdjuster:
             dt = datetime.strptime(date_str, "%Y-%m-%d")
             # 0=Monday, 6=Sunday
             return dt.weekday() >= 5
-        except Exception:
+        except ValueError:
             return False
     
     @staticmethod

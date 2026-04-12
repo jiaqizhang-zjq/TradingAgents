@@ -55,7 +55,6 @@ def parse_stock_data(stock_data_str: str) -> pd.DataFrame | None:
         logger.error("[parse_stock_data] Error: %s", e)
         import traceback
         logger.error("[parse_stock_data] Traceback:\n%s", traceback.format_exc())
-        pass
     return None
 
 

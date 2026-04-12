@@ -1,8 +1,8 @@
-from typing import Annotated
 import pandas as pd
-import io
+from typing import Any, Dict
 
 from tradingagents.utils.logger import get_logger
+from tradingagents.constants import MIN_STOCK_DATA_DAYS
 
 logger = get_logger(__name__)
 
@@ -72,7 +72,7 @@ from .core import (
 from tradingagents.core.container import get_container
 
 # ========== LOCAL VENDOR 实现 ==========
-def _parse_stock_data(stock_data_str):
+def _parse_stock_data(stock_data_str: str) -> pd.DataFrame:
     """解析股票数据字符串为DataFrame（委托给core模块）"""
     return _core_parse_stock_data(stock_data_str)
 
@@ -544,7 +544,7 @@ def _init_data_manager() -> UnifiedDataManager:
     
     return manager
 
-def route_to_vendor(method: str, *args, **kwargs):
+def route_to_vendor(method: str, *args, **kwargs) -> str:
     """路由方法调用到统一数据管理器
     
     这是兼容旧代码的接口，新代码应该直接使用 get_data_manager()
@@ -570,22 +570,22 @@ def route_to_vendor(method: str, *args, **kwargs):
                 start_dt = datetime.strptime(start_date, "%Y-%m-%d")
                 days_diff = (end_dt - start_dt).days
                 
-                if days_diff < 200:
-                    new_start_dt = end_dt - timedelta(days=200)
+                if days_diff < MIN_STOCK_DATA_DAYS:
+                    new_start_dt = end_dt - timedelta(days=MIN_STOCK_DATA_DAYS)
                     new_start_date = new_start_dt.strftime("%Y-%m-%d")
                     args_list[1] = new_start_date
                     args = tuple(args_list)
-            except Exception:
+            except (ValueError, TypeError):
                 pass
     
     return manager.fetch(method, *args, **kwargs)
 
-def get_fetch_stats():
+def get_fetch_stats() -> Dict:
     """获取数据获取统计信息"""
     manager = get_data_manager()
     return manager.get_stats()
 
-def reset_fetch_stats():
+def reset_fetch_stats() -> None:
     """重置数据获取统计信息"""
     manager = get_data_manager()
     manager.reset_stats()

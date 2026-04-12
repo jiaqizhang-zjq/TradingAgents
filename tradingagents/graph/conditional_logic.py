@@ -1,6 +1,6 @@
 # TradingAgents/graph/conditional_logic.py
 
-from typing import Dict, Any, List
+from typing import Dict, List
 from tradingagents.agents.utils.agent_states import AgentState
 from tradingagents.constants import RESEARCHER_REGISTRY, DEFAULT_SELECTED_RESEARCHERS
 
@@ -46,45 +46,45 @@ class ConditionalLogic:
                 self.debate_order.append(display_name)
                 self.speaker_to_index[speaker_label] = i
 
-    def should_continue_market(self, state: AgentState) -> str:
-        """Determine if market analysis should continue."""
-        messages = state["messages"]
-        last_message = messages[-1]
-        if last_message.tool_calls:
-            return "tools_market"
-        return "Msg Clear Market"
+        # 动态注册 should_continue_{analyst_type} 方法
+        # 使外部 getattr(self, f"should_continue_{t}") 调用正常工作
+        for analyst_type in ("market", "social", "news", "fundamentals", "candlestick"):
+            setattr(self, f"should_continue_{analyst_type}",
+                    self._make_analyst_continue(analyst_type))
 
-    def should_continue_social(self, state: AgentState):
-        """Determine if social media analysis should continue."""
-        messages = state["messages"]
-        last_message = messages[-1]
-        if last_message.tool_calls:
-            return "tools_social"
-        return "Msg Clear Social"
+    # ---- 分析师 tool-call 继续判断（泛型实现） ----
 
-    def should_continue_news(self, state: AgentState):
-        """Determine if news analysis should continue."""
-        messages = state["messages"]
-        last_message = messages[-1]
-        if last_message.tool_calls:
-            return "tools_news"
-        return "Msg Clear News"
+    @staticmethod
+    def _make_analyst_continue(analyst_type: str):
+        """工厂方法：为指定 analyst_type 生成 should_continue 闭包。
 
-    def should_continue_fundamentals(self, state: AgentState):
-        """Determine if fundamentals analysis should continue."""
-        messages = state["messages"]
-        last_message = messages[-1]
-        if last_message.tool_calls:
-            return "tools_fundamentals"
-        return "Msg Clear Fundamentals"
+        返回的闭包逻辑:
+            如果最新消息还有 tool_calls → 返回 "tools_{analyst_type}" 继续工具调用
+            否则 → 返回 "Msg Clear {Title}" 清理消息进入下一步
 
-    def should_continue_candlestick(self, state: AgentState):
-        """Determine if candlestick analysis should continue."""
-        messages = state["messages"]
-        last_message = messages[-1]
-        if last_message.tool_calls:
-            return "tools_candlestick"
-        return "Msg Clear Candlestick"
+        Args:
+            analyst_type: 分析师类型，如 "market", "social", "news", "fundamentals", "candlestick"
+        """
+        # 映射 analyst_type -> 标题格式（保持与原始路由名一致）
+        title_map = {
+            "market": "Market",
+            "social": "Social",
+            "news": "News",
+            "fundamentals": "Fundamentals",
+            "candlestick": "Candlestick",
+        }
+        title = title_map.get(analyst_type, analyst_type.title())
+        tools_name = f"tools_{analyst_type}"
+        clear_name = f"Msg Clear {title}"
+
+        def should_continue(state: AgentState) -> str:
+            """Determine if {analyst_type} analysis should continue."""
+            last_message = state["messages"][-1]
+            return tools_name if last_message.tool_calls else clear_name
+
+        should_continue.__doc__ = f"Determine if {analyst_type} analysis should continue."
+        should_continue.__name__ = f"should_continue_{analyst_type}"
+        return should_continue
 
     def should_continue_debate(self, state: AgentState) -> str:
         """Determine if debate should continue.

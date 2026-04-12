@@ -13,6 +13,10 @@ from .researchers.bull_researcher import create_bull_researcher
 from .researchers.buffett_researcher import create_buffett_researcher
 from .researchers.cathie_wood_researcher import create_cathie_wood_researcher
 from .researchers.peter_lynch_researcher import create_peter_lynch_researcher
+from .researchers.charlie_munger_researcher import create_charlie_munger_researcher
+from .researchers.soros_researcher import create_soros_researcher
+from .researchers.dalio_researcher import create_dalio_researcher
+from .researchers.livermore_researcher import create_livermore_researcher
 
 from .risk_mgmt.aggressive_debator import create_aggressive_debator
 from .risk_mgmt.conservative_debator import create_conservative_debator

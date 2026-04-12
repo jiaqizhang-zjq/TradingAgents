@@ -9,11 +9,12 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
-from contextlib import contextmanager
 
 # 导入依赖注入容器
 from tradingagents.core.container import get_container
+from tradingagents.dataflows.db_mixin import DatabaseMixin
 from tradingagents.utils.logger import get_logger
+from tradingagents.constants import DEFAULT_ANALYSIS_DB_PATH
 
 logger = get_logger(__name__)
 
@@ -44,26 +45,12 @@ class AnalysisReport:
     metadata: str = "{}"
 
 
-class TradingDatabase:
+class TradingDatabase(DatabaseMixin):
     """交易分析数据库管理器"""
     
-    def __init__(self, db_path: str = "tradingagents/db/trading_analysis.db"):
+    def __init__(self, db_path: str = DEFAULT_ANALYSIS_DB_PATH):
         self.db_path = db_path
         self._init_database()
-    
-    @contextmanager
-    def _get_connection(self):
-        """获取数据库连接上下文管理器"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            raise e
-        finally:
-            conn.close()
     
     def _init_database(self):
         """初始化数据库表结构"""
@@ -174,7 +161,7 @@ class TradingDatabase:
                 logger.info("✅ 报告已保存: %s @ %s", report.symbol, report.trade_date)
                 return True
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 保存报告失败: %s", e)
             return False
     
@@ -217,7 +204,7 @@ class TradingDatabase:
                 
                 return True
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 保存工具调用失败: %s", e)
             return False
     
@@ -262,7 +249,7 @@ class TradingDatabase:
                 
                 return None
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 获取报告失败: %s", e)
             return None
     
@@ -300,7 +287,7 @@ class TradingDatabase:
                     for row in rows
                 ]
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 获取工具调用记录失败: %s", e)
             return []
     
@@ -351,7 +338,7 @@ class TradingDatabase:
                     for row in rows
                 ]
                 
-        except Exception as e:
+        except sqlite3.Error as e:
             logger.error("❌ 列出报告失败: %s", e)
             return []
     
@@ -368,7 +355,7 @@ class TradingDatabase:
         return export_tool_calls_to_jsonl(self, symbol, trade_date, output_dir)
 
 
-def get_db(db_path: str = "tradingagents/db/trading_analysis.db") -> TradingDatabase:
+def get_db(db_path: str = DEFAULT_ANALYSIS_DB_PATH) -> TradingDatabase:
     """
     获取数据库实例（通过依赖注入容器）
     

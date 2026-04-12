@@ -276,56 +276,62 @@ class TradingAgentsGraph:
         )
         args = self.propagator.get_graph_args()
 
-        if self.debug:
-            # 调试模式，带跟踪输出
-            # 使用stream方法逐块执行，便于调试和观察中间状态
-            trace = []
-            last_debate_state = None
-            last_risk_state = None
-            
-            for chunk in self.graph.stream(init_agent_state, **args):
-                # 打印所有节点的消息
-                for node_name, node_data in chunk.items():
-                    if node_name == "messages" and len(node_data) > 0:
-                        logger.info("=" * 80)
-                        logger.info("📝 Messages Output:")
-                        logger.info("=" * 80)
-                        node_data[-1].pretty_print()
-                    elif node_name == "investment_debate_state":
-                        logger.info("=" * 80)
-                        logger.info("📊 Investment Debate State:")
-                        logger.info("=" * 80)
-                        logger.info("Count: %s", node_data.get('count', 0))
-                        logger.info("Latest Speaker: %s", node_data.get('latest_speaker', 'N/A'))
-                        # 动态输出所有 researcher 的历史
-                        researcher_histories = node_data.get('researcher_histories', {})
-                        for rtype, rhist in researcher_histories.items():
-                            logger.info("--- %s History ---", rtype)
-                            logger.info("%s", (rhist[:2000] if rhist else "N/A"))
-                        logger.info("--- Current Response ---")
-                        logger.info("%s", (node_data.get('current_response', '')[:2000] if node_data.get('current_response') else "N/A"))
-                        logger.info("=" * 80)
-                    elif node_name == "risk_debate_state":
-                        logger.info("=" * 80)
-                        logger.info("⚠️ Risk Debate State:")
-                        logger.info("=" * 80)
-                        logger.info("Count: %s", node_data.get('count', 0))
-                        logger.info("Latest Speaker: %s", node_data.get('latest_speaker', 'N/A'))
-                        logger.info("=" * 80)
-                    elif node_name == "trader_investment_plan":
-                        logger.info("=" * 80)
-                        logger.info("💰 Trader Investment Plan:")
-                        logger.info("=" * 80)
-                        logger.info("%s", str(node_data)[:2000])
-                        logger.info("=" * 80)
+        try:
+            if self.debug:
+                # 调试模式，带跟踪输出
+                # 使用stream方法逐块执行，便于调试和观察中间状态
+                trace = []
+                last_debate_state = None
+                last_risk_state = None
                 
-                trace.append(chunk)
+                for chunk in self.graph.stream(init_agent_state, **args):
+                    # 打印所有节点的消息
+                    for node_name, node_data in chunk.items():
+                        if node_name == "messages" and len(node_data) > 0:
+                            logger.info("=" * 80)
+                            logger.info("📝 Messages Output:")
+                            logger.info("=" * 80)
+                            node_data[-1].pretty_print()
+                        elif node_name == "investment_debate_state":
+                            logger.info("=" * 80)
+                            logger.info("📊 Investment Debate State:")
+                            logger.info("=" * 80)
+                            logger.info("Count: %s", node_data.get('count', 0))
+                            logger.info("Latest Speaker: %s", node_data.get('latest_speaker', 'N/A'))
+                            # 动态输出所有 researcher 的历史
+                            researcher_histories = node_data.get('researcher_histories', {})
+                            for rtype, rhist in researcher_histories.items():
+                                logger.info("--- %s History ---", rtype)
+                                logger.info("%s", (rhist[:2000] if rhist else "N/A"))
+                            logger.info("--- Current Response ---")
+                            logger.info("%s", (node_data.get('current_response', '')[:2000] if node_data.get('current_response') else "N/A"))
+                            logger.info("=" * 80)
+                        elif node_name == "risk_debate_state":
+                            logger.info("=" * 80)
+                            logger.info("⚠️ Risk Debate State:")
+                            logger.info("=" * 80)
+                            logger.info("Count: %s", node_data.get('count', 0))
+                            logger.info("Latest Speaker: %s", node_data.get('latest_speaker', 'N/A'))
+                            logger.info("=" * 80)
+                        elif node_name == "trader_investment_plan":
+                            logger.info("=" * 80)
+                            logger.info("💰 Trader Investment Plan:")
+                            logger.info("=" * 80)
+                            logger.info("%s", str(node_data)[:2000])
+                            logger.info("=" * 80)
+                    
+                    trace.append(chunk)
 
-            final_state = trace[-1] if trace else init_agent_state
-        else:
-            # 标准模式，不带跟踪
-            # 使用invoke方法一次性执行完整个图
-            final_state = self.graph.invoke(init_agent_state, **args)
+                final_state = trace[-1] if trace else init_agent_state
+            else:
+                # 标准模式，不带跟踪
+                # 使用invoke方法一次性执行完整个图
+                final_state = self.graph.invoke(init_agent_state, **args)
+        except Exception as e:
+            logger.error("图执行失败 (%s @ %s): %s", company_name, trade_date, e)
+            import traceback
+            logger.debug("详细错误信息:\n%s", traceback.format_exc())
+            raise
 
         # 存储当前状态用于反思
         self.curr_state = final_state

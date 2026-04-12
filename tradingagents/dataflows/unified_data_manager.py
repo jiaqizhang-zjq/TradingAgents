@@ -1,6 +1,5 @@
 import time
 import random
-import logging
 import pandas as pd
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -8,6 +7,7 @@ from datetime import datetime, timedelta
 
 from .data_cache import get_data_cache
 from tradingagents.utils.logger import get_logger
+from tradingagents.constants import MIN_STOCK_DATA_DAYS
 
 logger = get_logger(__name__)
 
@@ -190,7 +190,7 @@ class UnifiedDataManager:
                 df = df.set_index('date').sort_index()
             
             return df
-        except Exception:
+        except (ValueError, KeyError, pd.errors.ParserError):
             return None
     
     def _exponential_backoff(
@@ -279,13 +279,13 @@ class UnifiedDataManager:
                     start_dt = datetime.strptime(start_date, "%Y-%m-%d")
                     days_diff = (end_dt - start_dt).days
                     
-                    if days_diff < 200:
-                        new_start_dt = end_dt - timedelta(days=200)
+                    if days_diff < MIN_STOCK_DATA_DAYS:
+                        new_start_dt = end_dt - timedelta(days=MIN_STOCK_DATA_DAYS)
                         new_start_date = new_start_dt.strftime("%Y-%m-%d")
                         args_list[1] = new_start_date
                         processed_args = tuple(args_list)
                         logger.debug("调整日期范围: %s -> %s", start_date, new_start_date)
-                except Exception:
+                except (ValueError, TypeError):
                     pass
         
         cached_result = self.cache.get(method_name, *processed_args, **kwargs)
@@ -377,7 +377,7 @@ class UnifiedDataManager:
                         if end_dt.weekday() >= 5:
                             logger.debug("结束日期 %s 是周末，不写入缓存", end_date)
                             should_cache = False
-                    except Exception:
+                    except (ValueError, TypeError):
                         pass
                 
                 if should_cache:
