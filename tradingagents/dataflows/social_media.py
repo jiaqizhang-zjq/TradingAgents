@@ -7,6 +7,7 @@
 import json
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
+import warnings
 
 from .api_config import get_api_config
 
@@ -15,14 +16,14 @@ try:
     HAS_PRAW = True
 except ImportError:
     HAS_PRAW = False
-    print("警告: 未安装 praw，请运行: pip install praw")
+    warnings.warn("未安装 praw，请运行: pip install praw", ImportWarning, stacklevel=2)
 
 try:
     import tweepy
     HAS_TWEEPY = True
 except ImportError:
     HAS_TWEEPY = False
-    print("警告: 未安装 tweepy，请运行: pip install tweepy")
+    warnings.warn("未安装 tweepy，请运行: pip install tweepy", ImportWarning, stacklevel=2)
 
 
 class SocialMediaAPI:

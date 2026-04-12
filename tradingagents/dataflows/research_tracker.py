@@ -14,6 +14,9 @@ from enum import Enum
 
 # 导入依赖注入容器
 from tradingagents.core.container import get_container
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class ResearchOutcome(Enum):
@@ -190,7 +193,7 @@ class ResearchTracker:
             ''')
             
             conn.commit()
-            print(f"✅ Research Tracker 数据库初始化完成: {self.db_path}")
+            logger.info("✅ Research Tracker 数据库初始化完成: %s", self.db_path)
     
     # ==================== 记录管理 ====================
     
@@ -262,11 +265,11 @@ class ResearchTracker:
                     total_return  # 总收益
                 ))
                 
-                print(f"✅ 记录研究预测: {researcher_name} -> {symbol} {prediction}")
+                logger.info("✅ 记录研究预测: %s -> %s %s", researcher_name, symbol, prediction)
                 return True
                 
         except Exception as e:
-            print(f"❌ 记录研究预测失败: {e}")
+            logger.error("❌ 记录研究预测失败: %s", e)
             return False
     
     def verify_prediction(
@@ -302,7 +305,7 @@ class ResearchTracker:
                 
                 row = cursor.fetchone()
                 if not row:
-                    print(f"❌ 未找到预测记录: {researcher_name} {symbol} {trade_date}")
+                    logger.warning("❌ 未找到预测记录: %s %s %s", researcher_name, symbol, trade_date)
                     return False
                 
                 prediction = row['prediction']
@@ -329,11 +332,11 @@ class ResearchTracker:
                     WHERE researcher_name = ? AND symbol = ? AND trade_date = ?
                 ''', (actual_return, verified_date, researcher_name, symbol, trade_date))
                 
-                print(f"✅ 验证预测: {researcher_name} {symbol} -> {outcome} (收益: {actual_return:.2%})")
+                logger.info("✅ 验证预测: %s %s -> %s (收益: %.2f%%)", researcher_name, symbol, outcome, actual_return * 100)
                 return True
                 
         except Exception as e:
-            print(f"❌ 验证预测失败: {e}")
+            logger.error("❌ 验证预测失败: %s", e)
             return False
     
     def _auto_judge_outcome(self, prediction: str, actual_return: float) -> str:
@@ -462,7 +465,7 @@ class ResearchTracker:
                 return stats_list
                 
         except Exception as e:
-            print(f"❌ 获取统计信息失败: {e}")
+            logger.error("❌ 获取统计信息失败: %s", e)
             return []
     
     def get_symbol_stats(
@@ -516,7 +519,7 @@ class ResearchTracker:
                 }
                 
         except Exception as e:
-            print(f"❌ 获取股票统计失败: {e}")
+            logger.error("❌ 获取股票统计失败: %s", e)
             return {}
     
     # ==================== 扩展接口 ====================
@@ -559,11 +562,11 @@ class ResearchTracker:
                     json.dumps(config or {})
                 ))
                 
-                print(f"✅ 注册研究员: {researcher_name} ({researcher_type})")
+                logger.info("✅ 注册研究员: %s (%s)", researcher_name, researcher_type)
                 return True
                 
         except Exception as e:
-            print(f"❌ 注册研究员失败: {e}")
+            logger.error("❌ 注册研究员失败: %s", e)
             return False
     
     def get_registered_researchers(
@@ -616,7 +619,7 @@ class ResearchTracker:
                 ]
                 
         except Exception as e:
-            print(f"❌ 获取研究员列表失败: {e}")
+            logger.error("❌ 获取研究员列表失败: %s", e)
             return []
     
     def batch_verify_pending_predictions(
@@ -672,7 +675,7 @@ class ResearchTracker:
                 return verified_count
                 
         except Exception as e:
-            print(f"❌ 批量验证失败: {e}")
+            logger.error("❌ 批量验证失败: %s", e)
             return 0
     
     def get_researcher_win_rate(
@@ -787,7 +790,7 @@ class ResearchTracker:
                 }
                 
         except Exception as e:
-            print(f"❌ 获取胜率失败: {e}")
+            logger.error("❌ 获取胜率失败: %s", e)
             return {
                 'win_rate': default_win_rate,
                 'total_predictions': 0,

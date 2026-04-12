@@ -81,8 +81,67 @@ API_MAX_RETRIES = 3
 
 # ==================== 分析师配置 ====================
 ANALYST_TYPES = ["market", "sentiment", "news", "fundamentals", "candlestick"]
-RESEARCHER_TYPES = ["bull", "bear"]
 RISK_ANALYST_TYPES = ["moderate", "aggressive"]
+
+# ==================== Researcher 注册表 ====================
+# 所有可用的 researcher 定义
+# key: researcher 简称（用于配置选择）
+# value: {
+#   "type": researcher_type（用于内部标识和 memory key）
+#   "display_name": 图节点显示名称
+#   "speaker_label": 在辩论中的发言标签
+#   "module": 工厂模块路径
+#   "factory": 工厂函数名
+#   "default_win_rate": 默认胜率
+# }
+RESEARCHER_REGISTRY = {
+    "bull": {
+        "type": "bull_researcher",
+        "display_name": "Bull Researcher",
+        "speaker_label": "Bull",
+        "module": "tradingagents.agents.researchers.bull_researcher",
+        "factory": "create_bull_researcher",
+        "default_win_rate": DEFAULT_BULL_WIN_RATE,
+    },
+    "bear": {
+        "type": "bear_researcher",
+        "display_name": "Bear Researcher",
+        "speaker_label": "Bear",
+        "module": "tradingagents.agents.researchers.bear_researcher",
+        "factory": "create_bear_researcher",
+        "default_win_rate": DEFAULT_BEAR_WIN_RATE,
+    },
+    "buffett": {
+        "type": "buffett_researcher",
+        "display_name": "Buffett Researcher",
+        "speaker_label": "Buffett",
+        "module": "tradingagents.agents.researchers.buffett_researcher",
+        "factory": "create_buffett_researcher",
+        "default_win_rate": DEFAULT_NEUTRAL_WIN_RATE,
+    },
+    "cathie_wood": {
+        "type": "cathie_wood_researcher",
+        "display_name": "Cathie Wood Researcher",
+        "speaker_label": "CathieWood",
+        "module": "tradingagents.agents.researchers.cathie_wood_researcher",
+        "factory": "create_cathie_wood_researcher",
+        "default_win_rate": DEFAULT_NEUTRAL_WIN_RATE,
+    },
+    "peter_lynch": {
+        "type": "peter_lynch_researcher",
+        "display_name": "Peter Lynch Researcher",
+        "speaker_label": "PeterLynch",
+        "module": "tradingagents.agents.researchers.peter_lynch_researcher",
+        "factory": "create_peter_lynch_researcher",
+        "default_win_rate": DEFAULT_NEUTRAL_WIN_RATE,
+    },
+}
+
+# 默认选中的 researcher（向后兼容原始 bull/bear 双方辩论）
+DEFAULT_SELECTED_RESEARCHERS = ["bull", "bear"]
+
+# 向后兼容旧字段名
+RESEARCHER_TYPES = list(RESEARCHER_REGISTRY.keys())
 
 # ==================== 支撑/压力位窗口 ====================
 SUPPORT_RESISTANCE_WINDOW_20 = 20

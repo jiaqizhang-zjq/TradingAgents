@@ -4,6 +4,9 @@ import re
 
 from tradingagents.dataflows.research_tracker import get_research_tracker
 from tradingagents.dataflows.config import get_config
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def create_research_manager(llm, memory):
@@ -110,12 +113,12 @@ Debate History:
         # 调试信息：打印完整prompt（由debug开关控制）
         debug_config = config.get("debug", {})
         if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
-            print("=" * 80)
-            print("DEBUG: Research Manager Prompt Before LLM Call:")
-            print("=" * 80)
-            print(f"Language: {language}")
-            print(f"Prompt: {prompt[:1000]}..." if len(prompt) > 1000 else f"Prompt: {prompt}")
-            print("=" * 80)
+            logger.debug("=" * 80)
+            logger.debug("DEBUG: Research Manager Prompt Before LLM Call:")
+            logger.debug("=" * 80)
+            logger.debug("Language: %s", language)
+            logger.debug("Prompt: %s", prompt[:1000] + "..." if len(prompt) > 1000 else prompt)
+            logger.debug("=" * 80)
         
         response = llm.invoke(prompt)
         response_content = response.content
@@ -127,10 +130,9 @@ Debate History:
         new_investment_debate_state = {
             "judge_decision": response_content,
             "history": investment_debate_state.get("history", ""),
-            "bear_history": investment_debate_state.get("bear_history", ""),
-            "bull_history": investment_debate_state.get("bull_history", ""),
+            "researcher_histories": investment_debate_state.get("researcher_histories", {}),
             "current_response": response_content,
-            "latest_speaker": investment_debate_state.get("latest_speaker", ""),  # 保留 latest_speaker
+            "latest_speaker": investment_debate_state.get("latest_speaker", ""),
             "count": investment_debate_state["count"],
             "research_manager_prediction": prediction,
             "research_manager_confidence": confidence,
@@ -200,7 +202,7 @@ Debate History:
                 }
             )
         except Exception as e:
-            print(f"⚠️ 记录Research Manager决策失败: {e}")
+            logger.warning("记录Research Manager决策失败: %s", e)
 
         return {
             "investment_debate_state": new_investment_debate_state,

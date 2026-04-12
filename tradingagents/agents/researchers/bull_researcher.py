@@ -30,6 +30,9 @@ def create_bull_researcher(llm, memory):
         system_prompts=SYSTEM_PROMPTS,
         llm=llm,
         memory=memory,
-        default_win_rate=DEFAULT_BULL_WIN_RATE
+        default_win_rate=DEFAULT_BULL_WIN_RATE,
+        stance_zh="看涨",
+        stance_en="bullish",
+        speaker_label="Bull",
     )
     return researcher.create_node()

@@ -765,9 +765,14 @@ return "Aggressive Analyst"
     # 研究辩论状态
     "investment_debate_state": {
         "history": "...",                  # 辩论历史
-        "bull_history": "...",             # 多头历史
-        "bear_history": "...",             # 空头历史
+        "researcher_histories": {          # 各 researcher 的历史（动态键）
+            "bull_researcher": "...",
+            "bear_researcher": "...",
+            "buffett_researcher": "...",
+            # ... 根据选中的 researcher 动态扩展
+        },
         "current_response": "...",         # 当前响应
+        "latest_speaker": "...",           # 最新发言者
         "judge_decision": "...",           # 法官决策
         "count": 0                         # 计数
     },

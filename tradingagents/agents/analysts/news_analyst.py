@@ -3,6 +3,9 @@ import time
 import json
 from tradingagents.agents.utils.agent_utils import get_news, get_global_news
 from tradingagents.dataflows.config import get_config
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def create_news_analyst(llm):
@@ -74,13 +77,13 @@ def create_news_analyst(llm):
         # 调试信息：打印完整prompt（由debug开关控制）
         debug_config = config.get("debug", {})
         if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
-            print("=" * 80)
-            print("DEBUG: News Analyst Prompt Before LLM Call:")
-            print("=" * 80)
-            print(f"Language: {language}")
-            print(f"System Message: {system_message[:500]}..." if len(system_message) > 500 else f"System Message: {system_message}")
-            print(f"Assistant Prompt: {assistant_prompt[:500]}..." if len(assistant_prompt) > 500 else f"Assistant Prompt: {assistant_prompt}")
-            print("=" * 80)
+            logger.debug("=" * 80)
+            logger.debug("DEBUG: News Analyst Prompt Before LLM Call:")
+            logger.debug("=" * 80)
+            logger.debug("Language: %s", language)
+            logger.debug("System Message: %s", system_message[:500] + "..." if len(system_message) > 500 else system_message)
+            logger.debug("Assistant Prompt: %s", assistant_prompt[:500] + "..." if len(assistant_prompt) > 500 else assistant_prompt)
+            logger.debug("=" * 80)
         
         result = chain.invoke(state["messages"])
 

@@ -2,6 +2,10 @@ from typing import Annotated
 import pandas as pd
 import io
 
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 # Import from vendor-specific modules
 from .y_finance import (
     get_YFin_data_online,
@@ -172,8 +176,8 @@ def _local_get_all_indicators(symbol, curr_date, look_back_days, stock_data='', 
     import traceback
     
     try:
-        print(f"[_local_get_all_indicators] symbol={symbol}, curr_date={curr_date}, look_back_days={look_back_days}")
-        print(f"[_local_get_all_indicators] stock_data length={len(stock_data) if stock_data else 0}")
+        logger.debug("_local_get_all_indicators: symbol=%s, curr_date=%s, look_back_days=%s", symbol, curr_date, look_back_days)
+        logger.debug("_local_get_all_indicators: stock_data length=%d", len(stock_data) if stock_data else 0)
         
         # 1. 确保有股票数据
         stock_data = _ensure_stock_data(symbol, curr_date, look_back_days, stock_data)
@@ -182,30 +186,30 @@ def _local_get_all_indicators(symbol, curr_date, look_back_days, stock_data='', 
         df = _parse_stock_data(stock_data)
         if df is None:
             raise DataFetchError("Failed to parse stock data")
-        print(f"[_local_get_all_indicators] df parsed, shape={df.shape}")
+        logger.debug("_local_get_all_indicators: df parsed, shape=%s", df.shape)
         
         # 3. 准备干净的 DataFrame
         df_clean = _prepare_clean_dataframe(df)
-        print(f"[_local_get_all_indicators] df_clean shape={df_clean.shape}")
+        logger.debug("_local_get_all_indicators: df_clean shape=%s", df_clean.shape)
         
         # 4. 收集所有需要的指标
         all_needed_indicators = _collect_all_needed_indicators()
-        print(f"[_local_get_all_indicators] calculating {len(all_needed_indicators)} unique indicators...")
+        logger.debug("_local_get_all_indicators: calculating %d unique indicators...", len(all_needed_indicators))
         
         # 5. 批量计算指标
         lazy_calc = get_lazy_calculator(df_clean)
         df_with_indicators = lazy_calc.get_indicators(list(all_needed_indicators))
         
         # 6. 构建分组结果
-        print(f"[_local_get_all_indicators] building result groups...")
+        logger.debug("_local_get_all_indicators: building result groups...")
         result = _build_grouped_results(df_with_indicators, look_back_days)
         
-        print(f"[_local_get_all_indicators] done, result has {len(result)} groups")
+        logger.debug("_local_get_all_indicators: done, result has %d groups", len(result))
         return result
         
     except Exception as e:
-        print(f"[_local_get_all_indicators] ERROR: {e}")
-        print(f"[_local_get_all_indicators] Traceback:\n{traceback.format_exc()}")
+        logger.error("_local_get_all_indicators ERROR: %s", e)
+        logger.debug("_local_get_all_indicators Traceback:\n%s", traceback.format_exc())
         raise DataFetchError(f"_local_get_all_indicators failed: {e}")
 
 def _local_get_candlestick_patterns(symbol, start_date, end_date, *args, **kwargs):
@@ -292,23 +296,23 @@ def _local_get_chart_patterns(symbol, start_date, end_date, lookback=60, *args, 
     import traceback
     
     try:
-        print(f"[_local_get_chart_patterns] symbol={symbol}, start_date={start_date}, end_date={end_date}")
+        logger.debug("_local_get_chart_patterns: symbol=%s, start_date=%s, end_date=%s", symbol, start_date, end_date)
         
         stock_data = kwargs.get('stock_data', '')
         manager = get_data_manager()
         
         if not stock_data:
-            print(f"[_local_get_chart_patterns] fetching stock data...")
+            logger.debug("_local_get_chart_patterns: fetching stock data...")
             stock_data = manager.fetch("get_stock_data", symbol, start_date, end_date)
         
-        print(f"[_local_get_chart_patterns] parsing stock data...")
+        logger.debug("_local_get_chart_patterns: parsing stock data...")
         df = _parse_stock_data(stock_data)
         
         if df is None:
             raise DataFetchError("Failed to parse stock data")
         
-        print(f"[_local_get_chart_patterns] df parsed, shape={df.shape}")
-        print(f"[_local_get_chart_patterns] df columns={list(df.columns)}")
+        logger.debug("_local_get_chart_patterns: df parsed, shape=%s", df.shape)
+        logger.debug("_local_get_chart_patterns: df columns=%s", list(df.columns))
         
         df.reset_index(inplace=True)
         
@@ -322,9 +326,9 @@ def _local_get_chart_patterns(symbol, start_date, end_date, lookback=60, *args, 
             'Volume': 'volume'
         })[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
         
-        print(f"[_local_get_chart_patterns] calling identify_all_patterns...")
+        logger.debug("_local_get_chart_patterns: calling identify_all_patterns...")
         patterns = ChartPatterns.identify_all_patterns(df_clean, lookback)
-        print(f"[_local_get_chart_patterns] identify_all_patterns done")
+        logger.debug("_local_get_chart_patterns: identify_all_patterns done")
         
         result_lines = [
             f"# Chart Patterns for {symbol}",
@@ -352,8 +356,8 @@ def _local_get_chart_patterns(symbol, start_date, end_date, lookback=60, *args, 
         
         return "\n".join(result_lines)
     except Exception as e:
-        print(f"[_local_get_chart_patterns] ERROR: {e}")
-        print(f"[_local_get_chart_patterns] Traceback:\n{traceback.format_exc()}")
+        logger.error("_local_get_chart_patterns ERROR: %s", e)
+        logger.debug("_local_get_chart_patterns Traceback:\n%s", traceback.format_exc())
         raise DataFetchError(f"_local_get_chart_patterns failed: {e}")
 
 # ========== 数据管理器初始化 ==========

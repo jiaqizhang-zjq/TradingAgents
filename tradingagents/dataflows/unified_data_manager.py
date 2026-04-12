@@ -1,11 +1,15 @@
 import time
 import random
+import logging
 import pandas as pd
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 
 from .data_cache import get_data_cache
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 # 从模型模块导入（v2.0 模块化拆分）
 from .vendor_models import (
@@ -260,8 +264,8 @@ class UnifiedDataManager:
         """
         from datetime import datetime, timedelta
         
-        print(f"[UnifiedDataManager] 调用方法: {method_name}")
-        print(f"[UnifiedDataManager] 参数: args={args}, kwargs={kwargs}")
+        logger.debug("调用方法: %s", method_name)
+        logger.debug("参数: args=%s, kwargs=%s", args, kwargs)
 
         self.global_stats.total_calls += 1
         
@@ -280,13 +284,13 @@ class UnifiedDataManager:
                         new_start_date = new_start_dt.strftime("%Y-%m-%d")
                         args_list[1] = new_start_date
                         processed_args = tuple(args_list)
-                        print(f"[UnifiedDataManager] 调整日期范围: {start_date} -> {new_start_date}")
+                        logger.debug("调整日期范围: %s -> %s", start_date, new_start_date)
                 except Exception:
                     pass
         
         cached_result = self.cache.get(method_name, *processed_args, **kwargs)
         if cached_result is not None:
-            print(f"[UnifiedDataManager] 使用缓存数据")
+            logger.debug("使用缓存数据")
             self.global_stats.successful_calls += 1
             # 按日期逆序排列输出
             cached_lines = str(cached_result).split('\n')
@@ -295,11 +299,11 @@ class UnifiedDataManager:
                 data_lines = cached_lines[1:]
                 data_lines.reverse()
                 sorted_data = header + '\n' + '\n'.join(data_lines[:20])
-                print(f"[UnifiedDataManager] 缓存数据输出 (最新20条):\n{sorted_data}")
+                logger.debug("缓存数据输出 (最新20条):\n%s", sorted_data)
             else:
-                print(f"[UnifiedDataManager] 缓存数据输出:\n{str(cached_result)[:500]}")
+                logger.debug("缓存数据输出:\n%s", str(cached_result)[:500])
             if len(str(cached_result)) > 500:
-                print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(cached_result))})")
+                logger.debug("... (截断，总长度: %d)", len(str(cached_result)))
             
             # 记录工具调用信息（缓存数据）
             try:
@@ -320,14 +324,14 @@ class UnifiedDataManager:
                     input_params=input_params,
                     result=str(cached_result)
                 )
-                print(f"[UnifiedDataManager] 缓存工具调用已记录到数据库")
+                logger.debug("缓存工具调用已记录到数据库")
             except Exception as e:
-                print(f"[UnifiedDataManager] 记录缓存工具调用失败: {e}")
+                logger.warning("记录缓存工具调用失败: %s", e)
             
             return cached_result
         
         vendors = self._get_sorted_vendors(method_name)
-        print(f"[UnifiedDataManager] 可用数据源: {vendors}")
+        logger.debug("可用数据源: %s", vendors)
         
         if not vendors:
             raise DataFetchError(f"No vendors available for method '{method_name}'")
@@ -335,16 +339,16 @@ class UnifiedDataManager:
         last_error = None
         
         for vendor in vendors:
-            print(f"[UnifiedDataManager] 尝试使用数据源: {vendor}")
+            logger.debug("尝试使用数据源: %s", vendor)
             config = self.vendor_configs.get(vendor, VendorConfig(name=vendor))
             stats = self.vendor_stats.get(vendor, VendorStats(name=vendor))
             
             if not config.enabled:
-                print(f"[UnifiedDataManager] 数据源 {vendor} 已禁用")
+                logger.debug("数据源 %s 已禁用", vendor)
                 continue
             
             if vendor not in self.method_implementations.get(method_name, {}):
-                print(f"[UnifiedDataManager] 数据源 {vendor} 不支持方法 {method_name}")
+                logger.debug("数据源 %s 不支持方法 %s", vendor, method_name)
                 continue
             
             impl = self.method_implementations[method_name][vendor]
@@ -371,7 +375,7 @@ class UnifiedDataManager:
                         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
                         # 简单判断：周末不缓存 (5=周六, 6=周日)
                         if end_dt.weekday() >= 5:
-                            print(f"[UnifiedDataManager] 结束日期 {end_date} 是周末，不写入缓存")
+                            logger.debug("结束日期 %s 是周末，不写入缓存", end_date)
                             should_cache = False
                     except Exception:
                         pass
@@ -386,12 +390,12 @@ class UnifiedDataManager:
                     data_lines = result_lines[1:]
                     data_lines.reverse()
                     sorted_result = header + '\n' + '\n'.join(data_lines[:20])
-                    print(f"[UnifiedDataManager] 数据输出 (最新20条):\n{sorted_result}")
+                    logger.debug("数据输出 (最新20条):\n%s", sorted_result)
                 else:
-                    print(f"[UnifiedDataManager] 数据输出 (前500字符):\n{str(result)[:500]}")
+                    logger.debug("数据输出 (前500字符):\n%s", str(result)[:500])
                 
                 if len(str(result)) > 500:
-                    print(f"[UnifiedDataManager] ... (截断，总长度: {len(str(result))})")
+                    logger.debug("... (截断，总长度: %d)", len(str(result)))
                 
                 # 记录工具调用信息
                 try:
@@ -412,18 +416,18 @@ class UnifiedDataManager:
                         input_params=input_params,
                         result=str(result)
                     )
-                    print(f"[UnifiedDataManager] 工具调用已记录到数据库")
+                    logger.debug("工具调用已记录到数据库")
                 except Exception as e:
-                    print(f"[UnifiedDataManager] 记录工具调用失败: {e}")
+                    logger.warning("记录工具调用失败: %s", e)
                 
                 return result
             else:
-                print(f"[UnifiedDataManager] ❌ 数据源 {vendor} 失败")
+                logger.warning("数据源 %s 失败", vendor)
             
             last_error = result
         
         self.global_stats.failed_calls += 1
-        print(f"[UnifiedDataManager] ❌ 所有数据源都失败")
+        logger.error("所有数据源都失败, method=%s", method_name)
         raise DataFetchError(
             f"All vendors failed for method '{method_name}'. Last error: {last_error}")
     

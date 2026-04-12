@@ -8,6 +8,10 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class FetchStatistics:
@@ -153,19 +157,19 @@ class StatisticsCollector:
     
     def print_summary(self):
         """打印统计摘要"""
-        print("\n========== Data Fetch Statistics ==========")
+        logger.info("========== Data Fetch Statistics ==========")
         
         for stats in self._stats.values():
-            print(f"\n{stats.vendor}::{stats.method}")
-            print(f"  Total: {stats.total_count}")
-            print(f"  Success: {stats.success_count} ({stats.success_rate:.1%})")
-            print(f"  Failure: {stats.failure_count}")
-            print(f"  Avg Time: {stats.average_time_seconds:.3f}s")
+            logger.info("%s::%s", stats.vendor, stats.method)
+            logger.info("  Total: %d", stats.total_count)
+            logger.info("  Success: %d (%.1f%%)", stats.success_count, stats.success_rate * 100)
+            logger.info("  Failure: %d", stats.failure_count)
+            logger.info("  Avg Time: %.3fs", stats.average_time_seconds)
             
             if stats.last_error:
-                print(f"  Last Error: {stats.last_error}")
+                logger.info("  Last Error: %s", stats.last_error)
         
-        print("\n" + "=" * 44)
+        logger.info("=" * 44)
 
 
 # 全局统计收集器实例

@@ -30,6 +30,9 @@ def create_bear_researcher(llm, memory):
         system_prompts=SYSTEM_PROMPTS,
         llm=llm,
         memory=memory,
-        default_win_rate=DEFAULT_BEAR_WIN_RATE
+        default_win_rate=DEFAULT_BEAR_WIN_RATE,
+        stance_zh="看跌",
+        stance_en="bearish",
+        speaker_label="Bear",
     )
     return researcher.create_node()

@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from tradingagents.utils.validators import validate_symbol, validate_date
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_price_on_date(symbol: str, target_date: str) -> Optional[float]:
@@ -31,16 +34,16 @@ def get_price_on_date(symbol: str, target_date: str) -> Optional[float]:
         start_date = target_date
         end_date = target_date
         
-        print(f"Fetching price for {symbol} on {target_date}")
+        logger.debug("Fetching price for %s on %s", symbol, target_date)
         
         manager = get_data_manager()
         stock_data = manager.fetch("get_stock_data", symbol, start_date, end_date)
         
         if not stock_data or stock_data == "N/A" or (isinstance(stock_data, str) and stock_data.strip() == ""):
-            print(f"No data returned for {symbol}")
+            logger.debug("No data returned for %s", symbol)
             return None
         
-        print(f"Data type: {type(stock_data)}, length: {len(stock_data) if isinstance(stock_data, str) else 'N/A'}")
+        logger.debug("Data type: %s, length: %s", type(stock_data), len(stock_data) if isinstance(stock_data, str) else 'N/A')
         
         # 尝试解析JSON格式
         import json
@@ -75,11 +78,11 @@ def get_price_on_date(symbol: str, target_date: str) -> Optional[float]:
         except (ValueError, TypeError):
             pass
             
-        print(f"无法解析 {symbol} 的价格数据")
+        logger.warning("无法解析 %s 的价格数据", symbol)
         return None
         
     except Exception as e:
-        print(f"获取 {symbol} 在 {target_date} 的价格失败: {e}")
+        logger.error("获取 %s 在 %s 的价格失败: %s", symbol, target_date, e)
         return None
 
 

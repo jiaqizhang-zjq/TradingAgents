@@ -4,7 +4,8 @@ from .constants import (
     MAX_RISK_DISCUSS_ROUNDS,
     MAX_RECUR_LIMIT,
     DEFAULT_OUTPUT_LANGUAGE,
-    CACHE_TTL_HOURS
+    CACHE_TTL_HOURS,
+    DEFAULT_SELECTED_RESEARCHERS,
 )
 
 DEFAULT_CONFIG = {
@@ -26,6 +27,11 @@ DEFAULT_CONFIG = {
     "max_debate_rounds": MAX_DEBATE_ROUNDS,
     "max_risk_discuss_rounds": MAX_RISK_DISCUSS_ROUNDS,
     "max_recur_limit": MAX_RECUR_LIMIT,
+    # Researcher selection - 选择参与辩论的研究员
+    # 可选值: "bull", "bear", "buffett", "cathie_wood", "peter_lynch"
+    # 默认: ["bull", "bear"]（经典多空辩论）
+    # 示例: ["bull", "bear", "buffett"] （加入巴菲特视角的三方辩论）
+    "selected_researchers": DEFAULT_SELECTED_RESEARCHERS,
     # Language configuration - 输出语言设置
     # Options: "zh" (中文), "en" (English), "auto" (自动检测)
     "output_language": DEFAULT_OUTPUT_LANGUAGE,

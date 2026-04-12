@@ -42,7 +42,7 @@
 ```
 ✓ 测试状态创建成功
   - 包含字段: ['history', 'current_response', 'latest_speaker', 'count', 
-                'bull_history', 'bear_history', 'judge_decision']
+                'researcher_histories', 'judge_decision']
 ```
 
 **结论**: 状态结构完整，包含今天修复的 `latest_speaker` 字段。

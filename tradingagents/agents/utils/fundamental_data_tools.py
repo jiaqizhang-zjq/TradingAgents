@@ -2,6 +2,9 @@ from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import get_data_manager
 from tradingagents.agents.utils.logging_utils import log_tool_call
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @tool
@@ -18,7 +21,7 @@ def get_fundamentals(
     Returns:
         str: A formatted report containing comprehensive fundamental data
     """
-    print(f"\n🔧 Calling get_fundamentals for {ticker}, date={curr_date}...")
+    logger.debug("🔧 Calling get_fundamentals for %s, date=%s", ticker, curr_date)
     
     manager = get_data_manager()
     
@@ -50,7 +53,7 @@ def get_balance_sheet(
     Returns:
         str: A formatted report containing balance sheet data
     """
-    print(f"\n🔧 Calling get_balance_sheet for {ticker}, freq={freq}...")
+    logger.debug("🔧 Calling get_balance_sheet for %s, freq=%s", ticker, freq)
     
     manager = get_data_manager()
     
@@ -82,7 +85,7 @@ def get_cashflow(
     Returns:
         str: A formatted report containing cash flow statement data
     """
-    print(f"\n🔧 Calling get_cashflow for {ticker}, freq={freq}...")
+    logger.debug("🔧 Calling get_cashflow for %s, freq=%s", ticker, freq)
     
     manager = get_data_manager()
     
@@ -114,7 +117,7 @@ def get_income_statement(
     Returns:
         str: A formatted report containing income statement data
     """
-    print(f"\n🔧 Calling get_income_statement for {ticker}, freq={freq}...")
+    logger.debug("🔧 Calling get_income_statement for %s, freq=%s", ticker, freq)
     
     manager = get_data_manager()
     

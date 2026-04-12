@@ -13,6 +13,9 @@ from contextlib import contextmanager
 
 # 导入依赖注入容器
 from tradingagents.core.container import get_container
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -128,7 +131,7 @@ class TradingDatabase:
             ''')
             
             conn.commit()
-            print(f"✅ 数据库初始化完成: {self.db_path}")
+            logger.info("✅ 数据库初始化完成: %s", self.db_path)
     
     def save_analysis_report(self, report: AnalysisReport) -> bool:
         """
@@ -168,11 +171,11 @@ class TradingDatabase:
                     report.metadata
                 ))
                 
-                print(f"✅ 报告已保存: {report.symbol} @ {report.trade_date}")
+                logger.info("✅ 报告已保存: %s @ %s", report.symbol, report.trade_date)
                 return True
                 
         except Exception as e:
-            print(f"❌ 保存报告失败: {e}")
+            logger.error("❌ 保存报告失败: %s", e)
             return False
     
     def save_tool_call(self, symbol: str, trade_date: str, 
@@ -215,7 +218,7 @@ class TradingDatabase:
                 return True
                 
         except Exception as e:
-            print(f"❌ 保存工具调用失败: {e}")
+            logger.error("❌ 保存工具调用失败: %s", e)
             return False
     
     def get_report(self, symbol: str, trade_date: str) -> Optional[AnalysisReport]:
@@ -260,7 +263,7 @@ class TradingDatabase:
                 return None
                 
         except Exception as e:
-            print(f"❌ 获取报告失败: {e}")
+            logger.error("❌ 获取报告失败: %s", e)
             return None
     
     def get_tool_calls(self, symbol: str, trade_date: str) -> List[Dict]:
@@ -298,7 +301,7 @@ class TradingDatabase:
                 ]
                 
         except Exception as e:
-            print(f"❌ 获取工具调用记录失败: {e}")
+            logger.error("❌ 获取工具调用记录失败: %s", e)
             return []
     
     def list_reports(self, symbol: Optional[str] = None, 
@@ -349,7 +352,7 @@ class TradingDatabase:
                 ]
                 
         except Exception as e:
-            print(f"❌ 列出报告失败: {e}")
+            logger.error("❌ 列出报告失败: %s", e)
             return []
     
     def export_report_to_markdown(self, symbol: str, trade_date: str, 

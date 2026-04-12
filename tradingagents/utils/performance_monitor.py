@@ -9,6 +9,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import threading
 
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class PerformanceMetric:
@@ -174,42 +178,42 @@ class PerformanceMonitor:
         """
         summary = self.get_summary()
         
-        print("\n" + "=" * 80)
-        print("性能监控报告")
-        print("=" * 80)
-        print(f"监控函数数: {summary['total_functions']}")
-        print(f"总调用次数: {summary['total_calls']}")
-        print(f"总执行时间: {summary['total_time']:.2f}s")
-        print(f"总错误数: {summary['total_errors']}")
+        logger.info("=" * 80)
+        logger.info("性能监控报告")
+        logger.info("=" * 80)
+        logger.info("监控函数数: %d", summary['total_functions'])
+        logger.info("总调用次数: %d", summary['total_calls'])
+        logger.info("总执行时间: %.2fs", summary['total_time'])
+        logger.info("总错误数: %d", summary['total_errors'])
         
-        print("\n" + "-" * 80)
-        print(f"前{top_n}个最耗时的函数:")
-        print("-" * 80)
-        print(f"{'函数名':<40} {'调用次数':<10} {'平均时间':<15} {'总时间':<10}")
-        print("-" * 80)
+        logger.info("-" * 80)
+        logger.info("前%d个最耗时的函数:", top_n)
+        logger.info("-" * 80)
+        logger.info("%-40s %-10s %-15s %-10s", "函数名", "调用次数", "平均时间", "总时间")
+        logger.info("-" * 80)
         
         for i, (name, data) in enumerate(list(summary['functions'].items())[:top_n], 1):
-            print(f"{name:<40} {data['calls']:<10} {data['avg_time']:<15} {data['total_time']:<10}")
+            logger.info("%-40s %-10s %-15s %-10s", name, data['calls'], data['avg_time'], data['total_time'])
         
         # 显示最慢的调用
         slowest = self.get_slowest_calls(5)
         if slowest:
-            print("\n" + "-" * 80)
-            print("最慢的5次调用:")
-            print("-" * 80)
+            logger.info("-" * 80)
+            logger.info("最慢的5次调用:")
+            logger.info("-" * 80)
             for i, log in enumerate(slowest, 1):
-                print(f"{i}. {log['function']}: {log['duration_ms']:.2f}ms ({log['timestamp']})")
+                logger.info("%d. %s: %.2fms (%s)", i, log['function'], log['duration_ms'], log['timestamp'])
         
         # 显示最近的错误
         errors = self.get_recent_errors(5)
         if errors:
-            print("\n" + "-" * 80)
-            print("最近的5个错误:")
-            print("-" * 80)
+            logger.info("-" * 80)
+            logger.info("最近的5个错误:")
+            logger.info("-" * 80)
             for i, log in enumerate(errors, 1):
-                print(f"{i}. {log['function']}: {log['error']} ({log['timestamp']})")
+                logger.info("%d. %s: %s (%s)", i, log['function'], log['error'], log['timestamp'])
         
-        print("=" * 80 + "\n")
+        logger.info("=" * 80)
 
 
 # 全局监控器实例

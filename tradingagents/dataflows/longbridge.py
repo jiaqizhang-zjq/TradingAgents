@@ -16,6 +16,7 @@ import json
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
+import warnings
 import pandas as pd
 from io import StringIO
 
@@ -28,7 +29,7 @@ try:
     HAS_LONGBRIDGE = True
 except ImportError:
     HAS_LONGBRIDGE = False
-    print("警告: 未安装 longbridge SDK，请运行: pip install longbridge")
+    warnings.warn("未安装 longbridge SDK，请运行: pip install longbridge", ImportWarning, stacklevel=2)
 
 
 class LongbridgeAPI:

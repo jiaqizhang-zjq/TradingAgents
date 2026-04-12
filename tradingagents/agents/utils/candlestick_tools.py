@@ -2,6 +2,9 @@ from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import get_data_manager
 from tradingagents.agents.utils.logging_utils import log_tool_call
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @tool
@@ -29,7 +32,7 @@ def get_candlestick_patterns(
     Returns:
         str: A formatted dataframe containing the candlestick patterns for the specified ticker symbol.
     """
-    print(f"\n🔧 Calling get_candlestick_patterns for {symbol} ({start_date} to {end_date})...")
+    logger.debug("🔧 Calling get_candlestick_patterns for %s (%s to %s)", symbol, start_date, end_date)
     
     manager = get_data_manager()
     

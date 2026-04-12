@@ -2,6 +2,9 @@
 
 import io
 import pandas as pd
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def parse_stock_data(stock_data_str: str) -> pd.DataFrame | None:
@@ -49,9 +52,9 @@ def parse_stock_data(stock_data_str: str) -> pd.DataFrame | None:
                 
                 return df
     except Exception as e:
-        print(f"[parse_stock_data] Error: {e}")
+        logger.error("[parse_stock_data] Error: %s", e)
         import traceback
-        print(f"[parse_stock_data] Traceback:\n{traceback.format_exc()}")
+        logger.error("[parse_stock_data] Traceback:\n%s", traceback.format_exc())
         pass
     return None
 

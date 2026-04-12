@@ -1,5 +1,9 @@
 from datetime import datetime
 
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 def log_tool_call(tool_name: str, vendor_used: str, result: str):
     """记录工具调用信息"""
@@ -16,4 +20,4 @@ def log_tool_call(tool_name: str, vendor_used: str, result: str):
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(log_entry)
     
-    print(f"\n🔧 [TOOL CALL] {tool_name} (Vendor: {vendor_used})")
+    logger.debug("🔧 [TOOL CALL] %s (Vendor: %s)", tool_name, vendor_used)

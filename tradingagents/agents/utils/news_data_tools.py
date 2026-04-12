@@ -2,6 +2,9 @@ from langchain_core.tools import tool
 from typing import Annotated, List
 from tradingagents.dataflows.interface import get_data_manager
 from tradingagents.agents.utils.logging_utils import log_tool_call
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 try:
     from tradingagents.dataflows.social_media import get_stock_mentions
@@ -26,7 +29,7 @@ def get_news(
     Returns:
         str: A formatted string containing news data
     """
-    print(f"\n🔧 Calling get_news for {ticker} ({start_date} to {end_date})...")
+    logger.debug("🔧 Calling get_news for %s (%s to %s)", ticker, start_date, end_date)
     
     manager = get_data_manager()
     
@@ -58,7 +61,7 @@ def get_global_news(
     Returns:
         str: A formatted string containing global news data
     """
-    print(f"\n🔧 Calling get_global_news for date {curr_date}, look_back_days={look_back_days}...")
+    logger.debug("🔧 Calling get_global_news for date %s, look_back_days=%d", curr_date, look_back_days)
     
     manager = get_data_manager()
     
@@ -86,7 +89,7 @@ def get_insider_transactions(
     Returns:
         str: A report of insider transaction data
     """
-    print(f"\n🔧 Calling get_insider_transactions for {ticker}...")
+    logger.debug("🔧 Calling get_insider_transactions for %s", ticker)
     
     manager = get_data_manager()
     

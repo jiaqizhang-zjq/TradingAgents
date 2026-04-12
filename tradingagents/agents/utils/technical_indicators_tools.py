@@ -2,6 +2,9 @@ from langchain_core.tools import tool
 from typing import Annotated
 from tradingagents.dataflows.interface import get_data_manager
 from tradingagents.agents.utils.logging_utils import log_tool_call
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @tool
@@ -24,7 +27,7 @@ def get_indicators(
     Returns:
         str: A formatted dataframe containing the technical indicators for the specified ticker symbol and indicator.
     """
-    print(f"\n🔧 Calling get_indicators for {symbol}, indicator={indicator}, date={curr_date}...")
+    logger.debug("🔧 Calling get_indicators for %s, indicator=%s, date=%s", symbol, indicator, curr_date)
     
     manager = get_data_manager()
     
@@ -58,7 +61,7 @@ def get_all_indicators(
     Returns:
         str: A formatted string containing all technical indicator groups
     """
-    print(f"\n🔧 Calling get_all_indicators for {symbol}, date={curr_date}...")
+    logger.debug("🔧 Calling get_all_indicators for %s, date=%s", symbol, curr_date)
     
     manager = get_data_manager()
     

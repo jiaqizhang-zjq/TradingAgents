@@ -11,7 +11,7 @@
 
 import os
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 import sys
 import json
 from dotenv import load_dotenv
@@ -36,6 +36,9 @@ from tradingagents.agents.backtest_stats import (
     print_records,
     print_backtest_stats,
 )
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def _ensure_table_schema(cursor, conn):
@@ -109,11 +112,11 @@ def _backfill_buy_prices(cursor, conn, records):
         price = get_price_on_date(sym, trade_date)
         if price and price > 0:
             price_cache[(sym, trade_date)] = price
-            print(f"获取价格 {sym} @ {trade_date}: ${price:.2f}")
+            logger.info("获取价格 %s @ %s: $%.2f", sym, trade_date, price)
         else:
-            print(f"⚠️ {sym} {trade_date}: 无法获取买入价格")
+            logger.warning("%s %s: 无法获取买入价格", sym, trade_date)
 
-    print("-" * 130)
+    logger.info("-" * 130)
 
     for record in records:
         record_id, _, _, sym, trade_date, _, _, _, buy_price, initial_capital, shares, _ = record
@@ -121,7 +124,7 @@ def _backfill_buy_prices(cursor, conn, records):
         if buy_price is None or buy_price == 0:
             buy_price = price_cache.get((sym, trade_date))
             if buy_price is None or buy_price == 0:
-                print(f"⚠️ {sym} {trade_date}: 无法获取买入价格，跳过")
+                logger.warning("%s %s: 无法获取买入价格，跳过", sym, trade_date)
                 continue
 
             if initial_capital is None:
@@ -135,15 +138,15 @@ def _backfill_buy_prices(cursor, conn, records):
                 WHERE id = ?
             """, (buy_price, initial_capital, shares, record_id))
 
-            print(f"回填 {sym} {trade_date}: 买入价格 ${buy_price:.2f}, 股数 {shares:.2f}")
+            logger.info("回填 %s %s: 买入价格 $%.2f, 股数 %.2f", sym, trade_date, buy_price, shares)
 
     conn.commit()
 
 
 def _calculate_and_update_returns(cursor, conn, records, verify_date: str) -> int:
     """计算收益并更新数据库"""
-    print("\n开始计算收益...")
-    print("-" * 130)
+    logger.info("开始计算收益...")
+    logger.info("-" * 130)
 
     # 批量获取验证日期价格
     verify_prices = {}
@@ -160,7 +163,7 @@ def _calculate_and_update_returns(cursor, conn, records, verify_date: str) -> in
 
         current_price = verify_prices.get((sym, verify_date))
         if current_price is None:
-            print(f"⚠️ {sym} {verify_date}: 无法获取验证价格，跳过")
+            logger.warning("%s %s: 无法获取验证价格，跳过", sym, verify_date)
             continue
 
         actual_return = calculate_return(buy_price, current_price)
@@ -206,9 +209,8 @@ def _calculate_and_update_returns(cursor, conn, records, verify_date: str) -> in
         profit_str = f"${total_return:+.2f}" if total_return is not None else "N/A"
         shares_str = f"{shares:.2f}" if shares else "0.00"
 
-        print(f"{sym:6s} | {trade_date} | {prediction:4s} | 买入: ${buy_price:.2f} | "
-              f"股数: {shares_str:8s} | 当前: ${current_price:.2f} | "
-              f"收益率: {return_str:10s} | 总收益: {profit_str:12s} | {outcome}")
+        logger.info("%6s | %s | %4s | 买入: $%.2f | 股数: %8s | 当前: $%.2f | 收益率: %10s | 总收益: %12s | %s",
+                    sym, trade_date, prediction, buy_price, shares_str, current_price, return_str, profit_str, outcome)
 
         updated_count += 1
 
@@ -218,22 +220,26 @@ def _calculate_and_update_returns(cursor, conn, records, verify_date: str) -> in
 
 def _update_memory_system(db_path: str):
     """更新内存系统"""
-    print("\n" + "="*50)
-    print("🧠 更新内存系统...")
-    print("="*50)
+    logger.info("=" * 50)
+    logger.info("🧠 更新内存系统...")
+    logger.info("=" * 50)
 
     try:
         from tradingagents.agents.utils.memory import FinancialSituationMemory
+        from tradingagents.constants import RESEARCHER_REGISTRY
 
-        memory_names = ["bull_researcher", "bear_researcher", "trader", "research_manager", "risk_manager"]
+        # 从注册表动态获取所有 researcher type + 固定角色
+        memory_names = [info["type"] for info in RESEARCHER_REGISTRY.values()]
+        memory_names.extend(["trader", "research_manager", "risk_manager"])
+
         for name in memory_names:
             memory = FinancialSituationMemory(name, {"db_path": db_path})
             memory.learn_from_research_records()
-            print(f"✅ {name} 内存已更新")
+            logger.info("✅ %s 内存已更新", name)
     except Exception as e:
-        print(f"❌ 更新内存系统失败: {e}")
+        logger.error("更新内存系统失败: %s", e)
         import traceback
-        print(f"   错误详情: {traceback.format_exc()}")
+        logger.debug("错误详情: %s", traceback.format_exc())
 
 
 def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_PATH, debug: bool = False):
@@ -249,7 +255,7 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
     # 检查指定日期是否开盘
     if not is_market_open(symbol, target_date):
         if debug:
-            print(f"⏰ {target_date or '当前'} 非开盘时间，跳过回测")
+            logger.info("⏰ %s 非开盘时间，跳过回测", target_date or '当前')
         return
 
     if not target_date:
@@ -266,16 +272,16 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
     # 找出前一个交易日期
     last_date = _get_last_trade_date(cursor, target_date, symbol)
     if not last_date:
-        print("没有可回测的历史记录")
+        logger.info("没有可回测的历史记录")
         conn.close()
         return
 
-    print(f"回测日期: {last_date}")
-    print("-" * 130)
+    logger.info("回测日期: %s", last_date)
+    logger.info("-" * 130)
 
     # 获取待回测记录
     pending_records = _fetch_pending_records(cursor, last_date, symbol)
-    print(f"找到 {len(pending_records)} 条待回测记录 (BUY/SELL/HOLD)")
+    logger.info("找到 %d 条待回测记录 (BUY/SELL/HOLD)", len(pending_records))
 
     # 第一步：回填买入价格
     _backfill_buy_prices(cursor, conn, pending_records)
@@ -294,14 +300,14 @@ def run_backtest(symbol: str = None, target_date: str = None, db_path: str = DB_
     print_records(cursor, symbol, target_date, "回测后")
     conn.close()
 
-    print("-" * 130)
-    print(f"回测完成！更新了 {updated_count} 条记录")
+    logger.info("-" * 130)
+    logger.info("回测完成！更新了 %d 条记录", updated_count)
 
     # 更新内存系统
     _update_memory_system(db_path)
 
     # 打印统计
-    print("\n=== 回测统计 ===")
+    logger.info("=== 回测统计 ===")
     print_backtest_stats(db_path)
 
 

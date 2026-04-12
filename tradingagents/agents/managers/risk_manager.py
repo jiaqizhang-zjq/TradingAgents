@@ -2,6 +2,9 @@ import time
 import json
 import re
 from tradingagents.dataflows.config import get_config
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def create_risk_manager(llm, memory):
@@ -79,12 +82,12 @@ Focus on actionable insights and continuous improvement. Build on past lessons, 
         # 调试信息：打印完整prompt（由debug开关控制）
         debug_config = config.get("debug", {})
         if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
-            print("=" * 80)
-            print("DEBUG: Risk Manager Prompt Before LLM Call:")
-            print("=" * 80)
-            print(f"Language: {language}")
-            print(f"Prompt: {prompt[:1000]}..." if len(prompt) > 1000 else f"Prompt: {prompt}")
-            print("=" * 80)
+            logger.debug("=" * 80)
+            logger.debug("DEBUG: Risk Manager Prompt Before LLM Call:")
+            logger.debug("=" * 80)
+            logger.debug("Language: %s", language)
+            logger.debug("Prompt: %s", prompt[:1000] + "..." if len(prompt) > 1000 else prompt)
+            logger.debug("=" * 80)
         
         response = llm.invoke(prompt)
         response_content = response.content

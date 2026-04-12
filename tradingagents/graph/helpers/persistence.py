@@ -15,6 +15,9 @@ from tradingagents.dataflows.database import AnalysisReport, get_db
 from tradingagents.dataflows.research_tracker import get_research_tracker
 from tradingagents.report_saver import get_report_saver
 from tradingagents.agents.utils.agent_utils import is_market_open
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class StatePersistence:
@@ -36,7 +39,7 @@ class StatePersistence:
         # 检查指定日期是否开盘
         if not is_market_open(symbol, trade_date):
             if self.debug:
-                print(f"⏰ {trade_date} 非开盘时间，跳过保存数据库")
+                logger.info("⏰ %s 非开盘时间，跳过保存数据库", trade_date)
             return
         
         try:
@@ -66,13 +69,13 @@ class StatePersistence:
             success = db.save_analysis_report(report)
             
             if success:
-                print(f"✅ 分析结果已保存到数据库: {symbol} @ {trade_date}")
+                logger.info("✅ 分析结果已保存到数据库: %s @ %s", symbol, trade_date)
                 self._save_to_files(final_state)
             else:
-                print(f"❌ 保存到数据库失败")
+                logger.error("❌ 保存到数据库失败")
                 
         except Exception as e:
-            print(f"❌ 数据库保存错误: {e}")
+            logger.error("❌ 数据库保存错误: %s", e)
     
     def _save_to_files(self, final_state: Dict[str, Any]):
         """保存分析结果到文件"""
@@ -103,7 +106,7 @@ class StatePersistence:
             )
                 
         except Exception as e:
-            print(f"❌ 文件保存错误: {e}")
+            logger.error("❌ 文件保存错误: %s", e)
     
     def _record_research_predictions(self, final_state: Dict[str, Any]):
         """记录研究员预测（用于胜率追踪）"""
@@ -113,7 +116,7 @@ class StatePersistence:
         # 检查指定日期是否开盘
         if not is_market_open(symbol, trade_date):
             if self.debug:
-                print(f"⏰ {trade_date} 非开盘时间，跳过记录预测")
+                logger.info("⏰ %s 非开盘时间，跳过记录预测", trade_date)
             return
         
         try:
@@ -128,40 +131,28 @@ class StatePersistence:
             self._record_risk_analysts(tracker, symbol, trade_date, risk_debate)
             self._record_trader(tracker, symbol, trade_date, final_state)
             
-            print(f"✅ 研究员预测已记录到胜率追踪器")
+            logger.info("✅ 研究员预测已记录到胜率追踪器")
             
         except Exception as e:
-            print(f"❌ 记录研究员预测失败: {e}")
+            logger.error("❌ 记录研究员预测失败: %s", e)
     
     def _record_bull_bear(self, tracker, symbol: str, trade_date: str, invest_debate: Dict):
-        """记录多空研究员"""
-        # Bull
-        bull_prediction = invest_debate.get("bull_prediction", "HOLD")
-        bull_confidence = invest_debate.get("bull_confidence", 0.8)
-        if bull_prediction:
-            tracker.record_research(
-                researcher_name="bull_researcher",
-                researcher_type="bull",
-                symbol=symbol,
-                trade_date=trade_date,
-                prediction=bull_prediction,
-                confidence=bull_confidence,
-                reasoning=invest_debate.get("bull_history", "")
-            )
+        """记录所有 researcher（动态遍历 researcher_histories）"""
+        researcher_histories = invest_debate.get("researcher_histories", {})
         
-        # Bear
-        bear_prediction = invest_debate.get("bear_prediction", "HOLD")
-        bear_confidence = invest_debate.get("bear_confidence", 0.8)
-        if bear_prediction:
-            tracker.record_research(
-                researcher_name="bear_researcher",
-                researcher_type="bear",
-                symbol=symbol,
-                trade_date=trade_date,
-                prediction=bear_prediction,
-                confidence=bear_confidence,
-                reasoning=invest_debate.get("bear_history", "")
-            )
+        for researcher_type, history in researcher_histories.items():
+            prediction = invest_debate.get(f"{researcher_type}_prediction", "HOLD")
+            confidence = invest_debate.get(f"{researcher_type}_confidence", 0.8)
+            if prediction:
+                tracker.record_research(
+                    researcher_name=researcher_type,
+                    researcher_type=researcher_type,
+                    symbol=symbol,
+                    trade_date=trade_date,
+                    prediction=prediction,
+                    confidence=confidence,
+                    reasoning=history
+                )
         
         # Research Manager
         manager_prediction = invest_debate.get("research_manager_prediction", "HOLD")

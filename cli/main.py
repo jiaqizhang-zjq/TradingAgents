@@ -29,8 +29,20 @@ from cli.models import AnalystType
 from cli.utils import *
 from cli.announcements import fetch_announcements, display_announcements
 from cli.stats_handler import StatsCallbackHandler
+from tradingagents.constants import RESEARCHER_REGISTRY, DEFAULT_SELECTED_RESEARCHERS
 
 console = Console()
+
+
+def _get_research_team_agents(selected_researchers=None):
+    """从 RESEARCHER_REGISTRY 动态构建 Research Team 成员列表。"""
+    researchers = selected_researchers or DEFAULT_SELECTED_RESEARCHERS
+    team = []
+    for key in researchers:
+        if key in RESEARCHER_REGISTRY:
+            team.append(RESEARCHER_REGISTRY[key]["display_name"])
+    team.append("Research Manager")
+    return team
 
 app = typer.Typer(
     name="TradingAgents",
@@ -43,7 +55,7 @@ app = typer.Typer(
 class MessageBuffer:
     # Fixed teams that always run (not user-selectable)
     FIXED_AGENTS = {
-        "Research Team": ["Bull Researcher", "Bear Researcher", "Research Manager"],
+        "Research Team": _get_research_team_agents(),
         "Trading Team": ["Trader"],
         "Risk Management": ["Aggressive Analyst", "Neutral Analyst", "Conservative Analyst"],
         "Portfolio Management": ["Portfolio Manager"],
@@ -287,7 +299,7 @@ def update_display(layout, spinner_text=None, stats_handler=None, start_time=Non
             "News Analyst",
             "Fundamentals Analyst",
         ],
-        "Research Team": ["Bull Researcher", "Bear Researcher", "Research Manager"],
+        "Research Team": _get_research_team_agents(),
         "Trading Team": ["Trader"],
         "Risk Management": ["Aggressive Analyst", "Neutral Analyst", "Conservative Analyst"],
         "Portfolio Management": ["Portfolio Manager"],
@@ -646,14 +658,15 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
         research_dir = save_path / "2_research"
         debate = final_state["investment_debate_state"]
         research_parts = []
-        if debate.get("bull_history"):
-            research_dir.mkdir(exist_ok=True)
-            (research_dir / "bull.md").write_text(debate["bull_history"])
-            research_parts.append(("Bull Researcher", debate["bull_history"]))
-        if debate.get("bear_history"):
-            research_dir.mkdir(exist_ok=True)
-            (research_dir / "bear.md").write_text(debate["bear_history"])
-            research_parts.append(("Bear Researcher", debate["bear_history"]))
+        # 动态遍历所有 researcher 的历史记录
+        researcher_histories = debate.get("researcher_histories", {})
+        for rtype, hist in researcher_histories.items():
+            if hist and hist.strip():
+                research_dir.mkdir(exist_ok=True)
+                safe_name = rtype.replace("_researcher", "")
+                (research_dir / f"{safe_name}.md").write_text(hist)
+                display_name = rtype.replace("_", " ").title()
+                research_parts.append((display_name, hist))
         if debate.get("judge_decision"):
             research_dir.mkdir(exist_ok=True)
             (research_dir / "manager.md").write_text(debate["judge_decision"])
@@ -727,10 +740,12 @@ def display_complete_report(final_state):
     if final_state.get("investment_debate_state"):
         debate = final_state["investment_debate_state"]
         research = []
-        if debate.get("bull_history"):
-            research.append(("Bull Researcher", debate["bull_history"]))
-        if debate.get("bear_history"):
-            research.append(("Bear Researcher", debate["bear_history"]))
+        # 动态遍历所有 researcher 的历史记录
+        researcher_histories = debate.get("researcher_histories", {})
+        for rtype, hist in researcher_histories.items():
+            if hist and hist.strip():
+                display_name = rtype.replace("_", " ").title()
+                research.append((display_name, hist))
         if debate.get("judge_decision"):
             research.append(("Research Manager", debate["judge_decision"]))
         if research:
@@ -766,7 +781,7 @@ def display_complete_report(final_state):
 
 def update_research_team_status(status):
     """Update status for research team members (not Trader)."""
-    research_team = ["Bull Researcher", "Bear Researcher", "Research Manager"]
+    research_team = _get_research_team_agents()
     for agent in research_team:
         message_buffer.update_agent_status(agent, status)
 
@@ -794,7 +809,7 @@ def update_analyst_statuses(message_buffer, chunk):
     - Analysts with reports = completed
     - First analyst without report = in_progress
     - Remaining analysts without reports = pending
-    - When all analysts done, set Bull Researcher to in_progress
+    - When all analysts done, set first Researcher to in_progress
     """
     selected = message_buffer.selected_analysts
     found_active = False
@@ -816,10 +831,11 @@ def update_analyst_statuses(message_buffer, chunk):
         else:
             message_buffer.update_agent_status(agent_name, "pending")
 
-    # When all analysts complete, transition research team to in_progress
+    # When all analysts complete, transition first researcher to in_progress
     if not found_active and selected:
-        if message_buffer.agent_status.get("Bull Researcher") == "pending":
-            message_buffer.update_agent_status("Bull Researcher", "in_progress")
+        first_researcher = _get_research_team_agents()[0] if _get_research_team_agents() else None
+        if first_researcher and message_buffer.agent_status.get(first_researcher) == "pending":
+            message_buffer.update_agent_status(first_researcher, "in_progress")
 
 def extract_content_string(content):
     """Extract string content from various message formats.
@@ -1049,21 +1065,22 @@ def run_analysis():
             # Research Team - Handle Investment Debate State
             if chunk.get("investment_debate_state"):
                 debate_state = chunk["investment_debate_state"]
-                bull_hist = debate_state.get("bull_history", "").strip()
-                bear_hist = debate_state.get("bear_history", "").strip()
                 judge = debate_state.get("judge_decision", "").strip()
-
+                
+                # 动态遍历所有 researcher 的历史记录
+                researcher_histories = debate_state.get("researcher_histories", {})
+                has_any_researcher = False
+                for rtype, hist in researcher_histories.items():
+                    if hist and hist.strip():
+                        has_any_researcher = True
+                        display_name = rtype.replace("_", " ").title()
+                        message_buffer.update_report_section(
+                            "investment_plan", f"### {display_name} Analysis\n{hist.strip()}"
+                        )
+                
                 # Only update status when there's actual content
-                if bull_hist or bear_hist:
+                if has_any_researcher:
                     update_research_team_status("in_progress")
-                if bull_hist:
-                    message_buffer.update_report_section(
-                        "investment_plan", f"### Bull Researcher Analysis\n{bull_hist}"
-                    )
-                if bear_hist:
-                    message_buffer.update_report_section(
-                        "investment_plan", f"### Bear Researcher Analysis\n{bear_hist}"
-                    )
                 if judge:
                     message_buffer.update_report_section(
                         "investment_plan", f"### Research Manager Decision\n{judge}"

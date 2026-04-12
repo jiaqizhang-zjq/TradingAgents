@@ -16,7 +16,8 @@ class BaseResearcher:
     """
     基础研究员类
     
-    提供 Bull 和 Bear Researcher 的通用逻辑，减少代码重复
+    提供所有研究员（Bull/Bear/Buffett/CathieWood/PeterLynch...）的通用逻辑。
+    新增研究员只需提供 system_prompts、stance 和 speaker_label。
     """
     
     def __init__(
@@ -25,23 +26,32 @@ class BaseResearcher:
         system_prompts: Dict[str, str],
         llm,
         memory,
-        default_win_rate: float = 0.50
+        default_win_rate: float = 0.50,
+        stance_zh: str = "",
+        stance_en: str = "",
+        speaker_label: str = "",
     ):
         """
         初始化基础研究员
         
         Args:
-            researcher_type: 研究员类型 ("bull_researcher" 或 "bear_researcher")
+            researcher_type: 研究员类型标识 (如 "bull_researcher", "buffett_researcher")
             system_prompts: 系统提示词字典 {"en": ..., "zh": ...}
             llm: LLM 客户端
             memory: 记忆存储
             default_win_rate: 默认胜率
+            stance_zh: 中文立场标签（如 "看涨", "巴菲特价值投资"）
+            stance_en: 英文立场标签（如 "bullish", "Buffett value investing"）
+            speaker_label: 辩论中的发言者标签（如 "Bull", "Buffett"），用于轮流发言
         """
         self.researcher_type = researcher_type
         self.system_prompts = system_prompts
         self.llm = llm
         self.memory = memory
         self.default_win_rate = default_win_rate
+        self.stance_zh = stance_zh or self._default_stance_zh()
+        self.stance_en = stance_en or self._default_stance_en()
+        self.speaker_label = speaker_label or self._default_speaker_label()
     
     def _build_win_rate_string(
         self,
@@ -89,10 +99,10 @@ class BaseResearcher:
         history: str,
         current_response: str,
         past_memory_str: str,
-        opponent_type: str  # "看跌" 或 "看涨" (zh) / "bearish" 或 "bullish" (en)
     ) -> str:
-        """构建提示词（模板方法）"""
+        """构建提示词（模板方法）- 通用版本，不假设特定对手"""
         system_prompt = self.system_prompts.get(language, self.system_prompts["zh"])
+        stance_label = self._get_stance_zh() if language == "zh" else self._get_stance_en()
         
         if language == "zh":
             return f"""{system_prompt}
@@ -108,9 +118,9 @@ class BaseResearcher:
 公司基本面报告：{fundamentals_report}
 蜡烛图分析报告：{candlestick_report}
 辩论对话历史：{history}
-上次{opponent_type}论点：{current_response}
+上一位辩论者的论点：{current_response}
 类似情况下的反思和经验教训：{past_memory_str}
-利用这些信息提出一个令人信服的{self._get_stance_zh()}论点，反驳{opponent_type}的{'担忧' if opponent_type == '看跌' else '主张'}，并参与一场动态辩论，展示{self._get_stance_zh()}立场的优势。你还必须解决反思问题，并从过去的经验教训中学习。"""
+利用这些信息从你的{stance_label}视角提出一个令人信服的论点，回应其他辩论者的观点，并参与一场动态辩论，展示你的立场优势。你还必须解决反思问题，并从过去的经验教训中学习。"""
         else:
             return f"""{system_prompt}
 
@@ -125,25 +135,41 @@ Latest world affairs news: {news_report}
 Company fundamentals report: {fundamentals_report}
 Candlestick analysis report: {candlestick_report}
 Debate conversation history: {history}
-Last {opponent_type} argument: {current_response}
+Last debater's argument: {current_response}
 Reflections and lessons learned from similar situations: {past_memory_str}
-Use this information to make a compelling {self._get_stance_en()} case, counter the {opponent_type} {'concerns' if opponent_type == 'bearish' else 'claims'}, and engage in a dynamic debate showcasing the strengths of the {self._get_stance_en()} position. You must also address the reflection questions and learn from past lessons."""
+Use this information to make a compelling {stance_label} case from your perspective, respond to other debaters' arguments, and engage in a dynamic debate showcasing the strengths of your position. You must also address the reflection questions and learn from past lessons."""
     
+    def _default_stance_zh(self) -> str:
+        """默认中文立场（向后兼容 bull/bear）"""
+        if "bull" in self.researcher_type:
+            return "看涨"
+        elif "bear" in self.researcher_type:
+            return "看跌"
+        return self.researcher_type.replace("_researcher", "")
+    
+    def _default_stance_en(self) -> str:
+        """默认英文立场（向后兼容 bull/bear）"""
+        if "bull" in self.researcher_type:
+            return "bullish"
+        elif "bear" in self.researcher_type:
+            return "bearish"
+        return self.researcher_type.replace("_researcher", "")
+    
+    def _default_speaker_label(self) -> str:
+        """默认发言标签"""
+        if "bull" in self.researcher_type:
+            return "Bull"
+        elif "bear" in self.researcher_type:
+            return "Bear"
+        return self.researcher_type.replace("_researcher", "").title()
+
     def _get_stance_zh(self) -> str:
         """获取立场的中文描述"""
-        return "看涨" if self.researcher_type == "bull_researcher" else "看跌"
+        return self.stance_zh
     
     def _get_stance_en(self) -> str:
         """获取立场的英文描述"""
-        return "bullish" if self.researcher_type == "bull_researcher" else "bearish"
-    
-    def _get_opponent_stance_zh(self) -> str:
-        """获取对手立场的中文描述"""
-        return "看跌" if self.researcher_type == "bull_researcher" else "看涨"
-    
-    def _get_opponent_stance_en(self) -> str:
-        """获取对手立场的英文描述"""
-        return "bearish" if self.researcher_type == "bull_researcher" else "bullish"
+        return self.stance_en
     
     def _parse_llm_response(
         self,
@@ -210,11 +236,9 @@ Use this information to make a compelling {self._get_stance_en()} case, counter 
             investment_debate_state = state["investment_debate_state"]
             history = investment_debate_state.get("history", "")
             
-            # 根据研究员类型获取对应的历史
-            if self.researcher_type == "bull_researcher":
-                researcher_history = investment_debate_state.get("bull_history", "")
-            else:
-                researcher_history = investment_debate_state.get("bear_history", "")
+            # 从 researcher_histories Dict 获取本研究员的历史
+            researcher_histories = investment_debate_state.get("researcher_histories", {})
+            researcher_history = researcher_histories.get(self.researcher_type, "")
 
             current_response = investment_debate_state.get("current_response", "")
             market_research_report = state["market_report"]
@@ -242,8 +266,7 @@ Use this information to make a compelling {self._get_stance_en()} case, counter 
             tracker = get_research_tracker()
             win_rate_str = self._build_win_rate_string(symbol, language, tracker)
             
-            # 构建提示词
-            opponent_stance = self._get_opponent_stance_zh() if language == "zh" else self._get_opponent_stance_en()
+            # 构建提示词（不再需要 opponent_stance）
             prompt = self._build_prompt(
                 language=language,
                 win_rate_str=win_rate_str,
@@ -255,7 +278,6 @@ Use this information to make a compelling {self._get_stance_en()} case, counter 
                 history=history,
                 current_response=current_response,
                 past_memory_str=past_memory_str,
-                opponent_type=opponent_stance
             )
             
             # 调用 LLM
@@ -285,24 +307,23 @@ Use this information to make a compelling {self._get_stance_en()} case, counter 
             )
 
             # 更新状态
-            updated_history = f"{history}\n\n{self._get_stance_zh() if language == 'zh' else self._get_stance_en()}: {response_content}"
+            stance_label = self._get_stance_zh() if language == 'zh' else self._get_stance_en()
+            updated_history = f"{history}\n\n{stance_label}: {response_content}"
             updated_researcher_history = f"{researcher_history}\n\n{response_content}"
 
             investment_debate_state["history"] = updated_history
             investment_debate_state["current_response"] = response_content
             
-            # 更新 latest_speaker 用于 conditional_logic 判断
-            speaker_name = "Bull" if self.researcher_type == "bull_researcher" else "Bear"
-            investment_debate_state["latest_speaker"] = speaker_name
+            # 使用 speaker_label 用于 conditional_logic 判断
+            investment_debate_state["latest_speaker"] = self.speaker_label
             
             # 更新 count 用于轮次控制
             current_count = investment_debate_state.get("count", 0)
             investment_debate_state["count"] = current_count + 1
             
-            if self.researcher_type == "bull_researcher":
-                investment_debate_state["bull_history"] = updated_researcher_history
-            else:
-                investment_debate_state["bear_history"] = updated_researcher_history
+            # 更新 researcher_histories Dict（而不是硬编码的 bull_history/bear_history）
+            researcher_histories[self.researcher_type] = updated_researcher_history
+            investment_debate_state["researcher_histories"] = researcher_histories
 
             time.sleep(1)
 

@@ -7,10 +7,25 @@ import os
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 # 导入依赖注入容器
 from tradingagents.core.container import get_container
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+# 报告类型定义: (序号, 文件名, report_type, 参数名)
+_SIMPLE_REPORT_DEFS: List[Tuple[str, str, str]] = [
+    ("01_market_analysis.md", "market_analysis", "market_report"),
+    ("02_sentiment_analysis.md", "sentiment_analysis", "sentiment_report"),
+    ("03_news_analysis.md", "news_analysis", "news_report"),
+    ("04_fundamentals_analysis.md", "fundamentals_analysis", "fundamentals_report"),
+    ("05_candlestick_analysis.md", "candlestick_analysis", "candlestick_report"),
+    ("10_trader_report.md", "trader_report", "trader_report"),
+    ("11_final_decision.md", "final_decision", "final_trade_decision"),
+]
 
 
 class ReportSaver:
@@ -22,17 +37,9 @@ class ReportSaver:
     ├── LMND/
     │   ├── 2026-02-20/
     │   │   ├── 01_market_analysis.md
-    │   │   ├── 02_sentiment_analysis.md
-    │   │   ├── 03_news_analysis.md
-    │   │   ├── 04_fundamentals_analysis.md
-    │   │   ├── 05_candlestick_analysis.md
-    │   │   ├── 06_research_debate.md
-    │   │   ├── 07_research_manager_decision.md
-    │   │   ├── 08_risk_debate.md
-    │   │   ├── 09_risk_manager_decision.md
-    │   │   └── 10_final_decision.md
+    │   │   ├── ...
+    │   │   └── 11_final_decision.md
     │   └── 2026-02-19/
-    │       └── ...
     └── NVDA/
         └── ...
     """
@@ -51,7 +58,6 @@ class ReportSaver:
         """保存单个报告文件"""
         filepath = report_dir / filename
         
-        # 构建文件内容
         file_content = f"""# {filename.replace('.md', '').replace('_', ' ').title()}
 
 **股票代码**: {report_dir.parent.name}  
@@ -63,18 +69,15 @@ class ReportSaver:
 {content}
 
 """
-        
-        # 如果有元数据，添加到文件末尾
         if metadata:
             file_content += "\n---\n\n## 元数据\n\n```json\n"
             file_content += json.dumps(metadata, indent=2, ensure_ascii=False)
             file_content += "\n```\n"
         
-        # 写入文件
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(file_content)
         
-        print(f"✅ 报告已保存: {filepath}")
+        logger.info("✅ 报告已保存: %s", filepath)
         return filepath
     
     def save_analysis_reports(
@@ -92,116 +95,77 @@ class ReportSaver:
         investment_plan: str = "",
         final_trade_decision: str = ""
     ):
-        """
-        保存所有分析报告
-        
-        Args:
-            symbol: 股票代码
-            trade_date: 交易日期
-            market_report: 市场分析报告
-            sentiment_report: 情绪分析报告
-            news_report: 新闻分析报告
-            fundamentals_report: 基本面分析报告
-            candlestick_report: 蜡烛图分析报告
-            investment_debate_state: 投资辩论状态
-            risk_debate_state: 风险辩论状态
-            trader_report: 交易员报告
-            investment_plan: 投资计划
-            final_trade_decision: 最终交易决策
-        """
+        """保存所有分析报告"""
         report_dir = self._get_report_dir(symbol, trade_date)
         saved_files = []
         
-        # 1. 市场分析报告
-        if market_report:
-            saved_files.append(self._save_report(
-                report_dir, "01_market_analysis.md", market_report,
-                {"type": "market_analysis", "symbol": symbol, "date": trade_date}
-            ))
+        # 收集所有简单报告内容
+        report_values = {
+            "market_report": market_report,
+            "sentiment_report": sentiment_report,
+            "news_report": news_report,
+            "fundamentals_report": fundamentals_report,
+            "candlestick_report": candlestick_report,
+            "trader_report": trader_report,
+            "final_trade_decision": final_trade_decision,
+        }
         
-        # 2. 情绪分析报告
-        if sentiment_report:
-            saved_files.append(self._save_report(
-                report_dir, "02_sentiment_analysis.md", sentiment_report,
-                {"type": "sentiment_analysis", "symbol": symbol, "date": trade_date}
-            ))
-        
-        # 3. 新闻分析报告
-        if news_report:
-            saved_files.append(self._save_report(
-                report_dir, "03_news_analysis.md", news_report,
-                {"type": "news_analysis", "symbol": symbol, "date": trade_date}
-            ))
-        
-        # 4. 基本面分析报告
-        if fundamentals_report:
-            saved_files.append(self._save_report(
-                report_dir, "04_fundamentals_analysis.md", fundamentals_report,
-                {"type": "fundamentals_analysis", "symbol": symbol, "date": trade_date}
-            ))
-        
-        # 5. 蜡烛图分析报告
-        if candlestick_report:
-            saved_files.append(self._save_report(
-                report_dir, "05_candlestick_analysis.md", candlestick_report,
-                {"type": "candlestick_analysis", "symbol": symbol, "date": trade_date}
-            ))
-        
-        # 6. 研究员辩论过程
-        if investment_debate_state:
-            debate_content = self._format_debate_state(investment_debate_state, "研究员辩论")
-            if debate_content:
+        # 数据驱动方式保存简单报告
+        for filename, report_type, param_key in _SIMPLE_REPORT_DEFS:
+            content = report_values.get(param_key, "")
+            if content:
                 saved_files.append(self._save_report(
-                    report_dir, "06_research_debate.md", debate_content,
-                    {"type": "research_debate", "symbol": symbol, "date": trade_date}
+                    report_dir, filename, content,
+                    {"type": report_type, "symbol": symbol, "date": trade_date}
                 ))
         
-        # 7. 研究经理决策
-        if investment_debate_state and investment_debate_state.get("judge_decision"):
-            saved_files.append(self._save_report(
-                report_dir, "07_research_manager_decision.md", 
-                investment_debate_state["judge_decision"],
-                {"type": "research_manager_decision", "symbol": symbol, "date": trade_date}
-            ))
-        
-        # 8. 风险辩论过程
-        if risk_debate_state:
-            risk_debate_content = self._format_debate_state(risk_debate_state, "风险辩论")
-            if risk_debate_content:
-                saved_files.append(self._save_report(
-                    report_dir, "08_risk_debate.md", risk_debate_content,
-                    {"type": "risk_debate", "symbol": symbol, "date": trade_date}
-                ))
-        
-        # 9. 风险经理决策
-        if risk_debate_state and risk_debate_state.get("judge_decision"):
-            saved_files.append(self._save_report(
-                report_dir, "09_risk_manager_decision.md",
-                risk_debate_state["judge_decision"],
-                {"type": "risk_manager_decision", "symbol": symbol, "date": trade_date}
-            ))
-        
-        # 10. 交易员报告
-        if trader_report:
-            saved_files.append(self._save_report(
-                report_dir, "10_trader_report.md", trader_report,
-                {"type": "trader_report", "symbol": symbol, "date": trade_date}
-            ))
-        
-        # 11. 最终决策
-        if final_trade_decision:
-            saved_files.append(self._save_report(
-                report_dir, "11_final_decision.md", final_trade_decision,
-                {"type": "final_decision", "symbol": symbol, "date": trade_date}
-            ))
+        # 辩论类报告（有特殊格式化逻辑）
+        saved_files.extend(self._save_debate_reports(
+            report_dir, symbol, trade_date, 
+            investment_debate_state, risk_debate_state
+        ))
         
         # 保存索引文件
         self._save_index_file(report_dir, symbol, trade_date, saved_files)
         
-        print(f"\n✅ 所有报告已保存到: {report_dir}")
-        print(f"   共保存 {len(saved_files)} 个文件\n")
+        logger.info("✅ 所有报告已保存到: %s", report_dir)
+        logger.info("   共保存 %d 个文件", len(saved_files))
         
         return saved_files
+    
+    def _save_debate_reports(self, report_dir: Path, symbol: str, trade_date: str,
+                            investment_debate_state: Dict = None,
+                            risk_debate_state: Dict = None) -> list:
+        """保存辩论类报告"""
+        saved = []
+        
+        debate_configs = [
+            (investment_debate_state, "研究员辩论", "06_research_debate.md", 
+             "research_debate", "07_research_manager_decision.md", "research_manager_decision"),
+            (risk_debate_state, "风险辩论", "08_risk_debate.md",
+             "risk_debate", "09_risk_manager_decision.md", "risk_manager_decision"),
+        ]
+        
+        for state, title, debate_file, debate_type, decision_file, decision_type in debate_configs:
+            if not state:
+                continue
+            
+            # 辩论过程
+            debate_content = self._format_debate_state(state, title)
+            if debate_content:
+                saved.append(self._save_report(
+                    report_dir, debate_file, debate_content,
+                    {"type": debate_type, "symbol": symbol, "date": trade_date}
+                ))
+            
+            # 经理决策
+            if state.get("judge_decision"):
+                saved.append(self._save_report(
+                    report_dir, decision_file, state["judge_decision"],
+                    {"type": decision_type, "symbol": symbol, "date": trade_date}
+                ))
+        
+        return saved
     
     def _format_debate_state(self, debate_state: Dict, title: str) -> str:
         """格式化辩论状态为可读文本"""
@@ -210,13 +174,11 @@ class ReportSaver:
         
         content = f"# {title}\n\n"
         
-        # 添加历史记录
         if debate_state.get("history"):
             content += "## 辩论历史\n\n"
             content += debate_state["history"]
             content += "\n\n"
         
-        # 添加当前响应
         if debate_state.get("current_response"):
             content += "## 最新观点\n\n"
             content += debate_state["current_response"]
@@ -251,71 +213,44 @@ class ReportSaver:
 {symbol}/
 └── {trade_date}/
 """
-        
         for filepath in saved_files:
             index_content += f"    ├── {filepath.name}\n"
         
         index_content += "```\n"
         
-        # 写入索引文件
         index_path = report_dir / "00_index.md"
         with open(index_path, 'w', encoding='utf-8') as f:
             f.write(index_content)
         
-        print(f"✅ 索引文件已保存: {index_path}")
+        logger.info("✅ 索引文件已保存: %s", index_path)
     
     def get_report_history(self, symbol: str = None, limit: int = 100) -> list:
-        """
-        获取历史报告列表
-        
-        Args:
-            symbol: 按股票筛选，为None则返回所有
-            limit: 返回数量限制
-            
-        Returns:
-            报告历史列表
-        """
+        """获取历史报告列表"""
         history = []
         
-        if symbol:
-            # 获取特定股票的报告
-            symbol_dir = self.base_dir / symbol
-            if symbol_dir.exists():
-                for date_dir in sorted(symbol_dir.iterdir(), reverse=True):
-                    if date_dir.is_dir():
-                        history.append({
-                            "symbol": symbol,
-                            "date": date_dir.name,
-                            "path": str(date_dir),
-                            "reports": [f.name for f in date_dir.glob("*.md")]
-                        })
-        else:
-            # 获取所有股票的报告
-            for symbol_dir in self.base_dir.iterdir():
-                if symbol_dir.is_dir():
-                    for date_dir in sorted(symbol_dir.iterdir(), reverse=True):
-                        if date_dir.is_dir():
-                            history.append({
-                                "symbol": symbol_dir.name,
-                                "date": date_dir.name,
-                                "path": str(date_dir),
-                                "reports": [f.name for f in date_dir.glob("*.md")]
-                            })
+        dirs_to_scan = [self.base_dir / symbol] if symbol else list(self.base_dir.iterdir())
         
-        # 按日期排序并限制数量
+        for symbol_dir in dirs_to_scan:
+            if not symbol_dir.is_dir():
+                continue
+            sym = symbol_dir.name
+            for date_dir in sorted(symbol_dir.iterdir(), reverse=True):
+                if date_dir.is_dir():
+                    history.append({
+                        "symbol": sym,
+                        "date": date_dir.name,
+                        "path": str(date_dir),
+                        "reports": [f.name for f in date_dir.glob("*.md")]
+                    })
+        
         history.sort(key=lambda x: x["date"], reverse=True)
         return history[:limit]
 
 
 def get_report_saver(base_dir: str = "reports") -> ReportSaver:
-    """
-    获取 ReportSaver 实例（通过依赖注入容器）
-    
-    使用依赖注入容器管理单例，支持测试和多实例场景
-    """
+    """获取 ReportSaver 实例（通过依赖注入容器）"""
     container = get_container()
     
-    # 如果未注册，则注册并初始化
     if not container.has('report_saver'):
         container.register('report_saver', lambda: ReportSaver(base_dir), singleton=True)
     

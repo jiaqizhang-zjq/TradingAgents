@@ -7,6 +7,9 @@
 import os
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -126,9 +129,9 @@ def get_config_summary() -> Dict[str, bool]:
 def print_config_summary() -> None:
     """打印配置摘要"""
     summary = get_config_summary()
-    print("=" * 50)
-    print("API 配置摘要")
-    print("=" * 50)
+    logger.info("=" * 50)
+    logger.info("API 配置摘要")
+    logger.info("=" * 50)
     
     categories = [
         ("LLM 提供商", ["openai", "google", "anthropic", "xai", "openrouter"]),
@@ -137,12 +140,12 @@ def print_config_summary() -> None:
     ]
     
     for category, keys in categories:
-        print(f"\n{category}:")
+        logger.info("\n%s:", category)
         for key in keys:
             status = "✅ 已配置" if summary[key] else "❌ 未配置"
-            print(f"  - {key}: {status}")
+            logger.info("  - %s: %s", key, status)
     
-    print("\n" + "=" * 50)
+    logger.info("\n" + "=" * 50)
 
 
 def check_required_config(required_keys: list) -> bool:
@@ -159,7 +162,7 @@ def check_required_config(required_keys: list) -> bool:
     missing = [key for key in required_keys if not summary.get(key, False)]
     
     if missing:
-        print(f"错误: 缺少必需的配置: {', '.join(missing)}")
+        logger.error("错误: 缺少必需的配置: %s", ", ".join(missing))
         return False
     
     return True

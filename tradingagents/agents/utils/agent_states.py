@@ -1,25 +1,20 @@
-from typing import Annotated, Sequence
-from datetime import date, timedelta, datetime
-from typing_extensions import TypedDict, Optional
-from langchain_openai import ChatOpenAI
-from tradingagents.agents import *
-from langgraph.prebuilt import ToolNode
-from langgraph.graph import END, StateGraph, START, MessagesState
+from typing import Annotated, Dict
+from typing_extensions import TypedDict
+from langgraph.graph import MessagesState
 
 
 # Researcher team state
+# 使用 researcher_histories Dict 替代硬编码的 bull_history/bear_history
+# 支持动态数量的 researcher（巴菲特、木头姐、彼得林奇等）
 class InvestDebateState(TypedDict):
-    bull_history: Annotated[
-        str, "Bullish Conversation history"
-    ]  # Bullish Conversation history
-    bear_history: Annotated[
-        str, "Bearish Conversation history"
-    ]  # Bullish Conversation history
-    history: Annotated[str, "Conversation history"]  # Conversation history
-    current_response: Annotated[str, "Latest response"]  # Last response
-    judge_decision: Annotated[str, "Final judge decision"]  # Last response
-    latest_speaker: Annotated[str, "Researcher that spoke last"]  # Last speaker (Bull/Bear)
-    count: Annotated[int, "Length of the current conversation"]  # Conversation length
+    researcher_histories: Annotated[
+        Dict[str, str], "Per-researcher conversation histories, keyed by researcher_type"
+    ]  # 每个研究员的独立历史记录
+    history: Annotated[str, "Conversation history"]  # 全局辩论历史
+    current_response: Annotated[str, "Latest response"]  # 最新响应
+    judge_decision: Annotated[str, "Final judge decision"]  # 裁判决定
+    latest_speaker: Annotated[str, "Researcher that spoke last"]  # 最后发言者
+    count: Annotated[int, "Length of the current conversation"]  # 对话轮次
 
 
 # Risk management team state

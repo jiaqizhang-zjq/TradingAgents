@@ -32,7 +32,7 @@ def is_market_open(symbol: str = "AAPL", target_date: str = None) -> bool:
         latest_date = str(df['timestamp'].iloc[-1])[:10]
         return latest_date == end_date
     except Exception as e:
-        print(f"is_market_open error: {e}")
+        logger.error("is_market_open error: %s", e)
         return False
 
 

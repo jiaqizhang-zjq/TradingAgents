@@ -36,18 +36,14 @@ class AgentFactory:
         self._register_builtin_agents()
     
     def _register_builtin_agents(self) -> None:
-        """注册内置的Agent创建器"""
-        from tradingagents.agents.researchers.bull_researcher import create_bull_researcher
-        from tradingagents.agents.researchers.bear_researcher import create_bear_researcher
-        
-        # 注册研究员
-        self._creators["bull"] = create_bull_researcher
-        self._creators["bear"] = create_bear_researcher
-        
-        # 可以继续注册其他Agent
-        # self._creators["market"] = create_market_analyst
-        # self._creators["trader"] = create_trader
-        # ...
+        """注册内置的Agent创建器（从 RESEARCHER_REGISTRY 动态加载）"""
+        import importlib
+        from tradingagents.constants import RESEARCHER_REGISTRY
+
+        for key, info in RESEARCHER_REGISTRY.items():
+            module = importlib.import_module(info["module"])
+            factory_fn = getattr(module, info["factory"])
+            self._creators[key] = factory_fn
     
     def register(self, agent_type: str, creator: Callable) -> None:
         """

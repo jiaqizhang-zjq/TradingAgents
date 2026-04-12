@@ -3,6 +3,9 @@ import time
 import json
 import re
 from tradingagents.dataflows.config import get_config
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def create_trader(llm, memory):
@@ -93,13 +96,13 @@ Do not forget to utilize lessons from past decisions to learn from your mistakes
         # 调试信息：打印完整prompt（由debug开关控制）
         debug_config = config.get("debug", {})
         if debug_config.get("enabled", False) and debug_config.get("show_prompts", False):
-            print("=" * 80)
-            print("DEBUG: Trader Prompt Before LLM Call:")
-            print("=" * 80)
-            print(f"Language: {language}")
-            print(f"System Content: {system_content[:500]}..." if len(system_content) > 500 else f"System Content: {system_content}")
-            print(f"User Content: {context['content'][:300]}..." if len(context['content']) > 300 else f"User Content: {context['content']}")
-            print("=" * 80)
+            logger.debug("=" * 80)
+            logger.debug("DEBUG: Trader Prompt Before LLM Call:")
+            logger.debug("=" * 80)
+            logger.debug("Language: %s", language)
+            logger.debug("System Content: %s", system_content[:500] + "..." if len(system_content) > 500 else system_content)
+            logger.debug("User Content: %s", context['content'][:300] + "..." if len(context['content']) > 300 else context['content'])
+            logger.debug("=" * 80)
 
         result = llm.invoke(messages)
         response_content = result.content

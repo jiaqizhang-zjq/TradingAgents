@@ -10,6 +10,9 @@ import json
 from typing import Optional
 
 from .database import TradingDatabase, AnalysisReport
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def export_report_to_markdown(
@@ -33,7 +36,7 @@ def export_report_to_markdown(
     report = db.get_report(symbol, trade_date)
     
     if not report:
-        print(f"❌ 未找到报告: {symbol} @ {trade_date}")
+        logger.warning("❌ 未找到报告: %s @ %s", symbol, trade_date)
         return ""
     
     os.makedirs(output_dir, exist_ok=True)
@@ -102,7 +105,7 @@ def export_report_to_markdown(
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(content)
     
-    print(f"✅ Markdown 报告已导出: {filepath}")
+    logger.info("✅ Markdown 报告已导出: %s", filepath)
     return filepath
 
 
@@ -127,7 +130,7 @@ def export_tool_calls_to_jsonl(
     tool_calls = db.get_tool_calls(symbol, trade_date)
     
     if not tool_calls:
-        print(f"⚠️ 未找到工具调用记录: {symbol} @ {trade_date}")
+        logger.warning("⚠️ 未找到工具调用记录: %s @ %s", symbol, trade_date)
         return ""
     
     os.makedirs(output_dir, exist_ok=True)
@@ -139,5 +142,5 @@ def export_tool_calls_to_jsonl(
         for call in tool_calls:
             f.write(json.dumps(call, ensure_ascii=False) + '\n')
     
-    print(f"✅ JSONL 工具调用记录已导出: {filepath}")
+    logger.info("✅ JSONL 工具调用记录已导出: %s", filepath)
     return filepath

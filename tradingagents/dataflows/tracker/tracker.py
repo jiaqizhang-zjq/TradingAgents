@@ -12,6 +12,9 @@ from typing import Dict, List, Optional
 from contextlib import contextmanager
 
 from .models import ResearchOutcome, ResearchRecord, ResearcherStats
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class ResearchTracker:
@@ -135,7 +138,7 @@ class ResearchTracker:
                 
                 return True
         except Exception as e:
-            print(f"❌ 记录研究预测失败: {e}")
+            logger.error("❌ 记录研究预测失败: %s", e)
             return False
     
     def verify_prediction(self, researcher_name: str, symbol: str, trade_date: str,
@@ -161,7 +164,7 @@ class ResearchTracker:
                 
                 return True
         except Exception as e:
-            print(f"❌ 验证预测失败: {e}")
+            logger.error("❌ 验证预测失败: %s", e)
             return False
     
     def _auto_judge_outcome(self, prediction: str, actual_return: float) -> str:
@@ -200,7 +203,7 @@ class ResearchTracker:
                              (researcher_name, researcher_type, description, created_at, json.dumps(config or {})))
                 return True
         except Exception as e:
-            print(f"❌ 注册研究员失败: {e}")
+            logger.error("❌ 注册研究员失败: %s", e)
             return False
     
     def get_registered_researchers(self, researcher_type: str = None, is_active: bool = True) -> List[Dict]:
@@ -221,7 +224,7 @@ class ResearchTracker:
                 cursor.execute(query, params)
                 return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
-            print(f"❌ 获取研究员列表失败: {e}")
+            logger.error("❌ 获取研究员列表失败: %s", e)
             return []
     
     def batch_verify_pending_predictions(self, get_actual_return_func) -> int:

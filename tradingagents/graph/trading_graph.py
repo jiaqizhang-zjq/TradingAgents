@@ -1,16 +1,16 @@
 # TradingAgents/graph/trading_graph.py (重构后简化版)
 
 import os
-from pathlib import Path
-import json
-from datetime import date, datetime
-from typing import Dict, Any, Tuple, List, Optional
+from datetime import datetime
+from typing import Dict, Any, List, Optional
 
 from langgraph.prebuilt import ToolNode
 
 from tradingagents.llm_clients import create_llm_client
+from tradingagents.utils.logger import get_logger
 
-from tradingagents.agents import *
+logger = get_logger(__name__)
+
 from tradingagents.agents.backtest import run_backtest
 from tradingagents.default_config import DEFAULT_CONFIG
 from tradingagents.agents.utils.memory import FinancialSituationMemory
@@ -20,6 +20,7 @@ from tradingagents.agents.utils.agent_states import (
     RiskDebateState,
 )
 from tradingagents.dataflows.config import set_config
+from tradingagents.constants import RESEARCHER_REGISTRY, DEFAULT_SELECTED_RESEARCHERS
 from .helpers import StatePersistence
 
 # Import the new abstract tool methods from agent_utils
@@ -106,20 +107,28 @@ class TradingAgentsGraph:
         self.quick_thinking_llm = quick_client.get_llm()
         
         # Initialize memories
-        self.bull_memory = FinancialSituationMemory("bull_researcher", self.config)
-        self.bear_memory = FinancialSituationMemory("bear_researcher", self.config)
+        # ========== 动态创建 researcher memories ==========
+        self.selected_researchers = self.config.get("selected_researchers", DEFAULT_SELECTED_RESEARCHERS)
+        self.researcher_memories: Dict[str, FinancialSituationMemory] = {}
+        for key in self.selected_researchers:
+            if key in RESEARCHER_REGISTRY:
+                researcher_type = RESEARCHER_REGISTRY[key]["type"]
+                self.researcher_memories[researcher_type] = FinancialSituationMemory(
+                    researcher_type, self.config
+                )
+        
         self.trader_memory = FinancialSituationMemory("trader", self.config)
         self.invest_judge_memory = FinancialSituationMemory("research_manager", self.config)
         self.risk_manager_memory = FinancialSituationMemory("risk_manager", self.config)
         
         # 从历史研究记录中学习
         if self.debug:
-            print("\n" + "="*50)
-            print("📚 从历史研究记录中学习...")
-            print("="*50)
+            logger.info("=" * 50)
+            logger.info("📚 从历史研究记录中学习...")
+            logger.info("=" * 50)
         
-        self.bull_memory.learn_from_research_records()
-        self.bear_memory.learn_from_research_records()
+        for memory in self.researcher_memories.values():
+            memory.learn_from_research_records()
         self.trader_memory.learn_from_research_records()
         self.invest_judge_memory.learn_from_research_records()
         self.risk_manager_memory.learn_from_research_records()
@@ -130,18 +139,19 @@ class TradingAgentsGraph:
         # Initialize components
         self.conditional_logic = ConditionalLogic(
             max_debate_rounds=self.config.get("max_debate_rounds", 2),
-            max_risk_discuss_rounds=self.config.get("max_risk_discuss_rounds", 2)
+            max_risk_discuss_rounds=self.config.get("max_risk_discuss_rounds", 2),
+            selected_researchers=self.selected_researchers,
         )
         self.graph_setup = GraphSetup(
             self.quick_thinking_llm,
             self.deep_thinking_llm,
             self.tool_nodes,
-            self.bull_memory,
-            self.bear_memory,
+            self.researcher_memories,
             self.trader_memory,
             self.invest_judge_memory,
             self.risk_manager_memory,
             self.conditional_logic,
+            self.selected_researchers,
         )
 
         self.propagator = Propagator()
@@ -252,12 +262,12 @@ class TradingAgentsGraph:
         backtest_enabled = self.config.get("backtest", {}).get("enabled", True)
         if backtest_enabled:
             if self.debug:
-                print("\n" + "="*50)
-                print("🔄 执行回测...")
-                print("="*50)
+                logger.info("=" * 50)
+                logger.info("🔄 执行回测...")
+                logger.info("=" * 50)
             run_backtest(symbol=company_name, target_date=trade_date, debug=self.debug)
             if self.debug:
-                print()
+                logger.info("")
 
         # 初始化状态
         # 创建代理的初始状态，包含公司信息和交易日期
@@ -277,36 +287,37 @@ class TradingAgentsGraph:
                 # 打印所有节点的消息
                 for node_name, node_data in chunk.items():
                     if node_name == "messages" and len(node_data) > 0:
-                        print("\n" + "="*80)
-                        print(f"📝 Messages Output:")
-                        print("="*80)
+                        logger.info("=" * 80)
+                        logger.info("📝 Messages Output:")
+                        logger.info("=" * 80)
                         node_data[-1].pretty_print()
                     elif node_name == "investment_debate_state":
-                        print("\n" + "="*80)
-                        print(f"📊 Investment Debate State:")
-                        print("="*80)
-                        print(f"Count: {node_data.get('count', 0)}")
-                        print(f"Latest Speaker: {node_data.get('latest_speaker', 'N/A')}")
-                        print(f"\n--- Bull History ---")
-                        print(node_data.get('bull_history', '')[:2000] if node_data.get('bull_history') else "N/A")
-                        print(f"\n--- Bear History ---")
-                        print(node_data.get('bear_history', '')[:2000] if node_data.get('bear_history') else "N/A")
-                        print(f"\n--- Current Response ---")
-                        print(node_data.get('current_response', '')[:2000] if node_data.get('current_response') else "N/A")
-                        print("="*80)
+                        logger.info("=" * 80)
+                        logger.info("📊 Investment Debate State:")
+                        logger.info("=" * 80)
+                        logger.info("Count: %s", node_data.get('count', 0))
+                        logger.info("Latest Speaker: %s", node_data.get('latest_speaker', 'N/A'))
+                        # 动态输出所有 researcher 的历史
+                        researcher_histories = node_data.get('researcher_histories', {})
+                        for rtype, rhist in researcher_histories.items():
+                            logger.info("--- %s History ---", rtype)
+                            logger.info("%s", (rhist[:2000] if rhist else "N/A"))
+                        logger.info("--- Current Response ---")
+                        logger.info("%s", (node_data.get('current_response', '')[:2000] if node_data.get('current_response') else "N/A"))
+                        logger.info("=" * 80)
                     elif node_name == "risk_debate_state":
-                        print("\n" + "="*80)
-                        print(f"⚠️ Risk Debate State:")
-                        print("="*80)
-                        print(f"Count: {node_data.get('count', 0)}")
-                        print(f"Latest Speaker: {node_data.get('latest_speaker', 'N/A')}")
-                        print("="*80)
+                        logger.info("=" * 80)
+                        logger.info("⚠️ Risk Debate State:")
+                        logger.info("=" * 80)
+                        logger.info("Count: %s", node_data.get('count', 0))
+                        logger.info("Latest Speaker: %s", node_data.get('latest_speaker', 'N/A'))
+                        logger.info("=" * 80)
                     elif node_name == "trader_investment_plan":
-                        print("\n" + "="*80)
-                        print(f"💰 Trader Investment Plan:")
-                        print("="*80)
-                        print(str(node_data)[:2000])
-                        print("="*80)
+                        logger.info("=" * 80)
+                        logger.info("💰 Trader Investment Plan:")
+                        logger.info("=" * 80)
+                        logger.info("%s", str(node_data)[:2000])
+                        logger.info("=" * 80)
                 
                 trace.append(chunk)
 
@@ -336,8 +347,7 @@ class TradingAgentsGraph:
             "fundamentals_report": final_state["fundamentals_report"],
             "candlestick_report": final_state["candlestick_report"],
             "investment_debate_state": {
-                "bull_history": final_state["investment_debate_state"]["bull_history"],
-                "bear_history": final_state["investment_debate_state"]["bear_history"],
+                "researcher_histories": final_state["investment_debate_state"].get("researcher_histories", {}),
                 "history": final_state["investment_debate_state"]["history"],
                 "current_response": final_state["investment_debate_state"]["current_response"],
                 "judge_decision": final_state["investment_debate_state"]["judge_decision"],
@@ -359,12 +369,11 @@ class TradingAgentsGraph:
     
     def reflect_and_remember(self, returns_losses):
         """Reflect on decisions and update memory based on returns."""
-        self.reflector.reflect_bull_researcher(
-            self.curr_state, returns_losses, self.bull_memory
-        )
-        self.reflector.reflect_bear_researcher(
-            self.curr_state, returns_losses, self.bear_memory
-        )
+        # 动态反思所有 researcher
+        for researcher_type, memory in self.researcher_memories.items():
+            self.reflector.reflect_researcher(
+                self.curr_state, returns_losses, memory, researcher_type
+            )
         self.reflector.reflect_trader(
             self.curr_state, returns_losses, self.trader_memory
         )

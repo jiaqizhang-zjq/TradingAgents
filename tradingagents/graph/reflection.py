@@ -71,29 +71,28 @@ Adhere strictly to these instructions, and ensure your output is detailed, accur
         result = self.quick_thinking_llm.invoke(messages).content
         return result
 
-    def reflect_bull_researcher(self, current_state, returns_losses, bull_memory):
-        """Reflect on bull researcher's analysis and update memory."""
-        situation = self._extract_current_situation(current_state)
-        bull_debate_history = current_state["investment_debate_state"]["bull_history"]
+    def reflect_researcher(self, current_state, returns_losses, memory, researcher_type: str):
+        """Reflect on a researcher's analysis and update memory.
         
-        actual_return = returns_losses.get("bull_researcher", 0.0) if isinstance(returns_losses, dict) else 0.0
+        通用方法，替代原来的 reflect_bull_researcher / reflect_bear_researcher。
+        从 researcher_histories Dict 中读取对应 researcher 的历史。
+        
+        Args:
+            current_state: 当前状态
+            returns_losses: 收益/亏损数据
+            memory: 该 researcher 的记忆
+            researcher_type: researcher 类型标识（如 "bull_researcher", "buffett_researcher"）
+        """
+        situation = self._extract_current_situation(current_state)
+        researcher_histories = current_state["investment_debate_state"].get("researcher_histories", {})
+        debate_history = researcher_histories.get(researcher_type, "")
+        
+        actual_return = returns_losses.get(researcher_type, 0.0) if isinstance(returns_losses, dict) else 0.0
 
         result = self._reflect_on_component(
-            "BULL", bull_debate_history, situation, returns_losses
+            researcher_type.upper(), debate_history, situation, returns_losses
         )
-        bull_memory.add_situations([(situation, result, actual_return)])
-
-    def reflect_bear_researcher(self, current_state, returns_losses, bear_memory):
-        """Reflect on bear researcher's analysis and update memory."""
-        situation = self._extract_current_situation(current_state)
-        bear_debate_history = current_state["investment_debate_state"]["bear_history"]
-        
-        actual_return = returns_losses.get("bear_researcher", 0.0) if isinstance(returns_losses, dict) else 0.0
-
-        result = self._reflect_on_component(
-            "BEAR", bear_debate_history, situation, returns_losses
-        )
-        bear_memory.add_situations([(situation, result, actual_return)])
+        memory.add_situations([(situation, result, actual_return)])
 
     def reflect_trader(self, current_state, returns_losses, trader_memory):
         """Reflect on trader's decision and update memory."""

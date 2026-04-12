@@ -9,6 +9,9 @@ from functools import wraps
 from typing import Callable, TypeVar, Any, Optional
 from tradingagents.constants import MAX_RETRY_ATTEMPTS, RETRY_DELAY_SECONDS
 from tradingagents.exceptions import DataFetchError
+from tradingagents.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 T = TypeVar('T')
 
@@ -64,12 +67,12 @@ class RetryPolicy:
                 last_exception = e
                 
                 if attempt < self.max_attempts:
-                    print(f"⚠️ Attempt {attempt}/{self.max_attempts} failed: {e}")
-                    print(f"⏳ Retrying in {current_delay}s...")
+                    logger.warning("⚠️ Attempt %d/%d failed: %s", attempt, self.max_attempts, e)
+                    logger.info("⏳ Retrying in %ss...", current_delay)
                     time.sleep(current_delay)
                     current_delay *= self.backoff_multiplier
                 else:
-                    print(f"❌ All {self.max_attempts} attempts failed")
+                    logger.error("❌ All %d attempts failed", self.max_attempts)
         
         raise last_exception
     
