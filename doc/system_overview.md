@@ -33,7 +33,7 @@
 | TradingAgentsGraph | 核心协调器，管理整个分析流程 | tradingagents/graph/trading_graph.py |
 | 研究员代理 | 进行股票分析和预测 | tradingagents/agents/researchers/ |
 | 风控代理 | 评估风险和提供风险控制建议 | tradingagents/agents/risk_mgmt/ |
-| 交易员代理 | 制定最终交易决策 | tradingagents/agents/traders/ |
+| 交易员代理 | 制定最终交易决策 | tradingagents/agents/trader/trader.py |
 | 数据管理器 | 统一数据访问接口 | tradingagents/dataflows/interface.py |
 | 内存系统 | 存储和检索历史经验 | tradingagents/agents/utils/memory.py |
 | 回测系统 | 验证预测结果 | tradingagents/agents/backtest.py |
@@ -89,7 +89,7 @@ TradingAgents/
 │   ├── agents/            # 代理系统
 │   │   ├── researchers/   # 研究员代理
 │   │   ├── risk_mgmt/     # 风控代理
-│   │   ├── traders/       # 交易员代理
+│   │   ├── trader/        # 交易员代理
 │   │   ├── utils/         # 工具函数
 │   │   └── backtest.py    # 回测系统
 │   ├── dataflows/         # 数据系统
@@ -105,7 +105,8 @@ TradingAgents/
 ├── doc/                   # 文档
 ├── reports/               # 生成的报告
 ├── .env                   # 环境变量
-├── main.py                # 主入口
+├── run_trading.py         # 主入口（快速运行）
+├── cli/main.py            # CLI 主入口（python -m cli.main）
 └── requirements.txt       # 依赖
 ```
 
@@ -113,7 +114,8 @@ TradingAgents/
 
 | 文件 | 职责 | 位置 |
 |------|------|------|
-| main.py | 主入口，执行股票分析 | /TradingAgents/ |
+| run_trading.py | 主入口，执行股票分析（快速运行） | /TradingAgents/ |
+| cli/main.py | CLI 主入口，交互式命令行界面 | /TradingAgents/cli/ |
 | trading_graph.py | 核心协调器，管理分析流程 | /tradingagents/graph/ |
 | memory.py | 内存系统，存储历史经验 | /tradingagents/agents/utils/ |
 | backtest.py | 回测系统，验证预测结果 | /tradingagents/agents/ |
@@ -249,7 +251,7 @@ TradingAgents/
 1. **安装依赖**：pip install -r requirements.txt
 2. **配置环境**：设置必要的环境变量
 3. **初始化数据库**：确保数据库表结构正确
-4. **启动服务**：运行 main.py 或相关脚本
+4. **启动服务**：运行 `python run_trading.py` 或 `python -m cli.main`
 
 ### 8.3 维护任务
 

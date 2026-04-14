@@ -217,13 +217,22 @@
 |------------|------|
 | bull_0 | 初级看涨分析师 |
 | bear_0 | 初级看跌分析师 |
-| bull_researcher | 高级看涨研究员 |
-| bear_researcher | 高级看跌研究员 |
+| bull_researcher | 看多研究员（Junior） |
+| bear_researcher | 看空研究员（Junior） |
+| buffett_researcher | 巴菲特研究员（Senior） |
+| cathie_wood_researcher | Cathie Wood 研究员（Senior） |
+| peter_lynch_researcher | Peter Lynch 研究员（Senior） |
+| charlie_munger_researcher | 查理·芒格研究员（Senior） |
+| soros_researcher | 索罗斯研究员（Senior） |
+| dalio_researcher | 达利欧研究员（Senior） |
+| livermore_researcher | 利弗莫尔研究员（Senior） |
 | research_manager | 研究经理 |
 | aggressive_risk | 激进型风控 |
 | conservative_risk | 保守型风控 |
 | neutral_risk | 中性风控 |
 | trader | 交易员 |
+
+> 研究员通过 `RESEARCHER_REGISTRY`（`constants.py`）动态注册，共 9 种可用，默认选中 `["bull", "bear", "buffett"]`。
 
 ### 预测结果分布
 

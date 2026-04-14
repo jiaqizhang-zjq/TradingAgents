@@ -8,59 +8,107 @@ TradingAgents 框架采用多代理设计，每个代理都有专门的角色和
 
 ### 1. Agent 创建模式
 
-每个 Agent 都遵循相同的创建模式：
+每个 Agent 都遵循工厂函数模式，返回一个状态图节点函数：
 
 ```python
 def create_agent_name(llm, [other_params]):
     def agent_node(state):
         # 1. 从状态中获取数据
         # 2. 定义工具
-        # 3. 定义系统提示词
-        # 4. 创建提示词模板
-        # 5. 创建 LLM 链
-        # 6. 执行链并返回结果
+        # 3. 选择中/英文 prompt
+        # 4. 创建 LLM 链
+        # 5. 执行链并返回结果
         return {"messages": [result], "state_key": value}
     return agent_node
 ```
 
 ### 2. Agent 类型
 
-#### 2.1 分析师代理 (Analysts)
+#### 2.1 分析师代理 (Analysts) — 5 种
 
-- **市场分析师 (Market Analyst)**: 分析技术指标和市场趋势
-- **社交媒体分析师 (Social Media Analyst)**: 分析社交媒体情绪
-- **新闻分析师 (News Analyst)**: 分析新闻和内幕信息
-- **基本面分析师 (Fundamentals Analyst)**: 分析公司财务数据
+| 代理 | 文件 | 职责 |
+|------|------|------|
+| 市场分析师 | `analysts/market_analyst.py` | 技术指标、市场趋势分析 |
+| 基本面分析师 | `analysts/fundamentals_analyst.py` | 财务报表、资产负债表分析 |
+| 新闻分析师 | `analysts/news_analyst.py` | 新闻事件、宏观经济分析 |
+| 社交媒体分析师 | `analysts/social_media_analyst.py` | Reddit/Twitter 情绪分析 |
+| K线分析师 | `analysts/candlestick_analyst.py` | K线形态、价格行为分析 |
 
-#### 2.2 研究员代理 (Researchers)
+分析师之间**并行执行**，各自独立获取数据并生成报告。
 
-- **看多研究员 (Bull Researcher)**: 从乐观角度分析投资机会
-- **看空研究员 (Bear Researcher)**: 从谨慎角度分析风险
-- **研究管理器 (Research Manager)**: 协调辩论并做出判断
+#### 2.2 研究员代理 (Researchers) — 9 种风格
+
+所有研究员继承自 `base_researcher.py` 抽象基类，通过 `RESEARCHER_REGISTRY`（定义于 `constants.py`）动态注册。
+
+**初阶分析师（Junior）— 预设立场：**
+
+| 代理 | 文件 | 风格 |
+|------|------|------|
+| 看多研究员 | `researchers/bull_researcher.py` | 预设看多立场，识别机会和增长潜力 |
+| 看空研究员 | `researchers/bear_researcher.py` | 预设看空立场，识别风险和危险信号 |
+
+**高级分析师（Senior/Master）— 独立判断：**
+
+| 代理 | 文件 | 风格 |
+|------|------|------|
+| 巴菲特研究员 | `researchers/buffett_researcher.py` | 价值投资、安全边际、护城河、FCF |
+| Cathie Wood 研究员 | `researchers/cathie_wood_researcher.py` | 颠覆式创新、ARK 风格 |
+| Peter Lynch 研究员 | `researchers/peter_lynch_researcher.py` | GARP 成长合理价 |
+| Charlie Munger 研究员 | `researchers/charlie_munger_researcher.py` | 逆向思维、能力圈、检查清单 |
+| Ray Dalio 研究员 | `researchers/dalio_researcher.py` | 全天候策略、宏观周期、风险平价 |
+| Jesse Livermore 研究员 | `researchers/livermore_researcher.py` | 趋势跟踪、关键点位、资金管理 |
+| George Soros 研究员 | `researchers/soros_researcher.py` | 反身性理论、宏观对冲 |
+
+**推荐组合：**
+- 默认：`["bull", "bear", "buffett"]` — 经典多空 + 价值锚定
+- 大师：`["buffett", "charlie_munger", "soros"]` — 价值 + 逆向 + 宏观
+- 全面：`["bull", "bear", "buffett", "soros", "dalio"]` — 5 人深度辩论
+
+**管理层：**
+
+| 代理 | 文件 | 职责 |
+|------|------|------|
+| 研究管理器 | `managers/research_manager.py` | 组织 N-way 多轮辩论，追踪历史胜率 |
 
 #### 2.3 交易员代理 (Trader)
 
-- **交易员 (Trader)**: 综合所有分析结果，做出交易决策
+| 代理 | 文件 | 职责 |
+|------|------|------|
+| 交易员 | `trader/trader.py` | 综合所有分析报告，做出 BUY/SELL/HOLD + 仓位决策 |
 
 #### 2.4 风险管理代理 (Risk Management)
 
-- **激进辩论者 (Aggressive Debator)**: 支持高风险高回报策略
-- **保守辩论者 (Conservative Debator)**: 支持低风险策略
-- **中性辩论者 (Neutral Debator)**: 平衡风险和回报
-- **风险管理器 (Risk Manager)**: 评估整体风险并做出最终判断
+使用 `base_risk_debator.py` 基类消除三方辩论代码重复。
+
+| 代理 | 文件 | 职责 |
+|------|------|------|
+| 风险辩论者基类 | `risk_mgmt/base_risk_debator.py` | `RiskDebatorConfig` + `create_risk_debator()` 工厂 |
+| 激进辩论者 | `risk_mgmt/aggressive_debator.py` | 支持高风险高回报策略 |
+| 保守辩论者 | `risk_mgmt/conservative_debator.py` | 支持低风险稳健策略 |
+| 中性辩论者 | `risk_mgmt/neutral_debator.py` | 平衡风险和回报 |
+| 风险管理器 | `managers/risk_manager.py` | 评估整体风险并做出最终判断 |
 
 ## Prompt 组织方式
 
-### 1. 系统提示词 (System Message)
+### 1. 双语 Prompt 体系
 
-每个 Agent 都有专门的系统提示词，定义其角色和职责。例如市场分析师的系统提示词包括：
+所有 Agent 的 prompt 支持中/英双语，通过 `output_language` 配置切换：
 
-- 角色定义
-- 可用工具说明
-- 具体任务要求
-- 输出格式要求
+```python
+app_config = get_config()
+language = app_config.get("output_language", "zh")
+prompt = prompt_zh if language == "zh" else prompt_en
+```
 
-### 2. 提示词模板 (Prompt Template)
+### 2. 研究员 Prompt 结构
+
+研究员 prompt 定义在 `agents/prompts/perspectives.py` 中，每种投资风格包括：
+
+- **角色定义**：投资哲学和风格描述
+- **分析框架**：该风格关注的分析维度
+- **输出格式**：BUY/SELL/HOLD + 置信度百分比
+
+### 3. 提示词模板 (Prompt Template)
 
 使用 `ChatPromptTemplate` 构建完整的提示词：
 
@@ -71,7 +119,7 @@ prompt = ChatPromptTemplate.from_messages([
 ])
 ```
 
-### 3. 部分参数 (Partial Parameters)
+### 4. 部分参数 (Partial Parameters)
 
 使用 `partial` 方法预设固定参数：
 
@@ -84,14 +132,16 @@ prompt = prompt.partial(tool_names=", ".join([tool.name for tool in tools]))
 
 ### 1. 工具定义
 
-工具是普通的 Python 函数，使用装饰器或直接定义：
+工具使用抽象接口模式，定义在 `agents/utils/` 下：
 
-```python
-@tool
-def get_stock_data(ticker: str, date: str):
-    """获取股票数据"""
-    # 实现
-```
+| 工具文件 | 提供的工具 |
+|----------|-----------|
+| `core_stock_tools.py` | `get_stock_data` |
+| `technical_indicators_tools.py` | `get_indicators` |
+| `fundamental_data_tools.py` | `get_fundamentals`, `get_balance_sheet`, `get_cashflow`, `get_income_statement` |
+| `news_data_tools.py` | `get_news`, `get_global_news`, `get_insider_transactions` |
+| `candlestick_tools.py` | `get_candlestick_patterns` |
+| `chart_patterns_tools.py` | `get_chart_patterns` |
 
 ### 2. 工具绑定
 
@@ -129,7 +179,7 @@ workflow.add_node("tools_market", tool_node)
 
 ### 3. 条件逻辑
 
-使用 `ConditionalLogic` 类控制流程：
+使用 `ConditionalLogic` 类控制流程（定义于 `graph/conditional_logic.py`）：
 
 ```python
 workflow.add_conditional_edges(
@@ -139,11 +189,25 @@ workflow.add_conditional_edges(
 )
 ```
 
+### 4. 研究员动态注册
+
+研究员节点通过 `RESEARCHER_REGISTRY` 动态添加到图中（在 `graph/setup.py`）：
+
+```python
+for key in selected_researchers:
+    info = RESEARCHER_REGISTRY[key]
+    # 动态导入并创建研究员节点
+    module = importlib.import_module(info["module"])
+    factory_fn = getattr(module, info["factory"])
+    node_fn = factory_fn(llm, ...)
+    workflow.add_node(info["display_name"], node_fn)
+```
+
 ## 状态管理
 
 ### 1. 状态定义
 
-使用 `TypedDict` 定义状态结构：
+使用 `TypedDict` 定义状态结构（`agents/utils/agent_states.py`）：
 
 ```python
 class AgentState(TypedDict):
@@ -151,7 +215,26 @@ class AgentState(TypedDict):
     company_of_interest: str
     trade_date: str
     market_report: str
+    sentiment_report: str
+    news_report: str
+    fundamentals_report: str
+    candlestick_report: str
     # ... 其他字段
+
+class InvestDebateState(TypedDict):
+    # 研究员辩论状态
+    history: str
+    count: int
+    # ...
+
+class RiskDebateState(TypedDict):
+    # 风险辩论状态
+    history: str
+    count: int
+    aggressive_history: str
+    conservative_history: str
+    neutral_history: str
+    # ...
 ```
 
 ### 2. 状态更新
@@ -168,70 +251,78 @@ return {
 ## 完整工作流程
 
 1. **初始化状态**: 创建初始状态，包含公司信息和交易日期
-2. **分析师阶段**: 各分析师依次执行，分析不同维度的数据
-3. **研究员辩论**: 看多和看空研究员进行多轮辩论
-4. **研究管理器判断**: 研究管理器评估辩论结果
-5. **交易员决策**: 交易员根据所有分析做出交易决策
-6. **风险评估**: 风险管理团队评估风险
-7. **最终决策**: 风险管理器做出最终判断
+2. **分析师阶段**: 5 种分析师并行执行，分析不同维度的数据
+3. **研究员辩论**: 选中的 N 个研究员进行 round-robin 多轮辩论
+4. **研究管理器**: 汇总辩论结果，形成投资建议
+5. **交易员决策**: 交易员根据所有分析做出交易计划
+6. **风险辩论**: 激进/保守/中性三方进行风险评估
+7. **风险管理器**: 做出最终风险评估和决策
+8. **反思学习**: 记录经验到记忆系统
 
-## Skill、Tool、MCP、SubAgent 的区别
+## 预测提取
 
-### 1. Tool (工具)
+### prediction_utils.py
 
-**定义**: 单个可执行的函数，用于完成特定任务
+通用的预测结果提取函数，支持中英文双语：
 
-**特点**:
-- 简单、单一职责
-- 由 LLM 直接调用
-- 同步执行
-- 返回结构化数据
-
-**示例**:
 ```python
-get_stock_data(ticker, date)  # 获取股票数据
-get_indicators(ticker, indicators)  # 获取技术指标
+from tradingagents.agents.utils.prediction_utils import extract_prediction
+
+prediction, confidence = extract_prediction(
+    response_content,
+    language="zh",
+    zh_pattern=r'预测[:：]\s*(买入|卖出|持有|BUY|SELL|HOLD).*?置信度[:：]\s*(\d+)%?',
+    en_pattern=r'PREDICTION:\s*(BUY|SELL|HOLD).*?Confidence:\s*(\d+)%?',
+    default_confidence=0.8,
+)
 ```
 
-### 2. Skill (技能)
+### prediction_extractor.py
 
-**定义**: 多个 Tool 的组合，用于完成复杂任务
-
-**特点**:
-- 组合多个 Tool
-- 有自己的控制流程
-- 可以有内部状态
-- 更高层次的抽象
-
-**注意**: 当前 TradingAgents 项目中没有显式使用 Skill 概念，直接使用 Tool。
-
-### 3. MCP (Model Context Protocol)
-
-**定义**: 一种协议，用于连接 AI 助手与外部数据源和工具
-
-**特点**:
-- 标准化接口
-- 跨平台兼容
-- 可发现的工具和资源
-- 安全的权限模型
-
-**注意**: 当前 TradingAgents 项目中没有使用 MCP。
-
-### 4. SubAgent (子代理)
-
-**定义**: 在一个 Agent 内部调用另一个 Agent
-
-**特点**:
-- 模块化设计
-- 递归调用
-- 可以有自己的状态和工具
-- 适合复杂任务分解
-
-**注意**: 当前 TradingAgents 项目中没有显式使用 SubAgent 概念，所有 Agent 都是图中的独立节点。
+更复杂的预测提取策略，支持多种匹配模式和 fallback。
 
 ## 代码示例
 
-### 创建自定义 Agent
+### 创建新研究员
+
+1. 创建研究员文件 `researchers/my_researcher.py`：
+
+```python
+from tradingagents.agents.researchers.base_researcher import BaseResearcher
+
+class MyResearcher(BaseResearcher):
+    @property
+    def researcher_type(self) -> str:
+        return "my_researcher"
+    
+    @property
+    def display_name(self) -> str:
+        return "My Researcher"
+
+def create_my_researcher(llm, memory=None, research_tracker=None, **kwargs):
+    researcher = MyResearcher(llm=llm, memory=memory, research_tracker=research_tracker)
+    return researcher.create_node()
+```
+
+2. 在 `agents/prompts/perspectives.py` 中添加投资风格 prompt。
+
+3. 在 `constants.py` 的 `RESEARCHER_REGISTRY` 中注册：
+
+```python
+RESEARCHER_REGISTRY = {
+    # ... 现有注册项 ...
+    "my_style": {
+        "type": "my_researcher",
+        "display_name": "My Researcher",
+        "speaker_label": "MyStyle",
+        "module": "tradingagents.agents.researchers.my_researcher",
+        "factory": "create_my_researcher",
+        "default_win_rate": DEFAULT_NEUTRAL_WIN_RATE,
+    },
+}
+```
+
+### 创建自定义分析师
 
 ```python
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -242,34 +333,30 @@ def my_custom_tool(param: str) -> str:
     """自定义工具描述"""
     return f"处理结果: {param}"
 
-def create_my_agent(llm):
-    def my_agent_node(state):
+def create_my_analyst(llm):
+    def my_analyst_node(state):
         tools = [my_custom_tool]
-        
-        system_message = """你是一个自定义代理..."""
-        
+        system_message = """你是一个自定义分析师..."""
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_message),
             MessagesPlaceholder(variable_name="messages"),
         ])
-        
         chain = prompt | llm.bind_tools(tools)
         result = chain.invoke(state["messages"])
-        
         return {
             "messages": [result],
             "my_result": result.content if not result.tool_calls else "",
         }
-    
-    return my_agent_node
+    return my_analyst_node
 ```
 
 ## 最佳实践
 
 1. **单一职责**: 每个 Agent 应该专注于一个特定任务
-2. **清晰的提示词**: 提供详细的角色定义和任务说明
-3. **工具设计**: 工具应该简单、可组合、有良好的文档
+2. **双语 Prompt**: 新 Agent 应同时提供中/英文 prompt
+3. **工具设计**: 工具应简单、可组合、有良好的文档
 4. **状态管理**: 明确哪些状态字段需要更新
-5. **错误处理**: 在工具中添加适当的错误处理
-6. **日志记录**: 记录关键决策和中间结果
-7. **测试**: 独立测试每个 Agent 和工具
+5. **异常处理**: 使用自定义异常体系（`tradingagents/exceptions.py`）
+6. **输入验证**: 使用 `tradingagents/utils/validators.py` 进行参数校验
+7. **日志记录**: 使用 `logging_utils.py` 记录关键决策和中间结果
+8. **测试**: 独立测试每个 Agent 和工具（`tests/unit/`）

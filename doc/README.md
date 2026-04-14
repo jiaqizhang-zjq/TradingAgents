@@ -101,7 +101,7 @@
 | 文档 | 内容概览 | 难度 | 阅读时长 |
 |------|---------|------|---------|
 | [development_guide.md](development_guide.md) | 开发指南（项目百科全书） | ⭐⭐⭐ 深入 | 30+ 分钟 |
-| [refactor_history.md](refactor_history.md) | 重构历史记录 | 📋 参考 | 按需 |
+| [refactor_history.md](refactor_history.md) | 重构执行计划与历史记录 | 📋 参考 | 按需 |
 
 ## 💡 阅读建议
 

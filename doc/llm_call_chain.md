@@ -144,14 +144,14 @@ flowchart TD
 
 2. **数据获取**
    - 通过ToolNode调用各种工具函数
-   - 从Alpha Vantage和Yahoo Finance获取数据
+   - 从 Alpha Vantage、Yahoo Finance、Longbridge 获取数据（通过 UnifiedDataManager 路由）
 
 3. **数据处理**
    - 各分析师代理分析不同维度的数据
    - 生成分析报告
 
 4. **决策制定**
-   - 研究员团队进行辩论
+   - 研究员团队进行 N-way round-robin 辩论（默认 Bull + Bear + Buffett，共 9 种可选）
    - 交易员做出交易决策
    - 风险管理团队评估风险
 
@@ -159,24 +159,24 @@ flowchart TD
    - 最终交易决策
    - 完整的状态日志
 
-## 代码优化建议
+## 已完成的优化
 
-1. **LLM 客户端抽象**
-   - 当前的LLM客户端实现已经很好地抽象了不同提供商的差异
-   - 建议添加更多提供商的支持，如Cohere、Mistral等
+1. **LLM 客户端抽象** ✅
+   - 已实现 `BaseLLMClient` 抽象基类，支持 OpenAI、Anthropic、Google 等 6 种提供商
+   - 通过 `create_llm_client()` 工厂函数统一创建
 
-2. **工具调用优化**
-   - 考虑添加缓存机制，减少重复的数据获取
-   - 实现并行工具调用，提高性能
+2. **工具调用优化** ✅
+   - 已实现 `DataCache` 缓存机制，减少重复数据获取
+   - 已实现 `LazyIndicatorCalculator` 按需计算指标（性能提升 60-80%）
 
-3. **错误处理**
-   - 在LLM调用和工具调用中添加更robust的错误处理
-   - 实现重试机制和降级策略
+3. **错误处理** ✅
+   - 已实现 15+ 自定义异常类（`exceptions.py`）
+   - 已实现重试策略（`MAX_RETRY_ATTEMPTS = 3`）
 
-4. **监控和日志**
-   - 添加更详细的LLM调用监控
-   - 记录token使用情况和响应时间
+4. **监控和日志** ✅
+   - 已实现统一日志系统（`utils/logger.py`），支持敏感信息脱敏
+   - 已实现日志轮转（10MB per file, 5 backups）
 
-5. **配置管理**
-   - 考虑使用更结构化的配置管理方式
-   - 支持不同环境的配置文件
+5. **配置管理** ✅
+   - 已实现结构化配置（`default_config.py` + `constants.py`）
+   - 配置优先级: 命令行参数 > 环境变量 > default_config.py

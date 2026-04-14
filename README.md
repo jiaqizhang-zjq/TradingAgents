@@ -28,11 +28,11 @@
 - ✅ **胜率追踪** - 研究员辩论时显示历史胜率
 - ✅ **详细调试日志** - 可查看完整的辩论过程
 
-### 代码重构（2026-02）
-- ✅ **安全加固** - 修复SQL注入，添加输入验证系统
-- ✅ **性能优化** - 惰性指标计算（60-80%提升），内存优化（-40%）
-- ✅ **代码质量** - 消除重复代码（-65%），提取常量，统一日志系统
-- 📊 详细报告: [REFACTOR_REPORT.md](./REFACTOR_REPORT.md)
+### 代码重构
+- ✅ **v0.3.0 深度优化（2026-04）** - 自定义异常体系、9 种研究员、N-way round-robin 辩论、178 个测试
+- ✅ **v0.2.0 安全加固（2026-02）** - 修复SQL注入，添加输入验证系统
+- ✅ **v0.2.0 性能优化** - 惰性指标计算（60-80%提升），内存优化（-40%）
+- ✅ **v0.2.0 代码质量** - 消除重复代码（-65%），提取常量，统一日志系统
 
 ## News
 - [2026-02] **TradingAgents v0.2.0** released with multi-provider LLM support (GPT-5.x, Gemini 3.x, Claude 4.x, Grok 4.x) and improved system architecture.
@@ -211,9 +211,12 @@ See `tradingagents/default_config.py` for all configuration options.
 
 ### 📚 核心文档
 
-- [项目架构文档](doc/architecture.md) - 详细的项目结构、模块说明和技术栈
+- [文档阅读指南](doc/README.md) - 推荐阅读顺序和文档速查表
+- [项目结构](doc/project_structure.md) - 完整目录结构与文件说明
+- [系统概览](doc/system_overview.md) - 系统架构、核心组件和开发指南
 - [LLM 调用关系链](doc/llm_call_chain.md) - LLM 相关的函数调用关系和详细流程
 - [Agent 用法和解析](doc/agents_guide.md) - Agent 的创建、使用和完整工作流程
+- [LangGraph 框架详解](doc/langgraph_framework.md) - 图结构、节点、边的详细说明
 
 ### 🔍 核心概念解析
 

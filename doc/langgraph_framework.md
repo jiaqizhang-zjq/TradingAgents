@@ -83,25 +83,24 @@
                                  │
                                  ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          Bull Researcher                                  │
+│                     N-way 研究员辩论（Round-Robin）                        │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  [辩论是否继续?]                                                     │  │
-│  │       │                                                             │  │
-│  │       ├────是──→ Bear Researcher                                    │  │
-│  │       │                                                             │  │
-│  │       └────否──→ Research Manager                                   │  │
+│  │  默认: Bull → Bear → Buffett → Bull → Bear → Buffett → ...       │  │
+│  │  支持 2~9 人动态配置（RESEARCHER_REGISTRY）                         │  │
+│  │                                                                   │  │
+│  │  Researcher[i]                                                    │  │
+│  │       │                                                           │  │
+│  │  [辩论轮次 < N * max_debate_rounds ?]                               │  │
+│  │       │                                                           │  │
+│  │       ├────是──→ Researcher[(i+1) % N]  (round-robin)             │  │
+│  │       │                                                           │  │
+│  │       └────否──→ Research Manager                                 │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          Bear Researcher                                  │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  [辩论是否继续?]                                                     │  │
-│  │       │                                                             │  │
-│  │       ├────是──→ Bull Researcher                                    │  │
-│  │       │                                                             │  │
-│  │       └────否──→ Research Manager                                   │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│  可用研究员（9 种）：                                                     │
+│  初阶: bull, bear                                                        │
+│  高级: buffett, cathie_wood, peter_lynch, charlie_munger,                │
+│        dalio, livermore, soros                                            │
 └────────────────────────────────┬────────────────────────────────────────┘
                                  │
                                  ▼
@@ -297,59 +296,29 @@
 
 ### 2. 研究团队节点
 
-#### 2.1 Bull Researcher (多头研究员)
+研究员通过 `RESEARCHER_REGISTRY`（`constants.py`）动态注册，支持 N-way round-robin 辩论。所有研究员继承自 `base_researcher.py` 抽象基类。
 
-**文件位置**: `tradingagents/agents/researchers/bull_researcher.py`
+#### 2.1 研究员列表（9 种风格）
 
-**功能**: 主张投资该股票，构建看涨论点
+| 简称 | 节点名称 | 文件 | 风格 |
+|------|---------|------|------|
+| `bull` | Bull Researcher | `bull_researcher.py` | 初阶 — 预设看多立场 |
+| `bear` | Bear Researcher | `bear_researcher.py` | 初阶 — 预设看空立场 |
+| `buffett` | Buffett Researcher | `buffett_researcher.py` | 价值投资、安全边际、护城河 |
+| `cathie_wood` | Cathie Wood Researcher | `cathie_wood_researcher.py` | 颠覆式创新 |
+| `peter_lynch` | Peter Lynch Researcher | `peter_lynch_researcher.py` | GARP 成长合理价 |
+| `charlie_munger` | Charlie Munger Researcher | `charlie_munger_researcher.py` | 逆向思维、能力圈 |
+| `dalio` | Dalio Researcher | `dalio_researcher.py` | 全天候、宏观周期 |
+| `livermore` | Livermore Researcher | `livermore_researcher.py` | 趋势跟踪、关键点位 |
+| `soros` | Soros Researcher | `soros_researcher.py` | 反身性理论、宏观对冲 |
 
-**输入状态字段**:
-- `market_report`: 市场分析师报告
-- `sentiment_report`: 社交媒体分析师报告
-- `news_report`: 新闻分析师报告
-- `fundamentals_report`: 基本面分析师报告
-- `candlestick_report`: 蜡烛图分析师报告
-- `investment_debate_state`: 辩论状态
+**通用输入状态字段**:
+- `market_report`, `sentiment_report`, `news_report`, `fundamentals_report`, `candlestick_report`
+- `investment_debate_state`: 辩论状态（含 `history`, `researcher_histories`, `count` 等）
 
-**输出状态字段**:
-- 更新 `investment_debate_state`
+**通用输出**: 更新 `investment_debate_state`
 
-**Prompt 概要**:
-- 强调增长潜力、竞争优势、积极市场指标
-- 关键要点：
-  - 增长潜力：市场机会、收入预测、可扩展性
-  - 竞争优势：独特产品、强势品牌、主导市场定位
-  - 积极指标：财务健康、行业趋势、近期积极新闻
-  - 反驳看跌论点：用具体数据和合理推理反驳
-- 输出格式：`Bull Analyst: {content}`
-
----
-
-#### 2.2 Bear Researcher (空头研究员)
-
-**文件位置**: `tradingagents/agents/researchers/bear_researcher.py`
-
-**功能**: 反对投资该股票，构建看跌论点
-
-**输入状态字段**:
-- `market_report`: 市场分析师报告
-- `sentiment_report`: 社交媒体分析师报告
-- `news_report`: 新闻分析师报告
-- `fundamentals_report`: 基本面分析师报告
-- `candlestick_report`: 蜡烛图分析师报告
-- `investment_debate_state`: 辩论状态
-
-**输出状态字段**:
-- 更新 `investment_debate_state`
-
-**Prompt 概要**:
-- 强调风险、挑战和负面指标
-- 关键要点：
-  - 风险和挑战：市场饱和、财务不稳定、宏观经济威胁
-  - 竞争劣势：弱势市场定位、创新下降、竞争对手威胁
-  - 负面指标：财务数据、市场趋势、近期不利新闻
-  - 反驳看涨论点：揭露弱点或过度乐观假设
-- 输出格式：`Bear Analyst: {content}`
+**默认选中**: `["bull", "bear", "buffett"]`（通过 `DEFAULT_CONFIG["selected_researchers"]` 配置）
 
 ---
 
@@ -412,6 +381,8 @@
 ---
 
 ### 4. 风险分析团队节点
+
+所有风险辩论者使用 `base_risk_debator.py` 基类（`RiskDebatorConfig` + `create_risk_debator()` 工厂函数）消除代码重复。
 
 #### 4.1 Aggressive Analyst (激进风险分析师)
 
@@ -612,25 +583,23 @@
 
 ### 2. 研究辩论相关边
 
-#### 2.1 Bull Researcher → 条件边
+#### 2.1 N-way Round-Robin 辩论路由
+
+研究员辩论采用动态 N-way round-robin 路由模式。假设选中了 N 个研究员：
+
 - **类型**: `add_conditional_edges` (条件边)
-- **源**: `Bull Researcher`
+- **源**: 每个 `Researcher[i]`
 - **条件函数**: `should_continue_debate` (来自 `ConditionalLogic` 类)
 - **目标**:
-  - 如果辩论继续 → `Bear Researcher`
+  - 如果辩论继续 → `Researcher[(i+1) % N]`（下一个研究员）
   - 如果辩论结束 → `Research Manager`
-- **说明**: 根据辩论轮数决定下一步
+- **说明**: 研究员按注册顺序轮流发言，直到达到 `N × max_debate_rounds` 次发言
 
----
-
-#### 2.2 Bear Researcher → 条件边
-- **类型**: `add_conditional_edges` (条件边)
-- **源**: `Bear Researcher`
-- **条件函数**: `should_continue_debate` (来自 `ConditionalLogic` 类)
-- **目标**:
-  - 如果辩论继续 → `Bull Researcher`
-  - 如果辩论结束 → `Research Manager`
-- **说明**: 根据辩论轮数决定下一步
+**示例**（默认 `["bull", "bear", "buffett"]`，`max_debate_rounds=2`）：
+```
+Bull → Bear → Buffett → Bull → Bear → Buffett → Research Manager
+ (1)    (2)     (3)     (4)    (5)     (6)        汇总决策
+```
 
 ---
 
@@ -710,18 +679,19 @@ return "Msg Clear {analyst_type}"
 ```
 
 #### 2. should_continue_debate
-判断研究辩论是否继续
+判断研究辩论是否继续（N-way round-robin）
 
 **逻辑**:
 ```python
-if count >= 2 * max_debate_rounds:
+# N = 选中的研究员数量
+if count >= N * max_debate_rounds:
     return "Research Manager"
-if current_response starts with "Bull":
-    return "Bear Researcher"
-return "Bull Researcher"
+# 根据当前发言者确定下一个研究员
+return researchers[(current_index + 1) % N]
 ```
 
-**默认配置**: `max_debate_rounds = 1` (即 2 轮来回)
+**默认配置**: `max_debate_rounds = 2`, `selected_researchers = ["bull", "bear", "buffett"]`
+（即 3 × 2 = 6 次发言后结束辩论）
 
 #### 3. should_continue_risk_analysis
 判断风险分析是否继续
@@ -826,10 +796,10 @@ selected_analysts = [
 这个 LangGraph 框架实现了一个多代理交易决策系统，包含：
 
 1. **5 个专业分析师**，各自独立分析不同维度
-2. **2 个研究员**进行多空辩论
-3. **1 个研究经理**做出投资决策
+2. **最多 9 种研究员**（动态注册，默认 3 人）进行 N-way round-robin 辩论
+3. **1 个研究管理器**做出投资决策
 4. **1 个交易员**制定交易计划
-5. **3 个风险分析师**从不同风险角度评估
-6. **1 个风险法官**做出最终交易决策
+5. **3 个风险辩论者**（基于 `base_risk_debator` 基类）从不同角度评估
+6. **1 个风险管理器**做出最终交易决策
 
 整个流程从分析师收集信息开始，经过研究辩论、交易计划、风险评估，最终做出明确的 Buy/Sell/Hold 决策。

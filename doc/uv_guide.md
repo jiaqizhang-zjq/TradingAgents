@@ -122,13 +122,13 @@ uv pip check
 
 ```bash
 # 在虚拟环境中运行
-uv run python main.py
+uv run python run_trading.py
 
 # 运行模块
-uv run python -m tradingagents
+uv run python -m cli.main
 
 # 运行脚本（自动使用虚拟环境）
-uv run main.py
+uv run run_trading.py
 ```
 
 ### 项目管理
@@ -232,7 +232,7 @@ uv pip install --group dev
 
 ```bash
 # 不需要手动激活虚拟环境
-uv run python main.py
+uv run python run_trading.py
 
 # 运行测试
 uv run pytest

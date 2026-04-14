@@ -1,9 +1,8 @@
-# TradingAgents 代码重构执行计划
+# TradingAgents 代码重构执行计划与历史
 
 **开始时间**: 2026-02-26
-**预计完成**: 2026-03-05 (7天全自主执行)
-**执行模式**: 全自主，无需人工干预
-**时间充裕**: ✅ 可以进行更深入的重构和优化
+**最后更新**: 2026-04-12
+**状态**: ✅ 核心目标达成
 
 ---
 
@@ -421,9 +420,8 @@ tradingagents/prompts/
 
 ### 🟢 P3-1: 更新文档
 **影响文件**:
-- `README.md`
-- `init.md`
-- `doc/architecture.md`
+- `doc/project_structure.md`
+- `doc/system_overview.md`
 - `doc/llm_call_chain.md`
 - `doc/agents_guide.md`
 

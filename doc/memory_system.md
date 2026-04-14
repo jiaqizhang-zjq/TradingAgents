@@ -36,11 +36,14 @@
 
 | 内存实例 | 对应角色 | 说明 |
 |---------|---------|------|
-| bull_memory | bull_researcher | 看涨研究员内存 |
-| bear_memory | bear_researcher | 看跌研究员内存 |
+| bull_memory | bull_researcher | 看多研究员内存 |
+| bear_memory | bear_researcher | 看空研究员内存 |
+| buffett_memory | buffett_researcher | 巴菲特研究员内存 |
 | trader_memory | trader | 交易员内存 |
 | invest_judge_memory | research_manager | 研究经理内存 |
 | risk_manager_memory | risk_manager | 风险经理内存 |
+
+> 其他高级研究员（cathie_wood, peter_lynch, charlie_munger, soros, dalio, livermore）在被 `selected_researchers` 选中参与辩论后，也会生成对应的内存实例。
 
 ### 2. 内存条目结构
 
